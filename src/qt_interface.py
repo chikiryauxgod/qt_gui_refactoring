@@ -12,11 +12,14 @@ import electoerosion
 
 from robot import Robot
 from pico import Pico
-from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
-                              QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
-                              QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
-                              QScrollArea, QFrame, QSplitter, QSizePolicy, QGridLayout,
-                              QLineEdit, QStackedWidget, QListWidget, QListWidgetItem,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget,
+                                QWidget, QVBoxLayout, QHBoxLayout, 
+                                QLabel, QPushButton, QDoubleSpinBox, 
+                                QSpinBox,QProgressBar, QTextEdit, 
+                                QGroupBox, QFileDialog, QMessageBox,
+                              QScrollArea, QFrame, QSplitter, 
+                              QSizePolicy, QGridLayout,QLineEdit,
+                              QStackedWidget, QListWidget, QListWidgetItem,
                               QCheckBox, QComboBox, QSlider, QDialog, QDialogButtonBox)
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot, QPropertyAnimation, QEasingCurve, QEvent
 from PySide6.QtGui import QImage, QPixmap, QFont, QPalette, QColor, QTextCursor 
@@ -68,13 +71,14 @@ class Arrow3D(FancyArrowPatch):
 class VideoStreamThread(QThread):
     new_frame = Signal(QImage)
     
-    def __init__(self):
+    def __init__(self, camera_idx=0, width=640, height=480, latency=30):
         super().__init__()
         self.running = True
-        self.cap = cv2.VideoCapture(0)
+        self.latency = latency
+        self.cap = cv2.VideoCapture(camera_idx)
         if self.cap.isOpened():
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         
     def run(self):
         while self.running:
@@ -86,13 +90,15 @@ class VideoStreamThread(QThread):
                     bytes_per_line = ch * w
                     qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
                     self.new_frame.emit(qt_image)
-            QThread.msleep(30)
+            self.msleep(self.latency)
             
     def stop(self):
         self.running = False
         self.wait()
         if self.cap.isOpened():
             self.cap.release()
+
+
 # Виджет управления осью
 class AxisControlWidget(QWidget):
     position_changed = Signal(str, float)
