@@ -1,6 +1,5 @@
 import pytest
 from src.qt_interface import Arrow3DData
-import src.electoerosion
 
 def test_arrow3d_data_as_tuple():
     data = Arrow3DData(
