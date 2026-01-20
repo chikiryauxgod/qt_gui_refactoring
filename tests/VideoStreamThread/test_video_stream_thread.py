@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import pytest
 import sys, types
@@ -35,7 +33,7 @@ class FakeCapture:
             frame = np.zeros((10, 10, 3), dtype=np.uint8)
             return True, frame
 
-        # после первого кадра считаем, что камера закончилась/закрылась
+   
         self._released = True
         return False, None
 
@@ -50,7 +48,7 @@ def patch_cv2(monkeypatch):
         return FakeCapture(idx)
 
     def fake_cvtcolor(frame, code):
-        return frame  # нам не важно, что именно делает конвертация
+        return frame  
 
     monkeypatch.setattr(qi.cv2, "VideoCapture", fake_videocapture)
     monkeypatch.setattr(qi.cv2, "cvtColor", fake_cvtcolor)
@@ -63,9 +61,9 @@ def test_run_finishes_when_capture_ends(patch_cv2):
     """
     t = VideoStreamThread(camera_idx=0, width=640, height=480, latency=1)
 
-    # на всякий случай: ограничим время выполнения теста логикой в FakeCapture
+    
     t.running = True
     t.run()
 
-    # После выполнения run() камера должна быть "закрыта"
+    
     assert t.cap.isOpened() is False
