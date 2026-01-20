@@ -8,18 +8,15 @@ import time
 import threading
 import queue
 import platform
-import electoerosion
+from src.electoerosion import Electroerosion
 
-from robot import Robot
-from pico import Pico
-from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget,
-                                QWidget, QVBoxLayout, QHBoxLayout, 
-                                QLabel, QPushButton, QDoubleSpinBox, 
-                                QSpinBox,QProgressBar, QTextEdit, 
-                                QGroupBox, QFileDialog, QMessageBox,
-                              QScrollArea, QFrame, QSplitter, 
-                              QSizePolicy, QGridLayout,QLineEdit,
-                              QStackedWidget, QListWidget, QListWidgetItem,
+from src.robot import Robot
+from src.pico import Pico
+from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
+                              QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
+                              QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
+                              QScrollArea, QFrame, QSplitter, QSizePolicy, QGridLayout,
+                              QLineEdit, QStackedWidget, QListWidget, QListWidgetItem,
                               QCheckBox, QComboBox, QSlider, QDialog, QDialogButtonBox)
 from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot, QPropertyAnimation, QEasingCurve, QEvent
 from PySide6.QtGui import QImage, QPixmap, QFont, QPalette, QColor, QTextCursor 
@@ -28,14 +25,13 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-from log import Log
-from widgets.axis_control_widget import AxisControlWidget
+from src.log import Log
+from src.arrow3D import Arrow3D, Arrow3DData
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
 #+ Выводить содержимое очереди в textbox процесса эрозии
 #- Сделать независимое управление помпами в UI
-
 
 try:
     from ikpy.chain import Chain
@@ -56,31 +52,6 @@ D_E = 2
 logger = Log()
 q = queue.Queue()
 #filename = None
-
-# Класс для 3D стрелок
-class Arrow3DData:
-    def __init__(self, xs, ys, zs):
-        self.xs = xs
-        self.ys = ys
-        self.zs = zs
-
-    def as_tuple(self):
-        return self.xs, self.ys, self.zs
-
-def matplotlib_project(xs, ys, zs, matrix):
-    return proj3d.proj_transform(xs, ys, zs, matrix)
-
-class Arrow3D(FancyArrowPatch):
-    def __init__(self, data, project_fn, *args, **kwargs):
-        super().__init__((0, 0), (0, 0), *args, **kwargs)
-        self._data = data
-        self._project = project_fn
-
-    def do_3d_projection(self, renderer=None):
-        xs3d, ys3d, zs3d = self._data.as_tuple()
-        xs, ys, zs = self._project(xs3d, ys3d, zs3d, self.axes.M)
-        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-        return np.min(zs)
 
 # Поток для видеозахвата
 class VideoStreamThread(QThread):
@@ -2067,7 +2038,7 @@ class MainWindow(QMainWindow):
         
         # Инициализация контроллеров оборудования
         try:
-            self.erode = electoerosion.Electroerosion()#, X, Y, Z, XS, YS, ZS)
+            self.erode = Electroerosion()#, X, Y, Z, XS, YS, ZS)
             self.robot_controller = self.erode.robot
             self.pico_controller = self.erode.erosion
         except Exception as e:
