@@ -8,10 +8,10 @@ import time
 import threading
 import queue
 import platform
-from src.electoerosion import Electroerosion
+from .electoerosion import Electroerosion
 
-from src.robot import Robot
-from src.pico import Pico
+from .robot import Robot
+from .pico import Pico
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
                               QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
                               QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
@@ -25,7 +25,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-from src.log import Log
+from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
 
@@ -71,11 +71,14 @@ class VideoStreamThread(QThread):
         while self.running:
             if self.cap.isOpened():
                 ret, frame = self.cap.read()
+                if not ret:
+                    self.running = False
+                    break
                 if ret:
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     h, w, ch = rgb_image.shape
                     bytes_per_line = ch * w
-                    qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
+                    qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
                     self.new_frame.emit(qt_image)
             self.msleep(self.latency)
             
