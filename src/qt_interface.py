@@ -57,13 +57,14 @@ q = queue.Queue()
 class VideoStreamThread(QThread):
     new_frame = Signal(QImage)
     
-    def __init__(self):
+    def __init__(self, camera_idx=0, width=640, height=480, latency=30):
         super().__init__()
         self.running = True
-        self.cap = cv2.VideoCapture(0)
+        self.latency = latency
+        self.cap = cv2.VideoCapture(camera_idx)
         if self.cap.isOpened():
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         
     def run(self):
         while self.running:
@@ -75,77 +76,79 @@ class VideoStreamThread(QThread):
                     bytes_per_line = ch * w
                     qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
                     self.new_frame.emit(qt_image)
-            QThread.msleep(30)
+            self.msleep(self.latency)
             
     def stop(self):
         self.running = False
         self.wait()
         if self.cap.isOpened():
             self.cap.release()
+
+
 # Виджет управления осью
-class AxisControlWidget(QWidget):
-    position_changed = Signal(str, float)
+# class AxisControlWidget(QWidget):
+#     position_changed = Signal(str, float)
     
-    def __init__(self, axis, initial_value=0.0):
-        super().__init__()
-        self.axis = axis
-        self.create_widgets(initial_value)
+#     def __init__(self, axis, initial_value=0.0):
+#         super().__init__()
+#         self.axis = axis
+#         self.create_widgets(initial_value)
         
-    def create_widgets(self, initial_value):
-        layout = QVBoxLayout()
+#     def create_widgets(self, initial_value):
+#         layout = QVBoxLayout()
         
-        # Устанавливаем минимальные отступы
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
+#         # Устанавливаем минимальные отступы
+#         layout.setContentsMargins(5, 5, 5, 5)
+#         layout.setSpacing(5)
         
-        title_label = QLabel(f"Ось {self.axis}")
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
-        layout.addWidget(title_label)
+#         title_label = QLabel(f"Ось {self.axis}")
+#         title_label.setAlignment(Qt.AlignCenter)
+#         title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+#         layout.addWidget(title_label)
         
-        self.value_label = QLabel(f"{initial_value:.1f} мм")
-        self.value_label.setAlignment(Qt.AlignCenter)
-        self.value_label.setStyleSheet("font-size: 12px; background-color: #f0f0f0; padding: 3px; border-radius: 3px;")
-        layout.addWidget(self.value_label)
+#         self.value_label = QLabel(f"{initial_value:.1f} мм")
+#         self.value_label.setAlignment(Qt.AlignCenter)
+#         self.value_label.setStyleSheet("font-size: 12px; background-color: #f0f0f0; padding: 3px; border-radius: 3px;")
+#         layout.addWidget(self.value_label)
         
-        # Добавляем небольшой отступ перед кнопками
-        layout.addSpacing(5)
+#         # Добавляем небольшой отступ перед кнопками
+#         layout.addSpacing(5)
         
-        button_layout = QGridLayout()
-        button_layout.setHorizontalSpacing(3)  # Уменьшаем горизонтальные промежутки
-        button_layout.setVerticalSpacing(3)    # Уменьшаем вертикальные промежутки
+#         button_layout = QGridLayout()
+#         button_layout.setHorizontalSpacing(3)  # Уменьшаем горизонтальные промежутки
+#         button_layout.setVerticalSpacing(3)    # Уменьшаем вертикальные промежутки
         
-        step_sizes = [0.1, 1.0, 10.0]
+#         step_sizes = [0.1, 1.0, 10.0]
         
-        for i, step in enumerate(step_sizes):
-            minus_btn = QPushButton(f"-{step}")
-            minus_btn.setFixedSize(60, 50)  # Фиксированный размер вместо максимальной ширины
-            minus_btn.setStyleSheet("font-size: 10px;")
-            minus_btn.clicked.connect(lambda checked, s=step: self.change_position(-s))
-            button_layout.addWidget(minus_btn, 0, i)
+#         for i, step in enumerate(step_sizes):
+#             minus_btn = QPushButton(f"-{step}")
+#             minus_btn.setFixedSize(60, 50)  # Фиксированный размер вместо максимальной ширины
+#             minus_btn.setStyleSheet("font-size: 10px;")
+#             minus_btn.clicked.connect(lambda checked, s=step: self.change_position(-s))
+#             button_layout.addWidget(minus_btn, 0, i)
             
-            step_label = QLabel(f"{step} мм")
-            step_label.setAlignment(Qt.AlignCenter)
-            step_label.setStyleSheet("font-size: 10px;")
-            button_layout.addWidget(step_label, 1, i)
+#             step_label = QLabel(f"{step} мм")
+#             step_label.setAlignment(Qt.AlignCenter)
+#             step_label.setStyleSheet("font-size: 10px;")
+#             button_layout.addWidget(step_label, 1, i)
             
-            plus_btn = QPushButton(f"+{step}")
-            plus_btn.setFixedSize(60, 50)
-            plus_btn.setStyleSheet("font-size: 10px;")
-            plus_btn.clicked.connect(lambda checked, s=step: self.change_position(s))
-            button_layout.addWidget(plus_btn, 2, i)
+#             plus_btn = QPushButton(f"+{step}")
+#             plus_btn.setFixedSize(60, 50)
+#             plus_btn.setStyleSheet("font-size: 10px;")
+#             plus_btn.clicked.connect(lambda checked, s=step: self.change_position(s))
+#             button_layout.addWidget(plus_btn, 2, i)
         
-        layout.addLayout(button_layout)
+#         layout.addLayout(button_layout)
         
-        # Добавляем растягивающийся элемент для выравнивания
-        # layout.addStretch(1)
-        self.setLayout(layout)
+#         # Добавляем растягивающийся элемент для выравнивания
+#         # layout.addStretch(1)
+#         self.setLayout(layout)
         
-    def change_position(self, delta):
-        current_value = float(self.value_label.text().split()[0])
-        new_value = current_value + delta
-        self.value_label.setText(f"{new_value:.1f} мм")
-        self.position_changed.emit(self.axis, new_value)
+#     def change_position(self, delta):
+#         current_value = float(self.value_label.text().split()[0])
+#         new_value = current_value + delta
+#         self.value_label.setText(f"{new_value:.1f} мм")
+#         self.position_changed.emit(self.axis, new_value)
 # Рабочий поток для эрозии
 class ErosionWorker(QThread):
     progress_updated = Signal(float)
@@ -424,9 +427,15 @@ class ErosionProcessTab(QWidget):
         
         axes_widget = QWidget()
         axes_layout = QHBoxLayout()
-        self.x_control = AxisControlWidget('X', self.controller.current_x)
-        self.y_control = AxisControlWidget('Y', self.controller.current_y)
-        self.z_control = AxisControlWidget('Z', self.controller.current_z)
+        
+        self.x_control = AxisControlWidget('X')
+        self.x_control.set_current_value(self.controller.current_x)
+
+        self.y_control = AxisControlWidget('Y')
+        self.y_control.set_current_value(self.controller.current_y)
+        
+        self.z_control = AxisControlWidget('Z')
+        self.z_control.set_current_value(self.controller.current_z)
         
                 # Кнопка возврата в нулевое положение
         reset_btn = QPushButton("Вернуться в нулевое положение")
