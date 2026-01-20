@@ -28,6 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
+from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -71,9 +72,6 @@ class VideoStreamThread(QThread):
         while self.running:
             if self.cap.isOpened():
                 ret, frame = self.cap.read()
-                if not ret:
-                    self.running = False
-                    break
                 if ret:
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     h, w, ch = rgb_image.shape
@@ -153,6 +151,7 @@ class VideoStreamThread(QThread):
 #         new_value = current_value + delta
 #         self.value_label.setText(f"{new_value:.1f} мм")
 #         self.position_changed.emit(self.axis, new_value)
+'''
 # Рабочий поток для эрозии
 class ErosionWorker(QThread):
     progress_updated = Signal(float)
@@ -272,6 +271,7 @@ class ErosionWorker(QThread):
     def stop(self):
         self.is_running = False
         self.is_paused = False
+'''
 # Вкладка процесса эрозии
 class ErosionProcessTab(QWidget):
     def __init__(self, controller):
