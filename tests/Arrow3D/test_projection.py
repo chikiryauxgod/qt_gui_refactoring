@@ -1,5 +1,5 @@
 import pytest
-import src.electoerosion
+
 
 def stub_project(xs, ys, zs, matrix):
     return xs, ys, zs

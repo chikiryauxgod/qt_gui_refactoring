@@ -1,6 +1,5 @@
 import pytest
 from src.qt_interface import Arrow3D, Arrow3DData
-import src.electoerosion
 
 def stub_project(xs, ys, zs, matrix):
     return xs, ys, zs
