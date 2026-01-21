@@ -3,8 +3,8 @@ import json
 import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-RUN_ID = "qwen_7_b"
-MODEL = "qwen2.5:7b"
+RUN_ID = "gemma_2_9_b"
+MODEL = "gemma2:9b"
 
 SYSTEM_PROMPT = """
 Ты — software architect.
