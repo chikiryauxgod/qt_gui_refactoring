@@ -1,0 +1,6 @@
+{
+  "commit": "cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11",
+  "author": "Matvey",
+  "date": "Wed Jan 21 15:54:50 2026 +0500",
+  "message": "feat: refactor VideoStreamThread class, upd test"
+}

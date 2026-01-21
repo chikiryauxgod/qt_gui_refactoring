@@ -2,27 +2,37 @@ import json
 from statistics import mean
 from pathlib import Path
 
-def aggregate(results: list[dict]) -> dict:
-    scores = {k: [] for k in ["SRP", "OCP", "LSP", "ISP", "DIP"]}
+RUN_ID = "qwen_0_5b"
 
-    for r in results:
-        if "error" in r:
-            continue
-        for k in scores:
-            scores[k].append(r[k]["score"])
+RESULTS = Path("results")
+OUT = Path("aggregated")
+OUT.mkdir(exist_ok=True)
+
+
+def aggregate_commit(commit: str) -> dict:
+    data = json.loads((RESULTS / f"{commit}.json").read_text())
+
+    scores = [
+        r["solid_score"]
+        for r in data
+        if isinstance(r, dict) and "solid_score" in r
+    ]
 
     return {
-        k: round(mean(v), 2) if v else None
-        for k, v in scores.items()
+        "commit": commit,
+        f"solid_{RUN_ID}": round(mean(scores), 2) if scores else None
     }
 
+
 def main():
-    for file in Path("results").glob("*.json"):
-        data = json.loads(file.read_text())
-        summary = aggregate(data)
-        file.with_suffix(".summary.json").write_text(
+    for f in RESULTS.glob("*.json"):
+        commit = f.stem
+        summary = aggregate_commit(commit)
+
+        (OUT / f"{commit}.{RUN_ID}.json").write_text(
             json.dumps(summary, indent=2)
         )
+
 
 if __name__ == "__main__":
     main()

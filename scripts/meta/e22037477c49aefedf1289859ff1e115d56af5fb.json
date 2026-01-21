@@ -1,0 +1,6 @@
+{
+  "commit": "e22037477c49aefedf1289859ff1e115d56af5fb",
+  "author": "faweddd",
+  "date": "Tue Jan 20 13:36:21 2026 +0500",
+  "message": "Refactor Arrow3D to separate package, fix imports and add unit tests"
+}
