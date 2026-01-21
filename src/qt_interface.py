@@ -28,7 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
-from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.services.xyz_trajectory_service import XYZTrajectoryService
 from src.services.joint_trajectory_service import JointTrajectoryService
 from src.presenters.xyz_control_presenter import XYZControlPresenter
@@ -37,6 +37,8 @@ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
+from src.presenters.joint_control_presenter import JointControlPresenter
+
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -959,11 +961,12 @@ class ServiceTab(QWidget):
         self.trajectory_service = XYZTrajectoryService()
         self.trajectory_points_joints = JointTrajectoryService()
         self.xyz_trajectory_executor = XYZTrajectoryExecutor(
-        controller=self.controller,
-        trajectory_service=self.trajectory_service,)
+            controller=self.controller,
+            trajectory_service=self.trajectory_service,)
+        self.joint_presenter = JointControlPresenter(self.controller)
         self.joint_trajectory_executor = JointTrajectoryExecutor(
-        controller=self.controller,
-        trajectory_service=self.trajectory_points_joints,)
+            joint_presenter=self.joint_presenter,
+            trajectory_service=self.trajectory_points_joints,)
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
