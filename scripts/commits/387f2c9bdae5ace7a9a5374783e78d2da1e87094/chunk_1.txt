@@ -1,0 +1,7 @@
++ #         self.value_label.setText(f"{new_value:.1f} мм")
++ #         self.position_changed.emit(self.axis, new_value)
+  # Рабочий поток для эрозии
+  class ErosionWorker(QThread):
+      progress_updated = Signal(float)
+
+FILES:

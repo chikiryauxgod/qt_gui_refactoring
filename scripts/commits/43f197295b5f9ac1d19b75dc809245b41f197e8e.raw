@@ -1,0 +1,216 @@
+commit 43f197295b5f9ac1d19b75dc809245b41f197e8e
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 18:23:33 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 18:23:33 2026 +0500
+
+    feat: new preseneter + actualized tests
+
+diff --git a/src/application/joint_trajectory_executor.py b/src/application/joint_trajectory_executor.py
+index 077b227..22058a9 100644
+--- a/src/application/joint_trajectory_executor.py
++++ b/src/application/joint_trajectory_executor.py
+@@ -2,18 +2,21 @@ from typing import Sequence
+ 
+ 
+ class JointTrajectoryExecutor:
+-    def __init__(self, controller, trajectory_service, delay_sec: float = 1.0):
+-        self._controller = controller
++    def __init__(
++        self,
++        joint_presenter,
++        trajectory_service,
++        delay_sec: float = 1.0,
++    ):
++        self._joint_presenter = joint_presenter
+         self._trajectory_service = trajectory_service
+         self._delay_sec = delay_sec
+ 
+     def execute(self) -> None:
+         for joints in self._trajectory_service.get_points():
+-            self._controller.set_joints(joints)
++            self._joint_presenter.set_position(joints)
+             self._sleep()
+ 
+     def _sleep(self) -> None:
+         import time
+         time.sleep(self._delay_sec)
+-
+-
+diff --git a/src/presenters/joint_control_presenter.py b/src/presenters/joint_control_presenter.py
+new file mode 100644
+index 0000000..b419343
+--- /dev/null
++++ b/src/presenters/joint_control_presenter.py
+@@ -0,0 +1,9 @@
++from typing import Sequence
++
++
++class JointControlPresenter:
++    def __init__(self, controller):
++        self._controller = controller
++
++    def set_position(self, joints: Sequence[float]) -> None:
++        self._controller.set_joint_pos(list(joints))
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index 168f1eb..42ac979 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -28,7 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
+ from .log import Log
+ from src.arrow3D import Arrow3D, Arrow3DData
+ from src.widgets.axis_control_widget import AxisControlWidget
+-from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
++from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.services.xyz_trajectory_service import XYZTrajectoryService
+ from src.services.joint_trajectory_service import JointTrajectoryService
+ from src.presenters.xyz_control_presenter import XYZControlPresenter
+@@ -37,6 +37,8 @@ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+ from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+ from src.VideoStream.VideoStreamThread import VideoStreamThread
++from src.presenters.joint_control_presenter import JointControlPresenter
++
+ 
+ 
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+@@ -959,11 +961,12 @@ class ServiceTab(QWidget):
+         self.trajectory_service = XYZTrajectoryService()
+         self.trajectory_points_joints = JointTrajectoryService()
+         self.xyz_trajectory_executor = XYZTrajectoryExecutor(
+-        controller=self.controller,
+-        trajectory_service=self.trajectory_service,)
++            controller=self.controller,
++            trajectory_service=self.trajectory_service,)
++        self.joint_presenter = JointControlPresenter(self.controller)
+         self.joint_trajectory_executor = JointTrajectoryExecutor(
+-        controller=self.controller,
+-        trajectory_service=self.trajectory_points_joints,)
++            joint_presenter=self.joint_presenter,
++            trajectory_service=self.trajectory_points_joints,)
+         self.continuous_move_timer = QTimer()
+         self.continuous_move_timer.timeout.connect(self.continuous_move)
+         self.continuous_move_data = None
+diff --git a/tests/ServiceTab/test_joint_trajectory_executor.py b/tests/ServiceTab/executors/test_joint_trajectory_executor.py
+similarity index 57%
+rename from tests/ServiceTab/test_joint_trajectory_executor.py
+rename to tests/ServiceTab/executors/test_joint_trajectory_executor.py
+index d6ab609..5069ce8 100644
+--- a/tests/ServiceTab/test_joint_trajectory_executor.py
++++ b/tests/ServiceTab/executors/test_joint_trajectory_executor.py
+@@ -1,10 +1,9 @@
+ from unittest.mock import Mock
+-
+ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+ 
+ 
+-def test_joint_trajectory_executor_calls_controller():
+-    controller = Mock()
++def test_joint_trajectory_executor_calls_presenter():
++    presenter = Mock()
+     trajectory_service = Mock()
+     trajectory_service.get_points.return_value = [
+         [0, 0, 0, 0, 0, 0],
+@@ -12,13 +11,13 @@ def test_joint_trajectory_executor_calls_controller():
+     ]
+ 
+     executor = JointTrajectoryExecutor(
+-        controller=controller,
++        joint_presenter=presenter,
+         trajectory_service=trajectory_service,
+         delay_sec=0,
+     )
+ 
+     executor.execute()
+ 
+-    controller.set_joints.assert_any_call([0, 0, 0, 0, 0, 0])
+-    controller.set_joints.assert_any_call([10, 20, 30, 40, 50, 60])
+-    assert controller.set_joints.call_count == 2
++    presenter.set_position.assert_any_call([0, 0, 0, 0, 0, 0])
++    presenter.set_position.assert_any_call([10, 20, 30, 40, 50, 60])
++    assert presenter.set_position.call_count == 2
+diff --git a/tests/ServiceTab/executors/test_xyz_trajectory_executor.py b/tests/ServiceTab/executors/test_xyz_trajectory_executor.py
+new file mode 100644
+index 0000000..5069ce8
+--- /dev/null
++++ b/tests/ServiceTab/executors/test_xyz_trajectory_executor.py
+@@ -0,0 +1,23 @@
++from unittest.mock import Mock
++from src.application.joint_trajectory_executor import JointTrajectoryExecutor
++
++
++def test_joint_trajectory_executor_calls_presenter():
++    presenter = Mock()
++    trajectory_service = Mock()
++    trajectory_service.get_points.return_value = [
++        [0, 0, 0, 0, 0, 0],
++        [10, 20, 30, 40, 50, 60],
++    ]
++
++    executor = JointTrajectoryExecutor(
++        joint_presenter=presenter,
++        trajectory_service=trajectory_service,
++        delay_sec=0,
++    )
++
++    executor.execute()
++
++    presenter.set_position.assert_any_call([0, 0, 0, 0, 0, 0])
++    presenter.set_position.assert_any_call([10, 20, 30, 40, 50, 60])
++    assert presenter.set_position.call_count == 2
+diff --git a/tests/ServiceTab/presenters/test_joint_control_presenter.py b/tests/ServiceTab/presenters/test_joint_control_presenter.py
+new file mode 100644
+index 0000000..5e1b7bb
+--- /dev/null
++++ b/tests/ServiceTab/presenters/test_joint_control_presenter.py
+@@ -0,0 +1,12 @@
++from unittest.mock import Mock
++from src.presenters.joint_control_presenter import JointControlPresenter
++
++
++def test_set_position_calls_controller():
++    controller = Mock()
++    presenter = JointControlPresenter(controller)
++
++    joints = [1, 2, 3, 4, 5, 6]
++    presenter.set_position(joints)
++
++    controller.set_joint_pos.assert_called_once_with(joints)
+diff --git a/tests/ServiceTab/test_joint_trajectory_service.py b/tests/ServiceTab/services/test_joint_trajectory_service.py
+similarity index 100%
+rename from tests/ServiceTab/test_joint_trajectory_service.py
+rename to tests/ServiceTab/services/test_joint_trajectory_service.py
+diff --git a/tests/ServiceTab/test_xyz_trajectory_service.py b/tests/ServiceTab/services/test_xyz_trajectory_service.py
+similarity index 100%
+rename from tests/ServiceTab/test_xyz_trajectory_service.py
+rename to tests/ServiceTab/services/test_xyz_trajectory_service.py
+diff --git a/tests/ServiceTab/test_xyz_trajectory_executor.py b/tests/ServiceTab/test_xyz_trajectory_executor.py
+deleted file mode 100644
+index 58161fd..0000000
+--- a/tests/ServiceTab/test_xyz_trajectory_executor.py
++++ /dev/null
+@@ -1,24 +0,0 @@
+-from unittest.mock import Mock
+-
+-from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+-
+-
+-def test_xyz_trajectory_execution_calls_controller_in_order():
+-    controller = Mock()
+-    trajectory_service = Mock()
+-    trajectory_service.get_points.return_value = [
+-        (1, 2, 3),
+-        (4, 5, 6),
+-    ]
+-
+-    executor = XYZTrajectoryExecutor(
+-        controller=controller,
+-        trajectory_service=trajectory_service,
+-        delay_sec=0,
+-    )
+-
+-    executor.execute()
+-
+-    controller.set_coord_pos.assert_any_call(1, 2, 3)
+-    controller.set_coord_pos.assert_any_call(4, 5, 6)
+-    assert controller.set_coord_pos.call_count == 2

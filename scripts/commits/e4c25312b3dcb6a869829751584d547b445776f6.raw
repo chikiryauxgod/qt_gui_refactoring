@@ -1,0 +1,29 @@
+commit e4c25312b3dcb6a869829751584d547b445776f6
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Sat Jan 17 22:31:03 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Sat Jan 17 22:31:03 2026 +0500
+
+    add electoerosion.py stubs for qt_interface.py
+
+diff --git a/src/electoerosion.py b/src/electoerosion.py
+new file mode 100644
+index 0000000..413c298
+--- /dev/null
++++ b/src/electoerosion.py
+@@ -0,0 +1,14 @@
++class Electroerosion:
++    def __init__(self, filename=None, speed=10, mode="test"):
++        self.filename = filename
++        self.speed = speed
++        self.mode = mode
++        self.robot = None
++        self.erosion = None
++        print(f"[ELECTROEROSION - stub] filename={filename}, speed={speed}, mode={mode}")
++
++    def start(self):
++        print("[ELECTROEROSION - stub] start() called")
++
++    def stop(self):
++        print("[ELECTROEROSION - stub] stop() called")
+\ No newline at end of file

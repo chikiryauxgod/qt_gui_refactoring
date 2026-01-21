@@ -1,0 +1,20 @@
+commit be3381f685af34eb908c7f7a1cb77d4dc0a637b9
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 21:28:52 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 21:28:52 2026 +0500
+
+    chore: add tests to dir
+
+diff --git a/tests/test_joints_trajectory_plotter.py b/tests/ServiceTab/visualization/test_joints_trajectory_plotter.py
+similarity index 100%
+rename from tests/test_joints_trajectory_plotter.py
+rename to tests/ServiceTab/visualization/test_joints_trajectory_plotter.py
+diff --git a/tests/test_xyz_kinematics_plotter.py b/tests/ServiceTab/visualization/test_xyz_kinematics_plotter.py
+similarity index 100%
+rename from tests/test_xyz_kinematics_plotter.py
+rename to tests/ServiceTab/visualization/test_xyz_kinematics_plotter.py
+diff --git a/tests/test_xyz_trajectory_plotter.py b/tests/ServiceTab/visualization/test_xyz_trajectory_plotter.py
+similarity index 100%
+rename from tests/test_xyz_trajectory_plotter.py
+rename to tests/ServiceTab/visualization/test_xyz_trajectory_plotter.py

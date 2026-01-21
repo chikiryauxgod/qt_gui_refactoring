@@ -1,0 +1,9 @@
+commit 12e8c959ad511525b0625d430a42fa743707613b
+Merge: e220374 387f2c9
+Author:     Igor Malykh <146803718+faweddd@users.noreply.github.com>
+AuthorDate: Tue Jan 20 13:40:18 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Jan 20 13:40:18 2026 +0500
+
+    Merge branch 'main' into feature/arrow3d_to_solid
+

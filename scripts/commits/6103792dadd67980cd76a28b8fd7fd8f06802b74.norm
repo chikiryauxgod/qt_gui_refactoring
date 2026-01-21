@@ -1,0 +1,125 @@
+commit 6103792dadd67980cd76a28b8fd7fd8f06802b74
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 12:57:51 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 12:57:51 2026 +0500
+
+    feat: add joint_trajectory_service + test
+
+
+FILES:
+
+FILE: src/qt_interface.py
+LANG: py
+
+index 327fec7..02425f6 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -1654,7 +1654,7 @@ class ServiceTab(QWidget):
+         
+         # ★ Принудительное обновление интерфейса при необходимости
+         self.current_speed_label.repaint()  # :cite[5]
+-
++    
+     # Методы управления осями XYZ
+     @Slot(str, float)
+     def set_xyz_position(self, axis, value):
+
+
+FILE: src/services/joint_trajectory_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..d636dfa
+--- /dev/null
++++ b/src/services/joint_trajectory_service.py
+@@ -0,0 +1,31 @@
++from typing import List, Tuple
++
++
++JointPoint = Tuple[float, ...]
++
++
++class JointTrajectoryService:
++    """ Отвечает за хранение и управление joint-траекторией. """
++
++    def __init__(self) -> None:
++        self._points: List[JointPoint] = []
++
++    def set_initial_point(self, joints: JointPoint) -> None:
++        self._points = [tuple(joints)]
++
++    def add_point(self, joints: JointPoint) -> None:
++        self._points.append(tuple(joints))
++
++    def remove_point(self, index: int) -> None:
++        if index < 0 or index >= len(self._points):
++            raise IndexError("Joint trajectory index out of range")
++        self._points.pop(index)
++
++    def clear(self) -> None:
++        self._points.clear()
++
++    def get_points(self) -> List[JointPoint]:
++        return list(self._points)
++
++    def is_empty(self) -> bool:
++        return not self._points
+
+
+FILE: tests/ServiceTab/test_joint_trajectory_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..5db9b66
+--- /dev/null
++++ b/tests/ServiceTab/test_joint_trajectory_service.py
+@@ -0,0 +1,48 @@
++import pytest
++from src.services.joint_trajectory_service import JointTrajectoryService
++
++
++def test_set_initial_joint_point():
++    service = JointTrajectoryService()
++
++    service.set_initial_point((0.0, 1.0, 2.0))
++
++    assert service.get_points() == [(0.0, 1.0, 2.0)]
++
++
++def test_add_joint_point():
++    service = JointTrajectoryService()
++    service.set_initial_point((0.0, 0.0))
++
++    service.add_point((1.0, 2.0))
++
++    assert service.get_points() == [
++        (0.0, 0.0),
++        (1.0, 2.0),
++    ]
++
++
++def test_remove_joint_point():
++    service = JointTrajectoryService()
++    service.set_initial_point((0.0,))
++    service.add_point((1.0,))
++
++    service.remove_point(0)
++
++    assert service.get_points() == [(1.0,)]
++
++
++def test_clear_joint_trajectory():
++    service = JointTrajectoryService()
++    service.set_initial_point((0.0, 1.0))
++
++    service.clear()
++
++    assert service.is_empty()
++
++
++def test_remove_joint_point_out_of_range():
++    service = JointTrajectoryService()
++
++    with pytest.raises(IndexError):
++        service.remove_point(0)

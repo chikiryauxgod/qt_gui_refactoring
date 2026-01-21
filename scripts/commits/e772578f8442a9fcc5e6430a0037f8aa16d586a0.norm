@@ -1,0 +1,13 @@
+commit e772578f8442a9fcc5e6430a0037f8aa16d586a0
+Merge: 387f2c9 12e8c95
+Author:     Igor Malykh <146803718+faweddd@users.noreply.github.com>
+AuthorDate: Tue Jan 20 13:40:41 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Jan 20 13:40:41 2026 +0500
+
+    Merge pull request #8 from chikiryauxgod/feature/arrow3d_to_solid
+    
+    Refactor Arrow3D to separate package, fix imports and add unit tests
+
+
+FILES:

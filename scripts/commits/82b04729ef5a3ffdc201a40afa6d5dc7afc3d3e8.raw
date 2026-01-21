@@ -1,0 +1,2177 @@
+commit 82b04729ef5a3ffdc201a40afa6d5dc7afc3d3e8
+Author:     Matvey <matveykroychelove4ek@gmail.com>
+AuthorDate: Wed Jan 21 20:34:43 2026 +0500
+Commit:     Matvey <matveykroychelove4ek@gmail.com>
+CommitDate: Wed Jan 21 20:34:43 2026 +0500
+
+    feat: refactored class ErosionProcessTab, add test
+
+diff --git a/src/ErossionProcess/ErosionProcessTab.py b/src/ErossionProcess/ErosionProcessTab.py
+new file mode 100644
+index 0000000..c5ef03a
+--- /dev/null
++++ b/src/ErossionProcess/ErosionProcessTab.py
+@@ -0,0 +1,696 @@
++from __future__ import annotations
++
++# =========================
++# STANDARD
++# =========================
++import os
++import re
++import time
++import queue
++from dataclasses import dataclass
++from typing import Callable, Optional, Protocol, Sequence, Tuple, List
++
++import numpy as np
++
++# =========================
++# QT
++# =========================
++from PySide6.QtWidgets import (
++    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox,
++    QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox, QGridLayout,
++    QLineEdit, QStackedWidget, QComboBox
++)
++from PySide6.QtCore import Qt, Slot
++from PySide6.QtGui import QTextCursor
++
++# =========================
++# MATPLOTLIB
++# =========================
++from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
++from matplotlib.figure import Figure
++
++# =========================
++# PROJECT IMPORTS
++# =========================
++from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
++from src.widgets.axis_control_widget import AxisControlWidget
++from src.arrow3D import Arrow3DData
++
++
++Point3D = Tuple[float, float, float]
++
++
++# ==========================================================
++# Presenter stack (NO cyclic imports)
++# ==========================================================
++class ILogReader(Protocol):
++    def isRunning(self) -> bool: ...
++    def start(self) -> None: ...
++    def stop(self) -> None: ...
++    def wait(self, msec: int) -> bool: ...
++
++
++class ILogReaderFactory(Protocol):
++    def create(self, on_message: Callable[[str], None]) -> ILogReader: ...
++
++
++class QtQueueLogReaderFactory:
++    def __init__(self, q_ref: "queue.Queue"):
++        self._q = q_ref
++
++    def create(self, on_message: Callable[[str], None]) -> ILogReader:
++        source = QueueMessageSource(self._q)
++        reader = LogTextBoxErrosion(source, latency_ms=100)
++        reader.new_message.connect(on_message)
++        return reader
++
++
++class LogReaderController:
++    def __init__(self, factory: ILogReaderFactory):
++        self._factory = factory
++        self._reader: Optional[ILogReader] = None
++
++    def start(self, on_message: Callable[[str], None]) -> None:
++        if self._reader and self._reader.isRunning():
++            return
++        self._reader = self._factory.create(on_message)
++        self._reader.start()
++
++    def stop(self) -> None:
++        if self._reader and self._reader.isRunning():
++            self._reader.stop()
++            self._reader.wait(1000)
++
++
++class GCodeParser:
++    def parse_file(self, filename: str) -> List[Point3D]:
++        points: List[Point3D] = []
++        cx = cy = cz = 0.0
++
++        with open(filename, "r", encoding="utf-8", errors="ignore") as f:
++            for raw in f:
++                line = raw.strip()
++                if not line or line.startswith(";"):
++                    continue
++                if ";" in line:
++                    line = line.split(";", 1)[0].strip()
++                    if not line:
++                        continue
++
++                if line.startswith(("G0", "G1", "G00", "G01")):
++                    x = self._extract(line, "X", cx)
++                    y = self._extract(line, "Y", cy)
++                    z = self._extract(line, "Z", cz)
++                    if (x, y, z) != (cx, cy, cz):
++                        points.append((x, y, z))
++                        cx, cy, cz = x, y, z
++
++        return points or [(0.0, 0.0, 0.0)]
++
++    @staticmethod
++    def _extract(line: str, axis: str, default: float) -> float:
++        m = re.search(rf"{axis}([+-]?\d*\.?\d+)", line)
++        return float(m.group(1)) if m else default
++
++
++class GCodeMetrics:
++    @staticmethod
++    def path_length(points: Sequence[Point3D]) -> float:
++        if len(points) < 2:
++            return 0.0
++        total = 0.0
++        for i in range(1, len(points)):
++            x1, y1, z1 = points[i - 1]
++            x2, y2, z2 = points[i]
++            total += float(np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2))
++        return total
++
++    @staticmethod
++    def ranges(points: Sequence[Point3D]):
++        xs = [p[0] for p in points]
++        ys = [p[1] for p in points]
++        zs = [p[2] for p in points]
++        return (min(xs), max(xs)), (min(ys), max(ys)), (min(zs), max(zs))
++
++
++@dataclass(frozen=True)
++class ErosionRunParams:
++    electrode_diameter: float
++    electrode_length: float
++    erosion_time: float
++    erosion_up_time: float
++    erosion_depth: float
++    mode: str
++
++
++class IErosionProcessView(Protocol):
++    def show_error(self, title: str, text: str) -> None: ...
++    def set_gcode_info(self, text: str) -> None: ...
++    def plot_gcode(self, points: Sequence[Point3D]) -> None: ...
++    def append_log(self, message: str) -> None: ...
++    def set_started_ui_state(self) -> None: ...
++    def set_stopped_ui_state(self) -> None: ...
++    def set_paused_ui_state(self) -> None: ...
++    def set_running_ui_state(self) -> None: ...
++
++
++class ErosionProcessPresenter:
++    def __init__(self, controller, view: IErosionProcessView, q_ref: "queue.Queue"):
++        self._controller = controller
++        self._view = view
++        self._parser = GCodeParser()
++        self._metrics = GCodeMetrics()
++        self._log_reader = LogReaderController(QtQueueLogReaderFactory(q_ref))
++
++        self._points: List[Point3D] = []
++        self._filename: str = ""
++
++    def load_gcode(self, filename: str) -> None:
++        if not filename:
++            self._view.show_error("Ошибка", "Выберите файл G-code")
++            return
++        if not filename.lower().endswith((".gcode", ".nc")):
++            self._view.show_error("Ошибка", "Файл должен быть .gcode или .nc")
++            return
++        if not os.path.exists(filename):
++            self._view.show_error("Ошибка", "G-code файл не найден")
++            return
++
++        points = self._parser.parse_file(filename)
++        self._points = points
++        self._filename = filename
++
++        (xmin, xmax), (ymin, ymax), (zmin, zmax) = self._metrics.ranges(points)
++        info_text = (
++            f"Файл: {os.path.basename(filename)}\n"
++            f"Количество точек: {len(points)}\n"
++            f"Диапазон X: {xmin:.2f} - {xmax:.2f} мм\n"
++            f"Диапазон Y: {ymin:.2f} - {ymax:.2f} мм\n"
++            f"Диапазон Z: {zmin:.2f} - {zmax:.2f} мм\n"
++            f"Общая длина траектории: {self._metrics.path_length(points):.2f} мм\n"
++        )
++        self._view.set_gcode_info(info_text)
++        self._view.plot_gcode(points)
++
++    def start_erosion(self, params: ErosionRunParams) -> None:
++        if not self._points:
++            self._view.show_error("Ошибка", "Сначала загрузите G-code файл")
++            return
++        if not self._filename or not os.path.exists(self._filename):
++            self._view.show_error("Ошибка", "G-code файл не выбран или не существует")
++            return
++
++        self._log_reader.start(self._view.append_log)
++
++        self._controller.start_erosion_process(
++            self._points,
++            params.electrode_diameter,
++            params.electrode_length,
++            params.erosion_time,
++            params.erosion_up_time,
++            params.erosion_depth,
++            self._filename,
++            params.mode,
++        )
++        self._view.set_started_ui_state()
++
++    def stop_erosion(self, worker) -> None:
++        self._log_reader.stop()
++
++        if worker and worker.isRunning():
++            worker.stop()
++            worker.wait(1000)
++
++        if hasattr(self._controller, "stop_erosion_process"):
++            self._controller.stop_erosion_process()
++
++        self._view.set_stopped_ui_state()
++
++    def toggle_pause(self, worker, paused: bool) -> bool:
++        if worker is None or not worker.isRunning():
++            self._view.append_log("Worker not running or doesn't exist")
++            return paused
++
++        if not paused:
++            worker.pause()
++            self._view.set_paused_ui_state()
++            return True
++
++        worker.resume()
++        self._view.set_running_ui_state()
++        return False
++
++    def return_to_zero(self) -> None:
++        self._controller.set_coord_pos(self._controller.X0, self._controller.Y0, self._controller.Z0)
++
++
++# ==========================================================
++# VIEW (OLD UI preserved)
++# ==========================================================
++class ErosionProcessTab(QWidget):
++    def __init__(self, controller, q_ref):
++        super().__init__()
++        self.controller = controller
++        self._q = q_ref
++
++        self.current_step = 0
++        self.gcode_points: List[Point3D] = []
++        self.erosion_worker = None
++        self.is_process_paused = False
++
++        # ✅ correct presenter
++        self._presenter = ErosionProcessPresenter(
++            controller=controller,
++            view=self,
++            q_ref=q_ref,
++        )
++
++        self.create_widgets()
++
++    # -------- View API --------
++    def show_error(self, title: str, text: str) -> None:
++        QMessageBox.critical(self, title, text)
++
++    def set_gcode_info(self, text: str) -> None:
++        self.gcode_info_text.setPlainText(text)
++
++    def plot_gcode(self, points: Sequence[Point3D]) -> None:
++        self.gcode_points = list(points)
++        self.visualize_gcode()
++
++    @Slot(str)
++    def append_log(self, message: str) -> None:
++        self.status_text.append(message)
++        cursor = self.status_text.textCursor()
++        cursor.movePosition(QTextCursor.End)
++        self.status_text.setTextCursor(cursor)
++
++    def set_started_ui_state(self) -> None:
++        self.start_btn.setEnabled(False)
++        self.pause_btn.setEnabled(True)
++        self.pause_btn.setText("⏸ Пауза")
++        self.is_process_paused = False
++        self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++
++    def set_stopped_ui_state(self) -> None:
++        self.start_btn.setEnabled(True)
++        self.pause_btn.setEnabled(False)
++        self.pause_btn.setText("⏸ Пауза")
++        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++        self.is_process_paused = False
++        self.progress_bar.setValue(0)
++        self.time_label.setText("Остановлено")
++
++    def set_paused_ui_state(self) -> None:
++        self.pause_btn.setText("▶ Продолжить")
++        self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
++        self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
++
++    def set_running_ui_state(self) -> None:
++        self.pause_btn.setText("⏸ Пауза")
++        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++        self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++
++    # -------- OLD UI --------
++    def create_widgets(self):
++        main_layout = QVBoxLayout()
++
++        title_label = QLabel("Процесс электроэрозии")
++        title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
++        title_label.setAlignment(Qt.AlignCenter)
++        main_layout.addWidget(title_label)
++
++        self.step_indicator = QLabel("Шаг 0: Загрузка G-code файла")
++        self.step_indicator.setStyleSheet("font-weight: bold;")
++        self.step_indicator.setAlignment(Qt.AlignCenter)
++        main_layout.addWidget(self.step_indicator)
++
++        self.stacked_widget = QStackedWidget()
++        self.stacked_widget.addWidget(self.create_step0())
++        self.stacked_widget.addWidget(self.create_step1())
++        self.stacked_widget.addWidget(self.create_step2())
++        self.stacked_widget.addWidget(self.create_step3())
++        main_layout.addWidget(self.stacked_widget)
++
++        nav_layout = QHBoxLayout()
++
++        self.prev_btn = QPushButton("Назад")
++        self.prev_btn.clicked.connect(self.prev_step)
++        self.prev_btn.setEnabled(False)
++        nav_layout.addWidget(self.prev_btn)
++
++        self.next_btn = QPushButton("Далее")
++        self.next_btn.clicked.connect(self.next_step)
++        nav_layout.addWidget(self.next_btn)
++
++        nav_layout.addStretch()
++        main_layout.addLayout(nav_layout)
++
++        self.setLayout(main_layout)
++        self.show_step(0)
++
++    def create_step0(self):
++        widget = QWidget()
++        layout = QHBoxLayout()
++
++        left_widget = QGroupBox("Загрузка G-code файла")
++        left_layout = QVBoxLayout()
++
++        file_frame = QWidget()
++        file_layout = QHBoxLayout(file_frame)
++
++        self.gcode_file_edit = QLineEdit()
++        self.gcode_file_edit.setPlaceholderText("Выберите G-code файл...")
++        file_layout.addWidget(self.gcode_file_edit)
++
++        browse_btn = QPushButton("Обзор")
++        browse_btn.clicked.connect(self.select_gcode_file)
++        file_layout.addWidget(browse_btn)
++
++        left_layout.addWidget(file_frame)
++
++        info_group = QGroupBox("Информация о G-code")
++        info_layout = QVBoxLayout()
++
++        self.gcode_info_text = QTextEdit()
++        self.gcode_info_text.setReadOnly(True)
++        info_layout.addWidget(self.gcode_info_text)
++
++        info_group.setLayout(info_layout)
++        left_layout.addWidget(info_group)
++
++        left_widget.setLayout(left_layout)
++        layout.addWidget(left_widget)
++
++        right_widget = QGroupBox("Визуализация G-code")
++        right_layout = QVBoxLayout()
++
++        self.gcode_fig = Figure(figsize=(6, 5), dpi=100)
++        self.gcode_ax = self.gcode_fig.add_subplot(111, projection="3d")
++        self.gcode_ax.set_xlabel("X (мм)")
++        self.gcode_ax.set_ylabel("Y (мм)")
++        self.gcode_ax.set_zlabel("Z (мм)")
++        self.gcode_ax.set_title("Визуализация траектории G-code")
++
++        self.gcode_canvas = FigureCanvas(self.gcode_fig)
++        right_layout.addWidget(self.gcode_canvas)
++
++        right_widget.setLayout(right_layout)
++        layout.addWidget(right_widget)
++
++        widget.setLayout(layout)
++        return widget
++
++    def create_step1(self):
++        widget = QWidget()
++        layout = QHBoxLayout()
++
++        left_widget = QGroupBox("Видеопоток с камеры")
++        left_layout = QVBoxLayout()
++
++        self.video_label = QLabel()
++        self.video_label.setAlignment(Qt.AlignCenter)
++        self.video_label.setMinimumSize(640, 480)
++        self.video_label.setStyleSheet("border: 1px solid gray;")
++        self.video_label.setText("Загрузка видеопотока...")
++        left_layout.addWidget(self.video_label)
++
++        left_widget.setLayout(left_layout)
++        layout.addWidget(left_widget)
++
++        right_widget = QGroupBox("Управление положением робота")
++        right_layout = QVBoxLayout()
++
++        axes_widget = QWidget()
++        axes_layout = QHBoxLayout()
++
++        self.x_control = AxisControlWidget("X")
++        self.x_control.set_current_value(self.controller.current_x)
++
++        self.y_control = AxisControlWidget("Y")
++        self.y_control.set_current_value(self.controller.current_y)
++
++        self.z_control = AxisControlWidget("Z")
++        self.z_control.set_current_value(self.controller.current_z)
++
++        reset_btn = QPushButton("Вернуться в нулевое положение")
++        reset_btn.clicked.connect(self.return_to_zero_xyz)
++        reset_btn.setStyleSheet("""
++            QPushButton { background-color: #ff6b6b; color: white; font-weight: bold; border: none; border-radius: 4px; }
++            QPushButton:hover { background-color: #ff5252; }
++            QPushButton:pressed { background-color: #e53935; }
++            QPushButton:disabled { background-color: #808080; }
++        """)
++
++        self.x_control.position_changed.connect(self.on_position_changed)
++        self.y_control.position_changed.connect(self.on_position_changed)
++        self.z_control.position_changed.connect(self.on_position_changed)
++
++        axes_layout.addWidget(self.x_control)
++        axes_layout.addWidget(self.y_control)
++        axes_layout.addWidget(self.z_control)
++        axes_widget.setLayout(axes_layout)
++
++        right_layout.addWidget(axes_widget)
++        right_layout.addStretch(1)
++        right_layout.addWidget(reset_btn)
++
++        right_widget.setLayout(right_layout)
++        layout.addWidget(right_widget)
++
++        widget.setLayout(layout)
++        return widget
++
++    def create_step2(self):
++        widget = QWidget()
++        layout = QVBoxLayout()
++
++        params_group = QGroupBox("Параметры электроэрозионной обработки")
++        params_layout = QGridLayout()
++
++        parameters = [
++            ("Толщина электрода (мм)", "electrode_diameter", 2.0, 0.1, 10.0),
++            ("Длина электрода (мм)", "electrode_length", 100.0, 10.0, 500.0),
++            ("Время прожига (с)", "erosion_time", 10.0, 1.0, 60.0),
++            ("Время поднятия электрода (с)", "erosion_up_time", 5.0, 1.0, 30.0),
++            ("Глубина прожига (мм)", "erosion_depth", 0.1, 0.01, 1.0),
++            ("Скорость перемещения (мм/с)", "erosion_speed", 10.0, 1.0, 100.0),
++        ]
++
++        self.param_spinboxes = {}
++        for i, (label, name, default, min_val, max_val) in enumerate(parameters):
++            params_layout.addWidget(QLabel(label), i, 0)
++            spin = QDoubleSpinBox()
++            spin.setRange(min_val, max_val)
++            spin.setValue(default)
++            spin.setSingleStep(0.1 if max_val > 10 else 0.01)
++            spin.setSuffix(" мм" if "мм" in label else " с")
++            self.param_spinboxes[name] = spin
++            params_layout.addWidget(spin, i, 1)
++
++        params_layout.addWidget(QLabel("Режим эррозии"), 6, 0)
++        self.coombbox = QComboBox()
++        self.coombbox.addItems(["emulated", "work", "test"])
++        params_layout.addWidget(self.coombbox, 6, 1)
++
++        params_group.setLayout(params_layout)
++        layout.addWidget(params_group)
++
++        scheme_label = QLabel("Схема параметров электроэрозии")
++        scheme_label.setAlignment(Qt.AlignCenter)
++        layout.addWidget(scheme_label)
++
++        scheme_placeholder = QLabel("Место для схемы параметров")
++        scheme_placeholder.setAlignment(Qt.AlignCenter)
++        scheme_placeholder.setStyleSheet("border: 1px dashed gray; min-height: 200px;")
++        layout.addWidget(scheme_placeholder)
++
++        layout.addStretch()
++        widget.setLayout(layout)
++        return widget
++
++    def create_step3(self):
++        widget = QWidget()
++        layout = QVBoxLayout()
++        layout.setContentsMargins(10, 10, 10, 10)
++
++        status_group = QGroupBox("Статус процесса")
++        status_layout = QVBoxLayout()
++
++        self.process_status_label = QLabel("Готов к запуску")
++        self.process_status_label.setStyleSheet("""
++            font-weight: bold; font-size: 12pt; padding: 10px; border-radius: 5px; background-color: #ecf0f1;
++        """)
++        self.process_status_label.setAlignment(Qt.AlignCenter)
++        self.process_status_label.setMinimumHeight(40)
++        status_layout.addWidget(self.process_status_label)
++
++        status_group.setLayout(status_layout)
++        layout.addWidget(status_group)
++
++        progress_group = QGroupBox("Прогресс выполнения")
++        progress_layout = QVBoxLayout()
++        progress_bar_layout = QHBoxLayout()
++        progress_bar_layout.addWidget(QLabel("Прогресс:"))
++
++        self.progress_bar = QProgressBar()
++        self.progress_bar.setRange(0, 100)
++        progress_bar_layout.addWidget(self.progress_bar, 1)
++
++        self.time_label = QLabel("Осталось: --:--")
++        progress_bar_layout.addWidget(self.time_label)
++
++        progress_layout.addLayout(progress_bar_layout)
++        progress_group.setLayout(progress_layout)
++        layout.addWidget(progress_group)
++
++        current_group = QGroupBox("Текущие параметры")
++        current_layout = QVBoxLayout()
++
++        self.status_text = QTextEdit()
++        self.status_text.setReadOnly(True)
++        current_layout.addWidget(self.status_text)
++
++        current_group.setLayout(current_layout)
++        layout.addWidget(current_group)
++
++        control_layout = QHBoxLayout()
++
++        self.start_btn = QPushButton("Запуск")
++        self.start_btn.clicked.connect(self.start_erosion)
++        control_layout.addWidget(self.start_btn)
++
++        self.pause_btn = QPushButton("⏸ Пауза")
++        self.pause_btn.setEnabled(False)
++        self.pause_btn.setMinimumHeight(40)
++        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++        self.pause_btn.clicked.connect(self.toggle_pause)
++        control_layout.addWidget(self.pause_btn)
++
++        self.stop_btn = QPushButton("Стоп")
++        self.stop_btn.clicked.connect(self.stop_erosion)
++        control_layout.addWidget(self.stop_btn)
++
++        self.changetool = QPushButton("Заменить инструмент")
++        self.changetool.clicked.connect(self.ChangeTools)
++        control_layout.addWidget(self.changetool)
++
++        control_layout.addStretch()
++        layout.addLayout(control_layout)
++
++        widget.setLayout(layout)
++        return widget
++
++    # -------- wired handlers --------
++    @Slot()
++    def select_gcode_file(self):
++        filename, _ = QFileDialog.getOpenFileName(
++            self, "Выберите G-code файл", "", "G-code files (*.gcode *.nc);;All files (*.*)"
++        )
++        if filename:
++            self.gcode_file_edit.setText(filename)
++            self._presenter.load_gcode(filename)
++
++    @Slot()
++    def start_erosion(self):
++        params = ErosionRunParams(
++            electrode_diameter=self.param_spinboxes["electrode_diameter"].value(),
++            electrode_length=self.param_spinboxes["electrode_length"].value(),
++            erosion_time=self.param_spinboxes["erosion_time"].value(),
++            erosion_up_time=self.param_spinboxes["erosion_up_time"].value(),
++            erosion_depth=self.param_spinboxes["erosion_depth"].value(),
++            mode=self.coombbox.currentText(),
++        )
++        self._presenter.start_erosion(params)
++
++    def set_erosion_worker(self, worker):
++        self.erosion_worker = worker
++
++    @Slot()
++    def toggle_pause(self):
++        self.is_process_paused = self._presenter.toggle_pause(self.erosion_worker, self.is_process_paused)
++
++    @Slot()
++    def stop_erosion(self):
++        self._presenter.stop_erosion(self.erosion_worker)
++        self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
++
++    # -------- helper methods --------
++    def visualize_gcode(self):
++        self.gcode_ax.clear()
++        if self.gcode_points:
++            points = np.array(self.gcode_points)
++            self.gcode_ax.plot(points[:, 0], points[:, 1], points[:, 2], "b-", linewidth=2, alpha=0.7)
++            self.gcode_ax.scatter(
++                points[:, 0], points[:, 1], points[:, 2],
++                c=range(len(points)), cmap="viridis", s=20, alpha=0.6
++            )
++
++            if len(points) > 1:
++                for i in range(0, len(points) - 1, max(1, len(points) // 10)):
++                    x1, y1, z1 = points[i]
++                    x2, y2, z2 = points[i + 1]
++                    dx, dy, dz = x2 - x1, y2 - y1, z2 - z1
++                    length = np.sqrt(dx**2 + dy**2 + dz**2)
++                    if length > 0:
++                        dx, dy, dz = dx / length * 10, dy / length * 10, dz / length * 10
++                        arrow = Arrow3DData(
++                            [x1, x1 + dx], [y1, y1 + dy], [z1, z1 + dz],
++                            mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7
++                        )
++                        self.gcode_ax.add_artist(arrow)
++        self.gcode_canvas.draw()
++
++    @Slot()
++    def show_step(self, step_index):
++        self.stacked_widget.setCurrentIndex(step_index)
++        self.current_step = step_index
++        step_names = [
++            "Шаг 0: Загрузка G-code файла",
++            "Шаг 1: Настройка начального положения",
++            "Шаг 2: Настройка процесса эрозии",
++            "Шаг 3: Запуск процесса эрозии",
++        ]
++        self.step_indicator.setText(step_names[step_index])
++        self.prev_btn.setEnabled(step_index > 0)
++        self.next_btn.setEnabled(step_index < self.stacked_widget.count() - 1)
++
++    @Slot()
++    def next_step(self):
++        if self.current_step < self.stacked_widget.count() - 1:
++            self.show_step(self.current_step + 1)
++
++    @Slot()
++    def prev_step(self):
++        if self.current_step > 0:
++            self.show_step(self.current_step - 1)
++
++    @Slot(str, float)
++    def on_position_changed(self, axis, value):
++        positions = {"X": self.x_control, "Y": self.y_control, "Z": self.z_control}
++        x = float(positions["X"].value_label.text().split()[0])
++        y = float(positions["Y"].value_label.text().split()[0])
++        z = float(positions["Z"].value_label.text().split()[0])
++        self.controller.set_coord_pos(x, y, z)
++
++    def update_process_status(self, status, color="#ecf0f1"):
++        self.process_status_label.setText(status)
++        self.process_status_label.setStyleSheet(f"""
++            font-weight: bold;
++            font-size: 12pt;
++            padding: 10px;
++            border-radius: 5px;
++            background-color: {color};
++        """)
++
++    @Slot()
++    def ChangeTools(self):
++        if self.erosion_worker and self.erosion_worker.isRunning():
++            self.erosion_worker.pause()
++            self.is_process_paused = True
++            self.set_paused_ui_state()
++        QMessageBox.information(self, "Смена инструмента", "Замените инструмент, затем нажмите кнопку продолжить")
++
++    @Slot()
++    def return_to_zero_xyz(self):
++        self._presenter.return_to_zero()
+diff --git a/src/ErossionProcess/__init__.py b/src/ErossionProcess/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index 168f1eb..16339f2 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -28,7 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
+ from .log import Log
+ from src.arrow3D import Arrow3D, Arrow3DData
+ from src.widgets.axis_control_widget import AxisControlWidget
+-from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
++from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.services.xyz_trajectory_service import XYZTrajectoryService
+ from src.services.joint_trajectory_service import JointTrajectoryService
+ from src.presenters.xyz_control_presenter import XYZControlPresenter
+@@ -37,6 +37,7 @@ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+ from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+ from src.VideoStream.VideoStreamThread import VideoStreamThread
++from src.ErossionProcess.ErosionProcessTab import *
+ 
+ 
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+@@ -284,671 +285,671 @@ class ErosionWorker(QThread):
+         self.is_paused = False
+ '''
+ # Вкладка процесса эрозии
+-class ErosionProcessTab(QWidget):
+-    def __init__(self, controller):
+-        super().__init__()
+-        self.controller = controller
+-        self.current_step = 0
+-        self.gcode_points = []
+-        self.erosion_worker = None
+-        self.is_process_paused = False
+-        self.queue_reader = None    #Ссылка на поток чтения очереди
+-        self.create_widgets()
+-
+-    def start_queue_reader(self):
+-        """Запуск потока чтения из очереди"""
+-        source = QueueMessageSource(q)
+-        self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
+-        self.queue_reader.new_message.connect(self.append_to_status_text)
+-        self.queue_reader.start()
+-        
+-    def stop_queue_reader(self):
+-        """Остановка потока чтения из очереди"""
+-        if self.queue_reader and self.queue_reader.isRunning():
+-            self.queue_reader.stop()
+-            self.queue_reader.wait(1000)  # Ждем до 1 секунды для завершения 
+-
+-    @Slot(str)
+-    def append_to_status_text(self, message):
+-        """Добавление сообщения в текстовый виджет (вызывается из главного потока)"""
+-        self.status_text.append(message)
+-
+-        # Автопрокрутка вниз
+-        cursor = self.status_text.textCursor()
+-        cursor.movePosition(QTextCursor.End)
+-        self.status_text.setTextCursor(cursor)
+-
+-
+-    def create_widgets(self):
+-        main_layout = QVBoxLayout()
+-        
+-        title_label = QLabel("Процесс электроэрозии")
+-        title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+-        title_label.setAlignment(Qt.AlignCenter)
+-        main_layout.addWidget(title_label)
++# class ErosionProcessTab(QWidget):
++#     def __init__(self, controller):
++#         super().__init__()
++#         self.controller = controller
++#         self.current_step = 0
++#         self.gcode_points = []
++#         self.erosion_worker = None
++#         self.is_process_paused = False
++#         self.queue_reader = None    #Ссылка на поток чтения очереди
++#         self.create_widgets()
++
++#     def start_queue_reader(self):
++#         """Запуск потока чтения из очереди"""
++#         source = QueueMessageSource(q)
++#         self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
++#         self.queue_reader.new_message.connect(self.append_to_status_text)
++#         self.queue_reader.start()
++        
++#     def stop_queue_reader(self):
++#         """Остановка потока чтения из очереди"""
++#         if self.queue_reader and self.queue_reader.isRunning():
++#             self.queue_reader.stop()
++#             self.queue_reader.wait(1000)  # Ждем до 1 секунды для завершения 
++
++#     @Slot(str)
++#     def append_to_status_text(self, message):
++#         """Добавление сообщения в текстовый виджет (вызывается из главного потока)"""
++#         self.status_text.append(message)
++
++#         # Автопрокрутка вниз
++#         cursor = self.status_text.textCursor()
++#         cursor.movePosition(QTextCursor.End)
++#         self.status_text.setTextCursor(cursor)
++
++
++#     def create_widgets(self):
++#         main_layout = QVBoxLayout()
++        
++#         title_label = QLabel("Процесс электроэрозии")
++#         title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
++#         title_label.setAlignment(Qt.AlignCenter)
++#         main_layout.addWidget(title_label)
+         
+-        self.step_indicator = QLabel("Шаг 0: Загрузка G-code файла")
+-        self.step_indicator.setStyleSheet("font-weight: bold;")
+-        self.step_indicator.setAlignment(Qt.AlignCenter)
+-        main_layout.addWidget(self.step_indicator)
++#         self.step_indicator = QLabel("Шаг 0: Загрузка G-code файла")
++#         self.step_indicator.setStyleSheet("font-weight: bold;")
++#         self.step_indicator.setAlignment(Qt.AlignCenter)
++#         main_layout.addWidget(self.step_indicator)
+         
+-        self.stacked_widget = QStackedWidget()
++#         self.stacked_widget = QStackedWidget()
+         
+-        step0_widget = self.create_step0()
+-        self.stacked_widget.addWidget(step0_widget)
++#         step0_widget = self.create_step0()
++#         self.stacked_widget.addWidget(step0_widget)
+         
+-        step1_widget = self.create_step1()
+-        self.stacked_widget.addWidget(step1_widget)
++#         step1_widget = self.create_step1()
++#         self.stacked_widget.addWidget(step1_widget)
+         
+-        step2_widget = self.create_step2()
+-        self.stacked_widget.addWidget(step2_widget)
++#         step2_widget = self.create_step2()
++#         self.stacked_widget.addWidget(step2_widget)
+         
+-        step3_widget = self.create_step3()
+-        self.stacked_widget.addWidget(step3_widget)
++#         step3_widget = self.create_step3()
++#         self.stacked_widget.addWidget(step3_widget)
+         
+-        main_layout.addWidget(self.stacked_widget)
++#         main_layout.addWidget(self.stacked_widget)
+         
+-        nav_layout = QHBoxLayout()
++#         nav_layout = QHBoxLayout()
+         
+-        self.prev_btn = QPushButton("Назад")
+-        self.prev_btn.clicked.connect(self.prev_step)
+-        self.prev_btn.setEnabled(False)
+-        nav_layout.addWidget(self.prev_btn)
++#         self.prev_btn = QPushButton("Назад")
++#         self.prev_btn.clicked.connect(self.prev_step)
++#         self.prev_btn.setEnabled(False)
++#         nav_layout.addWidget(self.prev_btn)
+         
+-        self.next_btn = QPushButton("Далее")
+-        self.next_btn.clicked.connect(self.next_step)
+-        # self.next_btn.setStyleSheet("background-color: green; color: white;")
+-        nav_layout.addWidget(self.next_btn)
++#         self.next_btn = QPushButton("Далее")
++#         self.next_btn.clicked.connect(self.next_step)
++#         # self.next_btn.setStyleSheet("background-color: green; color: white;")
++#         nav_layout.addWidget(self.next_btn)
+         
+         
+         
+-        nav_layout.addStretch()
+-        main_layout.addLayout(nav_layout)
++#         nav_layout.addStretch()
++#         main_layout.addLayout(nav_layout)
+         
+-        self.setLayout(main_layout)
+-        self.show_step(0)
++#         self.setLayout(main_layout)
++#         self.show_step(0)
+     
+-    def create_step0(self):
+-        widget = QWidget()
+-        layout = QHBoxLayout()
++#     def create_step0(self):
++#         widget = QWidget()
++#         layout = QHBoxLayout()
+         
+-        left_widget = QGroupBox("Загрузка G-code файла")
+-        left_layout = QVBoxLayout()
++#         left_widget = QGroupBox("Загрузка G-code файла")
++#         left_layout = QVBoxLayout()
+         
+-        file_frame = QWidget()
+-        file_layout = QHBoxLayout(file_frame)
++#         file_frame = QWidget()
++#         file_layout = QHBoxLayout(file_frame)
+         
+-        self.gcode_file_edit = QLineEdit()
+-        self.gcode_file_edit.setPlaceholderText("Выберите G-code файл...")
+-        file_layout.addWidget(self.gcode_file_edit)
++#         self.gcode_file_edit = QLineEdit()
++#         self.gcode_file_edit.setPlaceholderText("Выберите G-code файл...")
++#         file_layout.addWidget(self.gcode_file_edit)
+         
+-        browse_btn = QPushButton("Обзор")
+-        browse_btn.clicked.connect(self.select_gcode_file)
+-        file_layout.addWidget(browse_btn)
++#         browse_btn = QPushButton("Обзор")
++#         browse_btn.clicked.connect(self.select_gcode_file)
++#         file_layout.addWidget(browse_btn)
+         
+-        left_layout.addWidget(file_frame)
++#         left_layout.addWidget(file_frame)
+         
+-        info_group = QGroupBox("Информация о G-code")
+-        info_layout = QVBoxLayout()
++#         info_group = QGroupBox("Информация о G-code")
++#         info_layout = QVBoxLayout()
+         
+-        self.gcode_info_text = QTextEdit()
+-        self.gcode_info_text.setReadOnly(True)
+-        info_layout.addWidget(self.gcode_info_text)
++#         self.gcode_info_text = QTextEdit()
++#         self.gcode_info_text.setReadOnly(True)
++#         info_layout.addWidget(self.gcode_info_text)
+         
+-        info_group.setLayout(info_layout)
+-        left_layout.addWidget(info_group)
++#         info_group.setLayout(info_layout)
++#         left_layout.addWidget(info_group)
+         
+-        left_widget.setLayout(left_layout)
+-        layout.addWidget(left_widget)
++#         left_widget.setLayout(left_layout)
++#         layout.addWidget(left_widget)
+         
+-        right_widget = QGroupBox("Визуализация G-code")
+-        right_layout = QVBoxLayout()
++#         right_widget = QGroupBox("Визуализация G-code")
++#         right_layout = QVBoxLayout()
+         
+-        self.gcode_fig = Figure(figsize=(6, 5), dpi=100)
+-        self.gcode_ax = self.gcode_fig.add_subplot(111, projection='3d')
++#         self.gcode_fig = Figure(figsize=(6, 5), dpi=100)
++#         self.gcode_ax = self.gcode_fig.add_subplot(111, projection='3d')
+         
+-        self.gcode_ax.set_xlabel('X (мм)')
+-        self.gcode_ax.set_ylabel('Y (мм)')
+-        self.gcode_ax.set_zlabel('Z (мм)')
+-        self.gcode_ax.set_title('Визуализация траектории G-code')
++#         self.gcode_ax.set_xlabel('X (мм)')
++#         self.gcode_ax.set_ylabel('Y (мм)')
++#         self.gcode_ax.set_zlabel('Z (мм)')
++#         self.gcode_ax.set_title('Визуализация траектории G-code')
+         
+-        self.gcode_canvas = FigureCanvas(self.gcode_fig)
+-        right_layout.addWidget(self.gcode_canvas)
++#         self.gcode_canvas = FigureCanvas(self.gcode_fig)
++#         right_layout.addWidget(self.gcode_canvas)
+         
+-        right_widget.setLayout(right_layout)
+-        layout.addWidget(right_widget)
++#         right_widget.setLayout(right_layout)
++#         layout.addWidget(right_widget)
+         
+-        widget.setLayout(layout)
+-        return widget
++#         widget.setLayout(layout)
++#         return widget
+     
+-    def create_step1(self):
+-        widget = QWidget()
+-        layout = QHBoxLayout()
+-        
+-        left_widget = QGroupBox("Видеопоток с камеры")
+-        left_layout = QVBoxLayout()
+-        
+-        self.video_label = QLabel()
+-        self.video_label.setAlignment(Qt.AlignCenter)
+-        self.video_label.setMinimumSize(640, 480)
+-        self.video_label.setStyleSheet("border: 1px solid gray;")
+-        self.video_label.setText("Загрузка видеопотока...")
+-        left_layout.addWidget(self.video_label)
+-        
+-        left_widget.setLayout(left_layout)
+-        layout.addWidget(left_widget)
+-        
+-        right_widget = QGroupBox("Управление положением робота")
+-        right_layout = QVBoxLayout()
+-        
+-        axes_widget = QWidget()
+-        axes_layout = QHBoxLayout()
+-        
+-        self.x_control = AxisControlWidget('X')
+-        self.x_control.set_current_value(self.controller.current_x)
+-
+-        self.y_control = AxisControlWidget('Y')
+-        self.y_control.set_current_value(self.controller.current_y)
+-        
+-        self.z_control = AxisControlWidget('Z')
+-        self.z_control.set_current_value(self.controller.current_z)
+-        
+-                # Кнопка возврата в нулевое положение
+-        reset_btn = QPushButton("Вернуться в нулевое положение")
+-        reset_btn.clicked.connect(self.return_to_zero_xyz)
+-        reset_btn.setStyleSheet("""
+-            QPushButton {
+-                background-color: #ff6b6b;
+-                color: white;
+-                font-weight: bold;
+-                border: none;
+-                border-radius: 4px;
+-            }
+-            QPushButton:hover {
+-                background-color: #ff5252;
+-            }
+-            QPushButton:pressed {
+-                background-color: #e53935;
+-            }
+-            QPushButton:disabled {
+-                background-color: #808080;
+-            }
+-        """)
+-        # reset_btn.clicked.connect(self.reset_to_zero)
+-        
+-
+-        self.x_control.position_changed.connect(self.on_position_changed)
+-        self.y_control.position_changed.connect(self.on_position_changed)
+-        self.z_control.position_changed.connect(self.on_position_changed)
+-        
+-        axes_layout.addWidget(self.x_control)
+-        axes_layout.addWidget(self.y_control)
+-        axes_layout.addWidget(self.z_control)
+-        axes_widget.setLayout(axes_layout)
+-
+-        right_layout.addWidget(axes_widget)
+-        right_layout.addStretch(1)
+-        right_layout.addWidget(reset_btn)       
+-
+-        right_widget.setLayout(right_layout)
+-        layout.addWidget(right_widget)
+-        
+-        widget.setLayout(layout)
+-        return widget
++#     def create_step1(self):
++#         widget = QWidget()
++#         layout = QHBoxLayout()
++        
++#         left_widget = QGroupBox("Видеопоток с камеры")
++#         left_layout = QVBoxLayout()
++        
++#         self.video_label = QLabel()
++#         self.video_label.setAlignment(Qt.AlignCenter)
++#         self.video_label.setMinimumSize(640, 480)
++#         self.video_label.setStyleSheet("border: 1px solid gray;")
++#         self.video_label.setText("Загрузка видеопотока...")
++#         left_layout.addWidget(self.video_label)
++        
++#         left_widget.setLayout(left_layout)
++#         layout.addWidget(left_widget)
++        
++#         right_widget = QGroupBox("Управление положением робота")
++#         right_layout = QVBoxLayout()
++        
++#         axes_widget = QWidget()
++#         axes_layout = QHBoxLayout()
++        
++#         self.x_control = AxisControlWidget('X')
++#         self.x_control.set_current_value(self.controller.current_x)
++
++#         self.y_control = AxisControlWidget('Y')
++#         self.y_control.set_current_value(self.controller.current_y)
++        
++#         self.z_control = AxisControlWidget('Z')
++#         self.z_control.set_current_value(self.controller.current_z)
++        
++#                 # Кнопка возврата в нулевое положение
++#         reset_btn = QPushButton("Вернуться в нулевое положение")
++#         reset_btn.clicked.connect(self.return_to_zero_xyz)
++#         reset_btn.setStyleSheet("""
++#             QPushButton {
++#                 background-color: #ff6b6b;
++#                 color: white;
++#                 font-weight: bold;
++#                 border: none;
++#                 border-radius: 4px;
++#             }
++#             QPushButton:hover {
++#                 background-color: #ff5252;
++#             }
++#             QPushButton:pressed {
++#                 background-color: #e53935;
++#             }
++#             QPushButton:disabled {
++#                 background-color: #808080;
++#             }
++#         """)
++#         # reset_btn.clicked.connect(self.reset_to_zero)
++        
++
++#         self.x_control.position_changed.connect(self.on_position_changed)
++#         self.y_control.position_changed.connect(self.on_position_changed)
++#         self.z_control.position_changed.connect(self.on_position_changed)
++        
++#         axes_layout.addWidget(self.x_control)
++#         axes_layout.addWidget(self.y_control)
++#         axes_layout.addWidget(self.z_control)
++#         axes_widget.setLayout(axes_layout)
++
++#         right_layout.addWidget(axes_widget)
++#         right_layout.addStretch(1)
++#         right_layout.addWidget(reset_btn)       
++
++#         right_widget.setLayout(right_layout)
++#         layout.addWidget(right_widget)
++        
++#         widget.setLayout(layout)
++#         return widget
+     
+-    def create_step2(self):
+-        widget = QWidget()
+-        layout = QVBoxLayout()
+-        
+-        params_group = QGroupBox("Параметры электроэрозионной обработки")
+-        params_layout = QGridLayout()
+-        
+-        parameters = [
+-            ('Толщина электрода (мм)', 'electrode_diameter', 2.0, 0.1, 10.0),
+-            ('Длина электрода (мм)', 'electrode_length', 100.0, 10.0, 500.0),
+-            ('Время прожига (с)', 'erosion_time', 10.0, 1.0, 60.0),
+-            ('Время поднятия электрода (с)', 'erosion_up_time', 5.0, 1.0, 30.0),
+-            ('Глубина прожига (мм)', 'erosion_depth', 0.1, 0.01, 1.0),
+-            ('Скорость перемещения (мм/с)', 'erosion_speed', 10.0, 1.0, 100.0)
+-        ]
+-        
+-        self.param_spinboxes = {}
+-        self.mode = None
+-        
+-        for i, (label, name, default, min_val, max_val) in enumerate(parameters):
+-            params_layout.addWidget(QLabel(label), i, 0)
+-            
+-            spinbox = QDoubleSpinBox()
+-            spinbox.setRange(min_val, max_val)
+-            spinbox.setValue(default)
+-            spinbox.setSingleStep(0.1 if max_val > 10 else 0.01)
+-            spinbox.setSuffix(" мм" if "мм" in label else " с")
+-            self.param_spinboxes[name] = spinbox
+-            
+-            params_layout.addWidget(spinbox, i, 1)
+-
+-        params_layout.addWidget(QLabel("Режим эррозии"), 6, 0)
+-        self.coombbox = QComboBox()
+-        self.coombbox.addItems(["emulated", "work", "test"])
+-        # self.mode = self.coombbox.currentText()
+-        params_layout.addWidget(self.coombbox, 6, 1)
+-        
+-        params_group.setLayout(params_layout)
+-        layout.addWidget(params_group)
+-        
+-        scheme_label = QLabel("Схема параметров электроэрозии")
+-        scheme_label.setAlignment(Qt.AlignCenter)
+-        layout.addWidget(scheme_label)
+-        
+-        scheme_placeholder = QLabel("Место для схемы параметров")
+-        scheme_placeholder.setAlignment(Qt.AlignCenter)
+-        scheme_placeholder.setStyleSheet("border: 1px dashed gray; min-height: 200px;")
+-        layout.addWidget(scheme_placeholder)
++#     def create_step2(self):
++#         widget = QWidget()
++#         layout = QVBoxLayout()
+         
+-        layout.addStretch()
+-        widget.setLayout(layout)
+-        return widget
++#         params_group = QGroupBox("Параметры электроэрозионной обработки")
++#         params_layout = QGridLayout()
++        
++#         parameters = [
++#             ('Толщина электрода (мм)', 'electrode_diameter', 2.0, 0.1, 10.0),
++#             ('Длина электрода (мм)', 'electrode_length', 100.0, 10.0, 500.0),
++#             ('Время прожига (с)', 'erosion_time', 10.0, 1.0, 60.0),
++#             ('Время поднятия электрода (с)', 'erosion_up_time', 5.0, 1.0, 30.0),
++#             ('Глубина прожига (мм)', 'erosion_depth', 0.1, 0.01, 1.0),
++#             ('Скорость перемещения (мм/с)', 'erosion_speed', 10.0, 1.0, 100.0)
++#         ]
++        
++#         self.param_spinboxes = {}
++#         self.mode = None
++        
++#         for i, (label, name, default, min_val, max_val) in enumerate(parameters):
++#             params_layout.addWidget(QLabel(label), i, 0)
++            
++#             spinbox = QDoubleSpinBox()
++#             spinbox.setRange(min_val, max_val)
++#             spinbox.setValue(default)
++#             spinbox.setSingleStep(0.1 if max_val > 10 else 0.01)
++#             spinbox.setSuffix(" мм" if "мм" in label else " с")
++#             self.param_spinboxes[name] = spinbox
++            
++#             params_layout.addWidget(spinbox, i, 1)
++
++#         params_layout.addWidget(QLabel("Режим эррозии"), 6, 0)
++#         self.coombbox = QComboBox()
++#         self.coombbox.addItems(["emulated", "work", "test"])
++#         # self.mode = self.coombbox.currentText()
++#         params_layout.addWidget(self.coombbox, 6, 1)
++        
++#         params_group.setLayout(params_layout)
++#         layout.addWidget(params_group)
++        
++#         scheme_label = QLabel("Схема параметров электроэрозии")
++#         scheme_label.setAlignment(Qt.AlignCenter)
++#         layout.addWidget(scheme_label)
++        
++#         scheme_placeholder = QLabel("Место для схемы параметров")
++#         scheme_placeholder.setAlignment(Qt.AlignCenter)
++#         scheme_placeholder.setStyleSheet("border: 1px dashed gray; min-height: 200px;")
++#         layout.addWidget(scheme_placeholder)
++        
++#         layout.addStretch()
++#         widget.setLayout(layout)
++#         return widget
+     
+-    def create_step3(self):
+-        widget = QWidget()
+-        layout = QVBoxLayout()
+-        layout.setContentsMargins(10, 10, 10, 10)
++#     def create_step3(self):
++#         widget = QWidget()
++#         layout = QVBoxLayout()
++#         layout.setContentsMargins(10, 10, 10, 10)
+     
+-        # Статус процесса
+-        status_group = QGroupBox("Статус процесса")
+-        status_layout = QVBoxLayout()
+-        
+-        self.process_status_label = QLabel("Готов к запуску")
+-        self.process_status_label.setStyleSheet("""
+-            font-weight: bold; 
+-            font-size: 12pt; 
+-            padding: 10px;
+-            border-radius: 5px;
+-            background-color: #ecf0f1;
+-        """)
+-        self.process_status_label.setAlignment(Qt.AlignCenter)
+-        self.process_status_label.setMinimumHeight(40)
+-        status_layout.addWidget(self.process_status_label)
+-        
+-        status_group.setLayout(status_layout)
+-        layout.addWidget(status_group)
+-        
+-        progress_group = QGroupBox("Прогресс выполнения")
+-        progress_layout = QVBoxLayout()
+-        
+-        progress_bar_layout = QHBoxLayout()
+-        progress_bar_layout.addWidget(QLabel("Прогресс:"))
+-        
+-        self.progress_bar = QProgressBar()
+-        self.progress_bar.setRange(0, 100)
+-        progress_bar_layout.addWidget(self.progress_bar, 1)
+-        
+-        self.time_label = QLabel("Осталось: --:--")
+-        progress_bar_layout.addWidget(self.time_label)
+-        
+-        progress_layout.addLayout(progress_bar_layout)
+-        progress_group.setLayout(progress_layout)
+-        layout.addWidget(progress_group)
+-        
+-        status_group = QGroupBox("Текущие параметры")
+-        status_layout = QVBoxLayout()
+-        
+-        self.status_text = QTextEdit()
+-        self.status_text.setReadOnly(True)
+-
+-
+-        status_layout.addWidget(self.status_text)
+-        
+-        status_group.setLayout(status_layout)
+-        layout.addWidget(status_group)
+-        
+-        control_layout = QHBoxLayout()
+-        
+-        self.start_btn = QPushButton("Запуск")
+-        self.start_btn.clicked.connect(self.start_erosion)
+-        control_layout.addWidget(self.start_btn)
+-        
+-        self.pause_btn = QPushButton("⏸ Пауза")
+-        self.pause_btn.setEnabled(False)
+-        self.pause_btn.setMinimumHeight(40)
+-        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+-        self.pause_btn.clicked.connect(self.toggle_pause)
+-        control_layout.addWidget(self.pause_btn)
+-        
+-        self.stop_btn = QPushButton("Стоп")
+-        self.stop_btn.clicked.connect(self.stop_erosion)
+-        control_layout.addWidget(self.stop_btn)
+-
+-        self.changetool = QPushButton("Заменить инструмент")
+-        self.changetool.clicked.connect(self.ChangeTools)
+-        control_layout.addWidget(self.changetool)
+-        
+-        control_layout.addStretch()
+-        layout.addLayout(control_layout)
+-        
+-        widget.setLayout(layout)
+-        return widget
+-
+-    @Slot()
+-    def select_gcode_file(self):
+-        filename, _ = QFileDialog.getOpenFileName(
+-            self,
+-            "Выберите G-code файл",
+-            "",
+-            "G-code files (*.gcode *.nc);;All files (*.*)"
+-        )
+-        if filename:
+-            self.gcode_file_edit.setText(filename)
+-
+-        if not filename.lower().endswith(('.gcode', '.nc')):
+-            QMessageBox.critical(
+-                self, 
+-                "Ошибка", 
+-                "Выбранный файл не является файлом G-code.\n"
+-                "Поддерживаемые расширения: .gcode, .nc"
+-            )
+-            return
+-
+-        if not filename:
+-            QMessageBox.critical(self, "Ошибка", "Выберите файл G-code")
+-            return
+-        
+-        try:
+-            self.gcode_points = self.parse_gcode_file(filename)
+-            self.visualize_gcode()
+-            
+-            info_text = f"Файл: {os.path.basename(filename)}\n"
+-            info_text += f"Количество точек: {len(self.gcode_points)}\n"
+-            
+-            if self.gcode_points:
+-                x_values = [p[0] for p in self.gcode_points]
+-                y_values = [p[1] for p in self.gcode_points]
+-                z_values = [p[2] for p in self.gcode_points]
++#         # Статус процесса
++#         status_group = QGroupBox("Статус процесса")
++#         status_layout = QVBoxLayout()
++        
++#         self.process_status_label = QLabel("Готов к запуску")
++#         self.process_status_label.setStyleSheet("""
++#             font-weight: bold; 
++#             font-size: 12pt; 
++#             padding: 10px;
++#             border-radius: 5px;
++#             background-color: #ecf0f1;
++#         """)
++#         self.process_status_label.setAlignment(Qt.AlignCenter)
++#         self.process_status_label.setMinimumHeight(40)
++#         status_layout.addWidget(self.process_status_label)
++        
++#         status_group.setLayout(status_layout)
++#         layout.addWidget(status_group)
++        
++#         progress_group = QGroupBox("Прогресс выполнения")
++#         progress_layout = QVBoxLayout()
++        
++#         progress_bar_layout = QHBoxLayout()
++#         progress_bar_layout.addWidget(QLabel("Прогресс:"))
++        
++#         self.progress_bar = QProgressBar()
++#         self.progress_bar.setRange(0, 100)
++#         progress_bar_layout.addWidget(self.progress_bar, 1)
++        
++#         self.time_label = QLabel("Осталось: --:--")
++#         progress_bar_layout.addWidget(self.time_label)
++        
++#         progress_layout.addLayout(progress_bar_layout)
++#         progress_group.setLayout(progress_layout)
++#         layout.addWidget(progress_group)
++        
++#         status_group = QGroupBox("Текущие параметры")
++#         status_layout = QVBoxLayout()
++        
++#         self.status_text = QTextEdit()
++#         self.status_text.setReadOnly(True)
++
++
++#         status_layout.addWidget(self.status_text)
++        
++#         status_group.setLayout(status_layout)
++#         layout.addWidget(status_group)
++        
++#         control_layout = QHBoxLayout()
++        
++#         self.start_btn = QPushButton("Запуск")
++#         self.start_btn.clicked.connect(self.start_erosion)
++#         control_layout.addWidget(self.start_btn)
++        
++#         self.pause_btn = QPushButton("⏸ Пауза")
++#         self.pause_btn.setEnabled(False)
++#         self.pause_btn.setMinimumHeight(40)
++#         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++#         self.pause_btn.clicked.connect(self.toggle_pause)
++#         control_layout.addWidget(self.pause_btn)
++        
++#         self.stop_btn = QPushButton("Стоп")
++#         self.stop_btn.clicked.connect(self.stop_erosion)
++#         control_layout.addWidget(self.stop_btn)
++
++#         self.changetool = QPushButton("Заменить инструмент")
++#         self.changetool.clicked.connect(self.ChangeTools)
++#         control_layout.addWidget(self.changetool)
++        
++#         control_layout.addStretch()
++#         layout.addLayout(control_layout)
++        
++#         widget.setLayout(layout)
++#         return widget
++
++#     @Slot()
++#     def select_gcode_file(self):
++#         filename, _ = QFileDialog.getOpenFileName(
++#             self,
++#             "Выберите G-code файл",
++#             "",
++#             "G-code files (*.gcode *.nc);;All files (*.*)"
++#         )
++#         if filename:
++#             self.gcode_file_edit.setText(filename)
++
++#         if not filename.lower().endswith(('.gcode', '.nc')):
++#             QMessageBox.critical(
++#                 self, 
++#                 "Ошибка", 
++#                 "Выбранный файл не является файлом G-code.\n"
++#                 "Поддерживаемые расширения: .gcode, .nc"
++#             )
++#             return
++
++#         if not filename:
++#             QMessageBox.critical(self, "Ошибка", "Выберите файл G-code")
++#             return
++        
++#         try:
++#             self.gcode_points = self.parse_gcode_file(filename)
++#             self.visualize_gcode()
++            
++#             info_text = f"Файл: {os.path.basename(filename)}\n"
++#             info_text += f"Количество точек: {len(self.gcode_points)}\n"
++            
++#             if self.gcode_points:
++#                 x_values = [p[0] for p in self.gcode_points]
++#                 y_values = [p[1] for p in self.gcode_points]
++#                 z_values = [p[2] for p in self.gcode_points]
+                 
+-                info_text += f"Диапазон X: {min(x_values):.2f} - {max(x_values):.2f} мм\n"
+-                info_text += f"Диапазон Y: {min(y_values):.2f} - {max(y_values):.2f} мм\n"
+-                info_text += f"Диапазон Z: {min(z_values):.2f} - {max(z_values):.2f} мм\n"
+-                info_text += f"Общая длина траектории: {self.calculate_path_length(self.gcode_points):.2f} мм\n"
++#                 info_text += f"Диапазон X: {min(x_values):.2f} - {max(x_values):.2f} мм\n"
++#                 info_text += f"Диапазон Y: {min(y_values):.2f} - {max(y_values):.2f} мм\n"
++#                 info_text += f"Диапазон Z: {min(z_values):.2f} - {max(z_values):.2f} мм\n"
++#                 info_text += f"Общая длина траектории: {self.calculate_path_length(self.gcode_points):.2f} мм\n"
+             
+-            self.gcode_info_text.setPlainText(info_text)
++#             self.gcode_info_text.setPlainText(info_text)
+             
+             
+-        except Exception as e:
+-            logger(f"Failed to upload file: {str(e)}", queue=q)            
++#         except Exception as e:
++#             logger(f"Failed to upload file: {str(e)}", queue=q)            
+ 
+-    def parse_gcode_file(self, filename):
+-        points = []
+-        current_x, current_y, current_z = 0, 0, 0
++#     def parse_gcode_file(self, filename):
++#         points = []
++#         current_x, current_y, current_z = 0, 0, 0
+         
+-        with open(filename, 'r') as file:
+-            for line in file:
+-                line = line.strip()
+-                if line.startswith(';') or not line:
+-                    continue
++#         with open(filename, 'r') as file:
++#             for line in file:
++#                 line = line.strip()
++#                 if line.startswith(';') or not line:
++#                     continue
+                 
+-                if ';' in line:
+-                    line = line.split(';')[0].strip()
++#                 if ';' in line:
++#                     line = line.split(';')[0].strip()
+                 
+-                if line.startswith('G1') or line.startswith('G0') or line.startswith('G01') or line.startswith('G00'):
+-                    x = self.extract_coordinate(line, 'X', current_x)
+-                    y = self.extract_coordinate(line, 'Y', current_y)
+-                    z = self.extract_coordinate(line, 'Z', current_z)
++#                 if line.startswith('G1') or line.startswith('G0') or line.startswith('G01') or line.startswith('G00'):
++#                     x = self.extract_coordinate(line, 'X', current_x)
++#                     y = self.extract_coordinate(line, 'Y', current_y)
++#                     z = self.extract_coordinate(line, 'Z', current_z)
+                     
+-                    if (x, y, z) != (current_x, current_y, current_z):
+-                        points.append((x, y, z))
+-                        current_x, current_y, current_z = x, y, z
+-        
+-        return points if points else [(0, 0, 0)]
+-
+-    def extract_coordinate(self, line, axis, default):
+-        pattern = f'{axis}([+-]?\\d*\\.?\\d+)'
+-        match = re.search(pattern, line)
+-        return float(match.group(1)) if match else default
+-
+-    def calculate_path_length(self, points):
+-        if len(points) < 2:
+-            return 0
+-        
+-        total_length = 0
+-        for i in range(1, len(points)):
+-            x1, y1, z1 = points[i-1]
+-            x2, y2, z2 = points[i]
+-            distance = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+-            total_length += distance
+-        
+-        return total_length
+-
+-    def visualize_gcode(self):
+-        self.gcode_ax.clear()
+-        
+-        if self.gcode_points:
+-            points = np.array(self.gcode_points)
+-            
+-            self.gcode_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
+-            self.gcode_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c=range(len(points)), 
+-                                cmap='viridis', s=20, alpha=0.6)
+-            
+-            if len(points) > 1:
+-                self.gcode_ax.plot([points[0, 0]], [points[0, 1]], [points[0, 2]], 
+-                                 'go', markersize=8, label='Начало')
+-                self.gcode_ax.plot([points[-1, 0]], [points[-1, 1]], [points[-1, 2]], 
+-                                 'rs', markersize=8, label='Конец')
+-                self.gcode_ax.legend()
+-            
+-            if len(points) > 1:
+-                for i in range(0, len(points)-1, max(1, len(points)//10)):
+-                    x1, y1, z1 = points[i]
+-                    x2, y2, z2 = points[i+1]
++#                     if (x, y, z) != (current_x, current_y, current_z):
++#                         points.append((x, y, z))
++#                         current_x, current_y, current_z = x, y, z
++        
++#         return points if points else [(0, 0, 0)]
++
++#     def extract_coordinate(self, line, axis, default):
++#         pattern = f'{axis}([+-]?\\d*\\.?\\d+)'
++#         match = re.search(pattern, line)
++#         return float(match.group(1)) if match else default
++
++#     def calculate_path_length(self, points):
++#         if len(points) < 2:
++#             return 0
++        
++#         total_length = 0
++#         for i in range(1, len(points)):
++#             x1, y1, z1 = points[i-1]
++#             x2, y2, z2 = points[i]
++#             distance = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
++#             total_length += distance
++        
++#         return total_length
++
++#     def visualize_gcode(self):
++#         self.gcode_ax.clear()
++        
++#         if self.gcode_points:
++#             points = np.array(self.gcode_points)
++            
++#             self.gcode_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
++#             self.gcode_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c=range(len(points)), 
++#                                 cmap='viridis', s=20, alpha=0.6)
++            
++#             if len(points) > 1:
++#                 self.gcode_ax.plot([points[0, 0]], [points[0, 1]], [points[0, 2]], 
++#                                  'go', markersize=8, label='Начало')
++#                 self.gcode_ax.plot([points[-1, 0]], [points[-1, 1]], [points[-1, 2]], 
++#                                  'rs', markersize=8, label='Конец')
++#                 self.gcode_ax.legend()
++            
++#             if len(points) > 1:
++#                 for i in range(0, len(points)-1, max(1, len(points)//10)):
++#                     x1, y1, z1 = points[i]
++#                     x2, y2, z2 = points[i+1]
+                     
+-                    dx, dy, dz = x2-x1, y2-y1, z2-z1
+-                    length = np.sqrt(dx**2 + dy**2 + dz**2)
+-                    if length > 0:
+-                        dx, dy, dz = dx/length*10, dy/length*10, dz/length*10
++#                     dx, dy, dz = x2-x1, y2-y1, z2-z1
++#                     length = np.sqrt(dx**2 + dy**2 + dz**2)
++#                     if length > 0:
++#                         dx, dy, dz = dx/length*10, dy/length*10, dz/length*10
+                         
+-                        arrow = Arrow3DData([x1, x1+dx], [y1, y1+dy], [z1, z1+dz], 
+-                                       mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7)
+-                        self.gcode_ax.add_artist(arrow)
+-        
+-        self.gcode_ax.set_xlabel('X (мм)')
+-        self.gcode_ax.set_ylabel('Y (мм)')
+-        self.gcode_ax.set_zlabel('Z (мм)')
+-        self.gcode_ax.set_title('Визуализация траектории G-code')
+-        
+-        if self.gcode_points and len(self.gcode_points) > 1:
+-            points = np.array(self.gcode_points)
+-            max_range = max(points[:, 0].max()-points[:, 0].min(), 
+-                           points[:, 1].max()-points[:, 1].min(), 
+-                           points[:, 2].max()-points[:, 2].min()) * 0.6
+-            
+-            mid_x = (points[:, 0].max()+points[:, 0].min()) * 0.5
+-            mid_y = (points[:, 1].max()+points[:, 1].min()) * 0.5
+-            mid_z = (points[:, 2].max()+points[:, 2].min()) * 0.5
+-            
+-            self.gcode_ax.set_xlim(mid_x - max_range, mid_x + max_range)
+-            self.gcode_ax.set_ylim(mid_y - max_range, mid_y + max_range)
+-            self.gcode_ax.set_zlim(max(0, mid_z - max_range), mid_z + max_range)
+-        else:
+-            self.gcode_ax.set_xlim([-100, 100])
+-            self.gcode_ax.set_ylim([-100, 100])
+-            self.gcode_ax.set_zlim([0, 200])
+-        
+-        self.gcode_canvas.draw()
+-
+-    @Slot()
+-    def show_step(self, step_index):
+-        self.stacked_widget.setCurrentIndex(step_index)
+-        self.current_step = step_index
+-        
+-        step_names = [
+-            "Шаг 0: Загрузка G-code файла",
+-            "Шаг 1: Настройка начального положения", 
+-            "Шаг 2: Настройка процесса эрозии",
+-            "Шаг 3: Запуск процесса эрозии"
+-        ]
+-        self.step_indicator.setText(step_names[step_index])
+-        
+-        self.prev_btn.setEnabled(step_index > 0)
+-        
+-        if step_index < self.stacked_widget.count() - 1:
+-            self.next_btn.setEnabled(True)
+-        else:
+-            self.next_btn.setEnabled(False)
+-
+-
+-    @Slot()
+-    def next_step(self):
+-        if self.current_step < self.stacked_widget.count() - 1:
+-            self.show_step(self.current_step + 1)
+-            if self.current_step == 2:
+-                XS = self.controller.current_x
+-                YS = self.controller.current_y
+-                ZS = self.controller.current_z
+-                logger(f'Param XS YS ZS set: {XS, YS, ZS}', queue=q)
+-
+-            elif self.current_step == 3:
+-                self.mode = self.coombbox.currentText()   
+-                logger(self.mode)
+-            
+-
+-    @Slot()
+-    def prev_step(self):
+-        if self.current_step > 0:
+-            self.show_step(self.current_step - 1)
+-
+-    @Slot()
+-    def stop_process(self):
+-        self.controller.safe_finish()
+-        self.show_step(0)
+-
+-        
+-    @Slot(str, float)
+-    def on_position_changed(self, axis, value):
+-        positions = {
+-            'X': self.x_control,
+-            'Y': self.y_control, 
+-            'Z': self.z_control
+-        }
+-        
+-        x = float(positions['X'].value_label.text().split()[0])
+-        y = float(positions['Y'].value_label.text().split()[0])
+-        z = float(positions['Z'].value_label.text().split()[0])
+-        
+-        self.controller.set_coord_pos(x, y, z)
+-
+-    def start_erosion(self):
+-        if hasattr(self, 'gcode_points') and self.gcode_points:
++#                         arrow = Arrow3DData([x1, x1+dx], [y1, y1+dy], [z1, z1+dz], 
++#                                        mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7)
++#                         self.gcode_ax.add_artist(arrow)
++        
++#         self.gcode_ax.set_xlabel('X (мм)')
++#         self.gcode_ax.set_ylabel('Y (мм)')
++#         self.gcode_ax.set_zlabel('Z (мм)')
++#         self.gcode_ax.set_title('Визуализация траектории G-code')
++        
++#         if self.gcode_points and len(self.gcode_points) > 1:
++#             points = np.array(self.gcode_points)
++#             max_range = max(points[:, 0].max()-points[:, 0].min(), 
++#                            points[:, 1].max()-points[:, 1].min(), 
++#                            points[:, 2].max()-points[:, 2].min()) * 0.6
++            
++#             mid_x = (points[:, 0].max()+points[:, 0].min()) * 0.5
++#             mid_y = (points[:, 1].max()+points[:, 1].min()) * 0.5
++#             mid_z = (points[:, 2].max()+points[:, 2].min()) * 0.5
++            
++#             self.gcode_ax.set_xlim(mid_x - max_range, mid_x + max_range)
++#             self.gcode_ax.set_ylim(mid_y - max_range, mid_y + max_range)
++#             self.gcode_ax.set_zlim(max(0, mid_z - max_range), mid_z + max_range)
++#         else:
++#             self.gcode_ax.set_xlim([-100, 100])
++#             self.gcode_ax.set_ylim([-100, 100])
++#             self.gcode_ax.set_zlim([0, 200])
++        
++#         self.gcode_canvas.draw()
++
++#     @Slot()
++#     def show_step(self, step_index):
++#         self.stacked_widget.setCurrentIndex(step_index)
++#         self.current_step = step_index
++        
++#         step_names = [
++#             "Шаг 0: Загрузка G-code файла",
++#             "Шаг 1: Настройка начального положения", 
++#             "Шаг 2: Настройка процесса эрозии",
++#             "Шаг 3: Запуск процесса эрозии"
++#         ]
++#         self.step_indicator.setText(step_names[step_index])
++        
++#         self.prev_btn.setEnabled(step_index > 0)
++        
++#         if step_index < self.stacked_widget.count() - 1:
++#             self.next_btn.setEnabled(True)
++#         else:
++#             self.next_btn.setEnabled(False)
++
++
++#     @Slot()
++#     def next_step(self):
++#         if self.current_step < self.stacked_widget.count() - 1:
++#             self.show_step(self.current_step + 1)
++#             if self.current_step == 2:
++#                 XS = self.controller.current_x
++#                 YS = self.controller.current_y
++#                 ZS = self.controller.current_z
++#                 logger(f'Param XS YS ZS set: {XS, YS, ZS}', queue=q)
++
++#             elif self.current_step == 3:
++#                 self.mode = self.coombbox.currentText()   
++#                 logger(self.mode)
++            
++
++#     @Slot()
++#     def prev_step(self):
++#         if self.current_step > 0:
++#             self.show_step(self.current_step - 1)
++
++#     @Slot()
++#     def stop_process(self):
++#         self.controller.safe_finish()
++#         self.show_step(0)
++
++        
++#     @Slot(str, float)
++#     def on_position_changed(self, axis, value):
++#         positions = {
++#             'X': self.x_control,
++#             'Y': self.y_control, 
++#             'Z': self.z_control
++#         }
++        
++#         x = float(positions['X'].value_label.text().split()[0])
++#         y = float(positions['Y'].value_label.text().split()[0])
++#         z = float(positions['Z'].value_label.text().split()[0])
++        
++#         self.controller.set_coord_pos(x, y, z)
++
++#     def start_erosion(self):
++#         if hasattr(self, 'gcode_points') and self.gcode_points:
+                 
+-                # Запускаем чтение из очереди ДО начала процесса эрозии
+-                self.start_queue_reader()                
+-                # Получаем filename из поля ввода
+-                filename = self.gcode_file_edit.text().strip()
++#                 # Запускаем чтение из очереди ДО начала процесса эрозии
++#                 self.start_queue_reader()                
++#                 # Получаем filename из поля ввода
++#                 filename = self.gcode_file_edit.text().strip()
+                 
+-                if not filename or not os.path.exists(filename):
+-                    QMessageBox.critical(self, "Ошибка", "G-code файл не выбран или не существует")
+-                    return
++#                 if not filename or not os.path.exists(filename):
++#                     QMessageBox.critical(self, "Ошибка", "G-code файл не выбран или не существует")
++#                     return
+                 
+-                # Запускаем процесс с передачей filename
+-                self.controller.start_erosion_process(
+-                    self.gcode_points,
+-                    self.param_spinboxes['electrode_diameter'].value(),
+-                    self.param_spinboxes['electrode_length'].value(),
+-                    self.param_spinboxes['erosion_time'].value(),
+-                    self.param_spinboxes['erosion_up_time'].value(),
+-                    self.param_spinboxes['erosion_depth'].value(),
+-                    filename,  # Передаем filename
+-                    # self.coombbox.currentText()
+-                    self.mode
+-                )
+-                self.start_btn.setEnabled(False)
+-                self.pause_btn.setEnabled(True)
+-                self.pause_btn.setText("⏸ Пауза")
+-                self.is_process_paused = False
+-        else:
+-            QMessageBox.critical(self, "Ошибка", "Сначала загрузите G-code файл")
++#                 # Запускаем процесс с передачей filename
++#                 self.controller.start_erosion_process(
++#                     self.gcode_points,
++#                     self.param_spinboxes['electrode_diameter'].value(),
++#                     self.param_spinboxes['electrode_length'].value(),
++#                     self.param_spinboxes['erosion_time'].value(),
++#                     self.param_spinboxes['erosion_up_time'].value(),
++#                     self.param_spinboxes['erosion_depth'].value(),
++#                     filename,  # Передаем filename
++#                     # self.coombbox.currentText()
++#                     self.mode
++#                 )
++#                 self.start_btn.setEnabled(False)
++#                 self.pause_btn.setEnabled(True)
++#                 self.pause_btn.setText("⏸ Пауза")
++#                 self.is_process_paused = False
++#         else:
++#             QMessageBox.critical(self, "Ошибка", "Сначала загрузите G-code файл")
+     
+-    def set_erosion_worker(self, worker):
+-        """Установка рабочего потока для управления паузой"""
+-        self.erosion_worker = worker
++#     def set_erosion_worker(self, worker):
++#         """Установка рабочего потока для управления паузой"""
++#         self.erosion_worker = worker
+     
+-    @Slot()
+-    def toggle_pause(self):
+-        """Переключение состояния паузы"""
+-        # logger(f"Debug: toggle_pause called, worker: {self.erosion_worker}, is_running: {self.erosion_worker.is_running if self.erosion_worker else 'No worker'}", queue=q)
+-        
+-        if self.erosion_worker is not None and self.erosion_worker.isRunning():
+-            if not self.is_process_paused:
+-                # Ставим на паузу
+-                logger("Pausing process", queue=q)
+-                self.erosion_worker.pause()
+-                self.pause_btn.setText("▶ Продолжить")
+-                self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+-                # logger(f"Процесс приостановлен", queue=q)
+-                self.is_process_paused = True
+-                self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
+-            else:
+-                # Возобновляем процесс
+-                logger("Resuming process", queue=q)
+-                self.erosion_worker.resume()
+-                self.pause_btn.setText("⏸ Пауза")
+-                self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+-                # logger(f" Процесс возобновлен", queue=q)
+-                self.is_process_paused = False
+-                self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+-        else:
+-            logger("Worker not running or doesn't exist", queue=q)
+-    @Slot()
+-    def stop_erosion(self):
+-
+-        # Останавливаем чтение из очереди
+-        self.stop_queue_reader()
+-        """Полная остановка процесса"""
+-        if self.erosion_worker and self.erosion_worker.isRunning():
+-            self.erosion_worker.stop()
+-            self.erosion_worker.wait(1000)  # Ждем до 1 секунды для завершения
+-        
+-        if hasattr(self.controller, 'stop_erosion_process'):
+-            self.controller.stop_erosion_process()
+-        
+-        self.start_btn.setEnabled(True)
+-        self.pause_btn.setEnabled(False)
+-        self.pause_btn.setText("⏸ Пауза")
+-        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+-        self.is_process_paused = False
+-        
+-        # Сбрасываем прогресс
+-        self.progress_bar.setValue(0)
+-        self.time_label.setText("Остановлено")
+-        
+-        logger(f"[{time.strftime('%H:%M:%S')}] Процесс остановлен", queue=q)
+-        self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
+-
+-    def update_process_status(self, status, color="#ecf0f1"):
+-        """Обновление статуса процесса"""
+-        self.process_status_label.setText(status)
+-        self.process_status_label.setStyleSheet(f"""
+-            font-weight: bold; 
+-            font-size: 12pt; 
+-            padding: 10px;
+-            border-radius: 5px;
+-            background-color: {color};
+-        """)
+-
+-    @Slot()
+-    def ChangeTools(self):
+-        logger("Pausing process", queue=q)
+-        self.erosion_worker.pause()
+-        self.pause_btn.setText("▶ Продолжить")
+-        self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+-        self.is_process_paused = True
+-        self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
+-        QMessageBox.information(self, "Смена инструмента", "Замените инструмент, затем нажмите кнопку продолжить")
+-        logger("Нажата кнопка замены инструмента")
+-
+-
+-
+-    @Slot()
+-    def return_to_zero_xyz(self):
+-        self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
++#     @Slot()
++#     def toggle_pause(self):
++#         """Переключение состояния паузы"""
++#         # logger(f"Debug: toggle_pause called, worker: {self.erosion_worker}, is_running: {self.erosion_worker.is_running if self.erosion_worker else 'No worker'}", queue=q)
++        
++#         if self.erosion_worker is not None and self.erosion_worker.isRunning():
++#             if not self.is_process_paused:
++#                 # Ставим на паузу
++#                 logger("Pausing process", queue=q)
++#                 self.erosion_worker.pause()
++#                 self.pause_btn.setText("▶ Продолжить")
++#                 self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
++#                 # logger(f"Процесс приостановлен", queue=q)
++#                 self.is_process_paused = True
++#                 self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
++#             else:
++#                 # Возобновляем процесс
++#                 logger("Resuming process", queue=q)
++#                 self.erosion_worker.resume()
++#                 self.pause_btn.setText("⏸ Пауза")
++#                 self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++#                 # logger(f" Процесс возобновлен", queue=q)
++#                 self.is_process_paused = False
++#                 self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++#         else:
++#             logger("Worker not running or doesn't exist", queue=q)
++#     @Slot()
++#     def stop_erosion(self):
++
++#         # Останавливаем чтение из очереди
++#         self.stop_queue_reader()
++#         """Полная остановка процесса"""
++#         if self.erosion_worker and self.erosion_worker.isRunning():
++#             self.erosion_worker.stop()
++#             self.erosion_worker.wait(1000)  # Ждем до 1 секунды для завершения
++        
++#         if hasattr(self.controller, 'stop_erosion_process'):
++#             self.controller.stop_erosion_process()
++        
++#         self.start_btn.setEnabled(True)
++#         self.pause_btn.setEnabled(False)
++#         self.pause_btn.setText("⏸ Пауза")
++#         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++#         self.is_process_paused = False
++        
++#         # Сбрасываем прогресс
++#         self.progress_bar.setValue(0)
++#         self.time_label.setText("Остановлено")
++        
++#         logger(f"[{time.strftime('%H:%M:%S')}] Процесс остановлен", queue=q)
++#         self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
++
++#     def update_process_status(self, status, color="#ecf0f1"):
++#         """Обновление статуса процесса"""
++#         self.process_status_label.setText(status)
++#         self.process_status_label.setStyleSheet(f"""
++#             font-weight: bold; 
++#             font-size: 12pt; 
++#             padding: 10px;
++#             border-radius: 5px;
++#             background-color: {color};
++#         """)
++
++#     @Slot()
++#     def ChangeTools(self):
++#         logger("Pausing process", queue=q)
++#         self.erosion_worker.pause()
++#         self.pause_btn.setText("▶ Продолжить")
++#         self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
++#         self.is_process_paused = True
++#         self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
++#         QMessageBox.information(self, "Смена инструмента", "Замените инструмент, затем нажмите кнопку продолжить")
++#         logger("Нажата кнопка замены инструмента")
++
++
++
++#     @Slot()
++#     def return_to_zero_xyz(self):
++#         self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
+ 
+ # Сервисная вкладка
+ class ServiceTab(QWidget):
+@@ -2106,7 +2107,7 @@ class MainWindow(QMainWindow):
+         self.setCentralWidget(central_widget)
+         
+         # Вкладка процесса электроэрозии
+-        self.erosion_tab = ErosionProcessTab(self)
++        self.erosion_tab = ErosionProcessTab(self, q)
+         central_widget.addTab(self.erosion_tab, "Процесс электроэрозии")
+         
+         # Вкладка сервисного управления
+diff --git a/tests/ErosionProcessTab/conftest.py b/tests/ErosionProcessTab/conftest.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/ErosionProcessTab/test_erosion_presenter_load.py b/tests/ErosionProcessTab/test_erosion_presenter_load.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/ErosionProcessTab/test_erosion_presenter_run.py b/tests/ErosionProcessTab/test_erosion_presenter_run.py
+new file mode 100644
+index 0000000..c701e73
+--- /dev/null
++++ b/tests/ErosionProcessTab/test_erosion_presenter_run.py
+@@ -0,0 +1,127 @@
++import queue
++import pytest
++from unittest.mock import Mock
++
++from src.ErossionProcess.ErosionProcessTab import (
++    ErosionProcessPresenter,
++    ErosionRunParams,
++)
++
++
++# ======================
++# Fixtures
++# ======================
++
++@pytest.fixture
++def fake_view():
++    view = Mock()
++    # делаем явные методы, чтобы тесты были стабильнее и читабельнее
++    view.show_error = Mock()
++    view.set_gcode_info = Mock()
++    view.plot_gcode = Mock()
++    view.append_log = Mock()
++    view.set_started_ui_state = Mock()
++    view.set_stopped_ui_state = Mock()
++    view.set_paused_ui_state = Mock()
++    view.set_running_ui_state = Mock()
++    return view
++
++
++@pytest.fixture
++def fake_controller():
++    controller = Mock()
++    controller.start_erosion_process = Mock()
++    controller.stop_erosion_process = Mock()
++    controller.set_coord_pos = Mock()
++    controller.X0 = 0
++    controller.Y0 = 0
++    controller.Z0 = 0
++    return controller
++
++
++@pytest.fixture
++def q_ref():
++    return queue.Queue()
++
++
++# ======================
++# Tests
++# ======================
++
++def test_start_erosion_without_gcode(fake_view, fake_controller, q_ref):
++    presenter = ErosionProcessPresenter(
++        controller=fake_controller,
++        view=fake_view,
++        q_ref=q_ref,
++    )
++
++    params = ErosionRunParams(
++        electrode_diameter=1.0,
++        electrode_length=10.0,
++        erosion_time=1.0,
++        erosion_up_time=1.0,
++        erosion_depth=0.1,
++        mode="test",
++    )
++
++    presenter.start_erosion(params)
++
++    fake_view.show_error.assert_called_once()
++    fake_controller.start_erosion_process.assert_not_called()
++
++class DummyLogReader:
++    def start(self, *_args, **_kwargs):
++        return None
++
++    def stop(self):
++        return None
++
++def test_start_erosion_success(tmp_path, fake_view, fake_controller, q_ref):
++
++    gcode = "G1 X1 Y1 Z1"
++    path = tmp_path / "ok.gcode"
++    path.write_text(gcode)
++
++    presenter = ErosionProcessPresenter(
++        controller=fake_controller,
++        view=fake_view,
++        q_ref=q_ref,
++    )
++
++    presenter.load_gcode(str(path))
++    presenter._log_reader = DummyLogReader()
++
++    params = ErosionRunParams(
++        electrode_diameter=1.0,
++        electrode_length=10.0,
++        erosion_time=1.0,
++        erosion_up_time=1.0,
++        erosion_depth=0.1,
++        mode="test",
++    )
++
++    presenter.start_erosion(params)
++
++    fake_controller.start_erosion_process.assert_called_once()
++    fake_view.set_started_ui_state.assert_called_once()
++
++
++def test_toggle_pause(fake_view, fake_controller, q_ref):
++    presenter = ErosionProcessPresenter(
++        controller=fake_controller,
++        view=fake_view,
++        q_ref=q_ref,
++    )
++
++    worker = Mock()
++    worker.isRunning.return_value = True
++
++    paused = presenter.toggle_pause(worker, False)
++    worker.pause.assert_called_once()
++    fake_view.set_paused_ui_state.assert_called_once()
++    assert paused is True
++
++    paused = presenter.toggle_pause(worker, True)
++    worker.resume.assert_called_once()
++    fake_view.set_running_ui_state.assert_called_once()
++    assert paused is False
+diff --git a/tests/ErosionProcessTab/test_erosion_process_tab.py b/tests/ErosionProcessTab/test_erosion_process_tab.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/ErosionProcessTab/test_gcode_metrics.py b/tests/ErosionProcessTab/test_gcode_metrics.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/ErosionProcessTab/test_gcode_parser.py b/tests/ErosionProcessTab/test_gcode_parser.py
+new file mode 100644
+index 0000000..e69de29

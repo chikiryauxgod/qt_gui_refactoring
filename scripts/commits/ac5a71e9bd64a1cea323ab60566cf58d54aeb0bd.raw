@@ -1,0 +1,53 @@
+commit ac5a71e9bd64a1cea323ab60566cf58d54aeb0bd
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Tue Jan 20 15:31:04 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Tue Jan 20 15:31:04 2026 +0500
+
+    fixed imports
+
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index ed3d514..84a08e8 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -27,6 +27,7 @@ from matplotlib.patches import FancyArrowPatch
+ from mpl_toolkits.mplot3d import proj3d
+ from src.log import Log
+ from src.arrow3D import Arrow3D, Arrow3DData
++from src.widgets.axis_control_widget import AxisControlWidget
+ 
+ 
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+diff --git a/tests/Arrow3D/test_arrow3d.py b/tests/Arrow3D/test_arrow3d.py
+index 08dad0f..e3f1c57 100644
+--- a/tests/Arrow3D/test_arrow3d.py
++++ b/tests/Arrow3D/test_arrow3d.py
+@@ -1,6 +1,5 @@
+ import pytest
+ from src.qt_interface import Arrow3D, Arrow3DData
+-import src.electoerosion
+ 
+ def stub_project(xs, ys, zs, matrix):
+     return xs, ys, zs
+diff --git a/tests/Arrow3D/test_data.py b/tests/Arrow3D/test_data.py
+index e948494..f20ec42 100644
+--- a/tests/Arrow3D/test_data.py
++++ b/tests/Arrow3D/test_data.py
+@@ -1,6 +1,5 @@
+ import pytest
+ from src.qt_interface import Arrow3DData
+-import src.electoerosion
+ 
+ def test_arrow3d_data_as_tuple():
+     data = Arrow3DData(
+diff --git a/tests/Arrow3D/test_projection.py b/tests/Arrow3D/test_projection.py
+index d13aaa1..d8df0e4 100644
+--- a/tests/Arrow3D/test_projection.py
++++ b/tests/Arrow3D/test_projection.py
+@@ -1,5 +1,5 @@
+ import pytest
+-import src.electoerosion
++
+ 
+ def stub_project(xs, ys, zs, matrix):
+     return xs, ys, zs

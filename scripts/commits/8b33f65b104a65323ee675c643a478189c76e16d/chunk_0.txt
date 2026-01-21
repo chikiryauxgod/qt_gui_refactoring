@@ -1,0 +1,13 @@
+commit 8b33f65b104a65323ee675c643a478189c76e16d
+Merge: 45cebe1 161b7f7
+Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
+AuthorDate: Tue Jan 20 15:36:05 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Jan 20 15:36:05 2026 +0500
+
+    Merge pull request #11 from chikiryauxgod/feature/upd_VideoStreamThread
+    
+    feat: bug fix with tests
+
+
+FILES:

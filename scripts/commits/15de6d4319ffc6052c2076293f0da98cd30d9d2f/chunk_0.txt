@@ -1,0 +1,13 @@
+commit 15de6d4319ffc6052c2076293f0da98cd30d9d2f
+Merge: 8091299 3cf10b9
+Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
+AuthorDate: Wed Jan 21 19:55:57 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Wed Jan 21 19:55:57 2026 +0500
+
+    Merge pull request #18 from chikiryauxgod/feature/new_service_tab_branch
+    
+    Feature/new service tab branch
+
+
+FILES:
