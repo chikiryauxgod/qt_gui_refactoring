@@ -2,7 +2,7 @@ import queue
 import pytest
 from unittest.mock import Mock
 
-from src.ErossionProcess.ErosionProcessTab import (
+from src.erosion_process.erosion_process_tab import (
     ErosionProcessPresenter,
     ErosionRunParams,
 )

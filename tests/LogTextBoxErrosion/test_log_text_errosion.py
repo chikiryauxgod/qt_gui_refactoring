@@ -4,7 +4,7 @@ import time
 import pytest
 from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
 
-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
 
 
 @pytest.fixture(scope="session", autouse=True)
