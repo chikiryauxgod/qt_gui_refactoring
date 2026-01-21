@@ -28,7 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
-from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
