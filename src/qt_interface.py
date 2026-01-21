@@ -30,6 +30,7 @@ from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+from src.VideoStream.VideoStreamThread import VideoStreamThread
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -57,7 +58,7 @@ q = queue.Queue()
 #filename = None
 
 # Поток для видеозахвата
-class VideoStreamThread(QThread):
+""" class VideoStreamThread(QThread):
     new_frame = Signal(QImage)
     
     def __init__(self, camera_idx=0, width=640, height=480, latency=30):
@@ -89,7 +90,7 @@ class VideoStreamThread(QThread):
         self.wait()
         if self.cap.isOpened():
             self.cap.release()
-
+ """
 
 # Виджет управления осью
 # class AxisControlWidget(QWidget):
