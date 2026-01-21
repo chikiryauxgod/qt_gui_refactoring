@@ -1,0 +1,181 @@
+++python aggregate_commit.py
++
++
++FILE: src/erosion_process/__init__.py
++LANG: py
++
++similarity index 100%
++rename from src/ErossionProcess/__init__.py
++rename to src/erosion_process/__init__.py
++
++
++FILE: src/erosion_process/erosion_process_tab.py
++LANG: py
++
++similarity index 96%
++rename from src/ErossionProcess/ErosionProcessTab.py
++rename to src/erosion_process/erosion_process_tab.py
++index c5ef03a..d2194c2 100644
++--- a/src/ErossionProcess/ErosionProcessTab.py
+++++ b/src/erosion_process/erosion_process_tab.py
++@@ -1,8 +1,5 @@
++ from __future__ import annotations
++ 
++-# =========================
++-# STANDARD
++-# =========================
++ import os
++ import re
++ import time
++@@ -12,9 +9,6 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple, List
++ 
++ import numpy as np
++ 
++-# =========================
++-# QT
++-# =========================
++ from PySide6.QtWidgets import (
++     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox,
++     QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox, QGridLayout,
++@@ -22,27 +16,15 @@ from PySide6.QtWidgets import (
++ )
++ from PySide6.QtCore import Qt, Slot
++ from PySide6.QtGui import QTextCursor
++-
++-# =========================
++-# MATPLOTLIB
++-# =========================
++ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
++ from matplotlib.figure import Figure
++-
++-# =========================
++-# PROJECT IMPORTS
++-# =========================
++-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
++ from src.widgets.axis_control_widget import AxisControlWidget
++ from src.arrow3D import Arrow3DData
++ 
++ 
++ Point3D = Tuple[float, float, float]
++ 
++-
++-# ==========================================================
++-# Presenter stack (NO cyclic imports)
++-# ==========================================================
++ class ILogReader(Protocol):
++     def isRunning(self) -> bool: ...
++     def start(self) -> None: ...
++@@ -243,10 +225,6 @@ class ErosionProcessPresenter:
++     def return_to_zero(self) -> None:
++         self._controller.set_coord_pos(self._controller.X0, self._controller.Y0, self._controller.Z0)
++ 
++-
++-# ==========================================================
++-# VIEW (OLD UI preserved)
++-# ==========================================================
++ class ErosionProcessTab(QWidget):
++     def __init__(self, controller, q_ref):
++         super().__init__()
++@@ -258,7 +236,6 @@ class ErosionProcessTab(QWidget):
++         self.erosion_worker = None
++         self.is_process_paused = False
++ 
++-        # ✅ correct presenter
++         self._presenter = ErosionProcessPresenter(
++             controller=controller,
++             view=self,
++@@ -267,7 +244,7 @@ class ErosionProcessTab(QWidget):
++ 
++         self.create_widgets()
++ 
++-    # -------- View API --------
+++    
++     def show_error(self, title: str, text: str) -> None:
++         QMessageBox.critical(self, title, text)
++ 
++@@ -311,7 +288,7 @@ class ErosionProcessTab(QWidget):
++         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++         self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++ 
++-    # -------- OLD UI --------
+++
++     def create_widgets(self):
++         main_layout = QVBoxLayout()
++ 
++@@ -615,7 +592,6 @@ class ErosionProcessTab(QWidget):
++         self._presenter.stop_erosion(self.erosion_worker)
++         self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
++ 
++-    # -------- helper methods --------
++     def visualize_gcode(self):
++         self.gcode_ax.clear()
++         if self.gcode_points:
++
++
++FILE: src/erosion_worker/erosion_worker.py
++LANG: py
++
++similarity index 95%
++rename from src/erosion_worker/errosion_worker.py
++rename to src/erosion_worker/erosion_worker.py
++index 185431c..dcb670b 100644
++--- a/src/erosion_worker/errosion_worker.py
+++++ b/src/erosion_worker/erosion_worker.py
++@@ -2,9 +2,7 @@ from PySide6.QtCore import QThread, Signal
++ import time
++ import os
++ 
++-#Класс-обёртка для Electroerosion
++ class ErosionController:
++-    # Инкапсулирует работу с Electroerosion
++     def __init__(self, erosion_cls, filename=None, logger=None, **params):
++         self.filename = filename
++         self.params = params
++@@ -20,7 +18,6 @@ class ErosionController:
++         self.erosion_instance.stop()
++ 
++ 
++-#G-code обработчик
++ class GCodeProcessor:
++     # Отвечает за прогресс по точкам G-code
++     def __init__(self, gcode_points, total_time):
++
++
++FILE: src/log_text/__init__.py
++LANG: py
++
++similarity index 100%
++rename from src/LogText/__init__.py
++rename to src/log_text/__init__.py
++
++
++FILE: src/log_text/log_text_box_erosion.py
++LANG: py
++
++similarity index 100%
++rename from src/LogText/LogTextBoxErrosion.py
++rename to src/log_text/log_text_box_erosion.py
++
++
++FILE: src/qt_interface.py
++LANG: py
++
++index 3bbebb3..cefb403 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -28,14 +28,14 @@ from mpl_toolkits.mplot3d import proj3d
++ from .log import Log
++ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++ from src.services.xyz_trajectory_service import XYZTrajectoryService
++ from src.services.joint_trajectory_service import JointTrajectoryService
++ from src.presenters.xyz_control_presenter import XYZControlPresenter
++ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
++ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
++-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion

@@ -1,0 +1,169 @@
+++            self.xyz_listbox.addItem(
+++                f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+++            )
++             self.update_xyz_trajectory_plot()
++         else:
++             logger("The point cannot be moved.", queue=q)
++@@ -1821,21 +1829,25 @@ class ServiceTab(QWidget):
++         current_row = self.xyz_listbox.currentRow()
++         if current_row >= 0:
++             self.xyz_listbox.takeItem(current_row)
++-            self.trajectory_points_xyz.pop(current_row)
++-            
+++            self.xyz_trajectory_service.remove_point(current_row)
+++
++             self.xyz_listbox.clear()
++-            for i, point in enumerate(self.trajectory_points_xyz):
++-                x, y, z = point
++-                self.xyz_listbox.addItem(f"{i+1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
++-            
+++            for i, (x, y, z) in enumerate(
+++                self.xyz_trajectory_service.get_points()
+++            ):
+++                self.xyz_listbox.addItem(
+++                    f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+++                )
+++
++             self.update_xyz_trajectory_plot()
++ 
++     @Slot()
++     def clear_xyz_trajectory(self):
+++        self.xyz_trajectory_service.clear()
++         self.xyz_listbox.clear()
++-        self.trajectory_points_xyz = []
++         self.update_xyz_trajectory_plot()
++ 
+++
++     @Slot()
++     def return_to_zero_xyz(self):
++         self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
++@@ -1855,29 +1867,43 @@ class ServiceTab(QWidget):
++     @Slot()
++     def update_xyz_trajectory_plot(self):
++         self.xyz_traj_ax.clear()
++-        
++-        if self.trajectory_points_xyz:
++-            points = np.array(self.trajectory_points_xyz)
++-            self.xyz_traj_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
++-            self.xyz_traj_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='red', s=30)
++-            
+++
+++        points_list = self.trajectory_service.get_points()
+++        if points_list:
+++            points = np.array(points_list)
+++
+++            self.xyz_traj_ax.plot(
+++                points[:, 0], points[:, 1], points[:, 2],
+++                'b-', linewidth=2, alpha=0.7
+++            )
+++            self.xyz_traj_ax.scatter(
+++                points[:, 0], points[:, 1], points[:, 2],
+++                c='red', s=30
+++            )
+++
++             for i, (x, y, z) in enumerate(points):
++-                self.xyz_traj_ax.text(x, y, z, str(i+1), color='red', fontsize=8)
++-            
+++                self.xyz_traj_ax.text(x, y, z, str(i + 1), color='red', fontsize=8)
+++
++             if len(points) > 1:
++                 for i in range(len(points) - 1):
++                     x1, y1, z1 = points[i]
++                     x2, y2, z2 = points[i + 1]
++-                    
++-                    arrow = Arrow3DData([x1, x2], [y1, y2], [z1, z2], 
++-                                   mutation_scale=20, lw=1, arrowstyle="-|>", color="green", alpha=0.7)
+++
+++                    arrow = Arrow3DData(
+++                        [x1, x2], [y1, y2], [z1, z2],
+++                        mutation_scale=20,
+++                        lw=1,
+++                        arrowstyle="-|>",
+++                        color="green",
+++                        alpha=0.7
+++                    )
++                     self.xyz_traj_ax.add_artist(arrow)
++-        
+++
++         self.xyz_traj_ax.set_xlabel('X (мм)')
++         self.xyz_traj_ax.set_ylabel('Y (мм)')
++         self.xyz_traj_ax.set_zlabel('Z (мм)')
++         self.xyz_traj_ax.set_title('Траектория движения XYZ')
++-        
+++
++         self.xyz_traj_canvas.draw()
++ 
++     # Методы траекторий суставов
++
+
+
+FILE: src/services/xyz_trajectory_service.py
+LANG: py
+
++index 365ce68..b3efdc8 100644
++--- a/src/services/xyz_trajectory_service.py
+++++ b/src/services/xyz_trajectory_service.py
++@@ -5,10 +5,7 @@ PointXYZ = Tuple[float, float, float]
++ 
++ 
++ class XYZTrajectoryService:
++-    """
++-    Отвечает ТОЛЬКО за хранение и управление XYZ-траекторией.
++-    Не знает ничего про Qt, controller и UI.
++-    """
+++    """ Отвечает за хранение и управление XYZ-траекторией. """
++ 
++     def __init__(self) -> None:
++         self._points: List[PointXYZ] = []
+
+
+FILE: scripts/commits/3e61e64c0ce465133bbc7f88bb82fa78d73f9520/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..8a9786c
+--- /dev/null
++++ b/scripts/commits/3e61e64c0ce465133bbc7f88bb82fa78d73f9520/chunk_0.txt
+@@ -0,0 +1,164 @@
++commit 3e61e64c0ce465133bbc7f88bb82fa78d73f9520
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Wed Jan 21 12:40:33 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Wed Jan 21 12:40:33 2026 +0500
++
++    refactor: include new class into main code
++
++
++FILES:
++
++FILE: src/qt_interface.py
++LANG: py
++
++index 1395c15..327fec7 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -29,7 +29,7 @@ from .log import Log
++ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++ from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
++-
+++from src.services.xyz_trajectory_service import XYZTrajectoryService
++ 
++ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
++ #+ Выводить содержимое очереди в textbox процесса эрозии
++@@ -943,7 +943,7 @@ class ServiceTab(QWidget):
++     def __init__(self, controller):
++         super().__init__()
++         self.controller = controller
++-        self.trajectory_points_xyz = []
+++        self.trajectory_service = XYZTrajectoryService()
++         self.trajectory_points_joints = []
++         self.continuous_move_timer = QTimer()
++         self.continuous_move_timer.timeout.connect(self.continuous_move)
++@@ -1796,9 +1796,15 @@ class ServiceTab(QWidget):
++     # Методы траекторий XYZ
++     @Slot()
++     def add_initial_xyz_point(self):
++-        point = (self.controller.current_x, self.controller.current_y, self.controller.current_z)
++-        self.trajectory_points_xyz = [point]
++-        self.xyz_listbox.addItem(f"1: X: {point[0]:.2f}, Y: {point[1]:.2f}, Z: {point[2]:.2f}")

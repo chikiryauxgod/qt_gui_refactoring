@@ -1,0 +1,183 @@
++             spinbox = QDoubleSpinBox()
++@@ -1587,66 +1587,66 @@ class ServiceTab(QWidget):
++             spinbox.setSuffix(" °")
++             joints_layout.addWidget(spinbox, i, 1)
++             self.new_joints[joint] = spinbox
++-        
+++
++         add_btn = QPushButton("Добавить позицию")
++         add_btn.clicked.connect(self.add_joints_point)
++         joints_layout.addWidget(add_btn, 6, 0, 1, 2)
++-        
+++
++         joints_group.setLayout(joints_layout)
++         control_layout.addWidget(joints_group)
++         
++         traj_control_layout = QHBoxLayout()
++-        
+++
++         remove_btn = QPushButton("Удалить позицию")
++         remove_btn.clicked.connect(self.remove_joints_point)
++         traj_control_layout.addWidget(remove_btn)
++-        
+++
++         clear_btn = QPushButton("Очистить все")
++         clear_btn.clicked.connect(self.clear_joints_trajectory)
++         traj_control_layout.addWidget(clear_btn)
++-        
+++
++         home_btn = QPushButton("Вернуться в ноль")
++         home_btn.clicked.connect(self.return_to_zero_joints)
++         traj_control_layout.addWidget(home_btn)
++-        
+++
++         control_layout.addLayout(traj_control_layout)
++-        
+++
++         list_group = QGroupBox("Позиции траектории")
++-        list_layout = QVBoxLayout()
++-        
+++        list_layout = QVBoxLayout(list_group)
+++
++         self.joints_listbox = QListWidget()
++         list_layout.addWidget(self.joints_listbox)
++-        
+++
++         execute_btn = QPushButton("Выполнить траекторию")
++         execute_btn.clicked.connect(self.execute_joints_trajectory)
++         list_layout.addWidget(execute_btn)
++-        
+++
++         list_group.setLayout(list_layout)
++         control_layout.addWidget(list_group)
++-        
++         control_frame.setLayout(control_layout)
++-        layout.addWidget(control_frame)
+++        main_layout.addWidget(control_frame)
++         
++         vis_frame = QGroupBox("Визуализация траектории")
++-        vis_layout = QVBoxLayout()
++-        
+++        vis_layout = QVBoxLayout(vis_frame)
+++
++         self.joints_traj_fig = Figure(figsize=(6, 5), dpi=100)
++-        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d')
++-        
+++        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d') 
+++
++         self.joints_traj_ax.set_xlabel('X (мм)')
++         self.joints_traj_ax.set_ylabel('Y (мм)')
++         self.joints_traj_ax.set_zlabel('Z (мм)')
++         self.joints_traj_ax.set_title('Траектория движения суставов')
++-        
+++
++         self.joints_traj_canvas = FigureCanvas(self.joints_traj_fig)
++         vis_layout.addWidget(self.joints_traj_canvas)
++-        
+++
++         vis_frame.setLayout(vis_layout)
++-        layout.addWidget(vis_frame)
++-        
++-        widget.setLayout(layout)
+++        main_layout.addWidget(vis_frame)
+++
+++        widget.setLayout(main_layout)
++         return widget
++ 
+++
++     def robot_settings_tab(self):
++         widget = QWidget()
++         main_layout = QHBoxLayout()
++
++
++FILE: src/visualization/joints_trajectory_plotter.py
++LANG: py
++
++index f7f9c53..f0e5dc7 100644
++--- a/src/visualization/joints_trajectory_plotter.py
+++++ b/src/visualization/joints_trajectory_plotter.py
++@@ -10,9 +10,19 @@ class JointsTrajectoryPlotter:
++             self._canvas.draw()
++             return
++ 
+++        steps = range(len(trajectories))
+++
++         for joint_index, joint_values in enumerate(zip(*trajectories)):
++-            self._ax.plot(joint_values, label=f"J{joint_index}")
+++            self._ax.plot(
+++                steps,
+++                joint_values,
+++                label=f"J{joint_index}"
+++            )
++ 
++-        self._ax.legend()
+++        self._ax.set_xlabel("Шаг траектории")
+++        self._ax.set_ylabel("Угол сустава (°)")
++         self._ax.set_title("Траектория суставов")
+++        self._ax.legend()
+++        self._ax.grid(True)
+++
++         self._canvas.draw()
+\ No newline at end of file
+
+
+FILE: scripts/commits/3d206021919c592341b6373a7abe34a375f9c917.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..cbb0ae5
+--- /dev/null
++++ b/scripts/commits/3d206021919c592341b6373a7abe34a375f9c917.norm
+@@ -0,0 +1,89 @@
++commit 3d206021919c592341b6373a7abe34a375f9c917
++Author:     Matvey <matveykroychelove4ek@gmail.com>
++AuthorDate: Mon Jan 19 22:53:11 2026 +0500
++Commit:     Matvey <matveykroychelove4ek@gmail.com>
++CommitDate: Mon Jan 19 22:53:11 2026 +0500
++
++    feat: upd .gitignore and upd VideoStreamThread
++
++
++FILES:
++
++FILE: .gitignore
++LANG: 
++
++index 3679edf..fdefaf7 100644
++--- a/.gitignore
+++++ b/.gitignore
++@@ -143,6 +143,7 @@ venv/
++ ENV/
++ env.bak/
++ venv.bak/
+++gui/
++ 
++ # Spyder project settings
++ .spyderproject
++
++
++FILE: src/qt_interface.py
++LANG: py
++
++index d02796c..13f0e0d 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -12,11 +12,14 @@ import electoerosion
++ 
++ from robot import Robot
++ from pico import Pico
++-from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
++-                              QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
++-                              QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
++-                              QScrollArea, QFrame, QSplitter, QSizePolicy, QGridLayout,
++-                              QLineEdit, QStackedWidget, QListWidget, QListWidgetItem,
+++from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget,
+++                                QWidget, QVBoxLayout, QHBoxLayout, 
+++                                QLabel, QPushButton, QDoubleSpinBox, 
+++                                QSpinBox,QProgressBar, QTextEdit, 
+++                                QGroupBox, QFileDialog, QMessageBox,
+++                              QScrollArea, QFrame, QSplitter, 
+++                              QSizePolicy, QGridLayout,QLineEdit,
+++                              QStackedWidget, QListWidget, QListWidgetItem,
++                               QCheckBox, QComboBox, QSlider, QDialog, QDialogButtonBox)
++ from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot, QPropertyAnimation, QEasingCurve, QEvent

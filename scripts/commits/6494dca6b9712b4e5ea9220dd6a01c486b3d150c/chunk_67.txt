@@ -1,0 +1,191 @@
++     def __init__(self, controller, q_ref):
++         super().__init__()
++@@ -258,7 +236,6 @@ class ErosionProcessTab(QWidget):
++         self.erosion_worker = None
++         self.is_process_paused = False
++ 
++-        # ✅ correct presenter
++         self._presenter = ErosionProcessPresenter(
++             controller=controller,
++             view=self,
++@@ -267,7 +244,7 @@ class ErosionProcessTab(QWidget):
++ 
++         self.create_widgets()
++ 
++-    # -------- View API --------
+++    
++     def show_error(self, title: str, text: str) -> None:
++         QMessageBox.critical(self, title, text)
++ 
++@@ -311,7 +288,7 @@ class ErosionProcessTab(QWidget):
++         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
++         self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++ 
++-    # -------- OLD UI --------
+++
++     def create_widgets(self):
++         main_layout = QVBoxLayout()
++ 
++@@ -615,7 +592,6 @@ class ErosionProcessTab(QWidget):
++         self._presenter.stop_erosion(self.erosion_worker)
++         self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
++ 
++-    # -------- helper methods --------
++     def visualize_gcode(self):
++         self.gcode_ax.clear()
++         if self.gcode_points:
++
+
+
+FILE: src/erosion_worker/erosion_worker.py
+LANG: py
+
++similarity index 95%
++rename from src/erosion_worker/errosion_worker.py
++rename to src/erosion_worker/erosion_worker.py
++index 185431c..dcb670b 100644
++--- a/src/erosion_worker/errosion_worker.py
+++++ b/src/erosion_worker/erosion_worker.py
++@@ -2,9 +2,7 @@ from PySide6.QtCore import QThread, Signal
++ import time
++ import os
++ 
++-#Класс-обёртка для Electroerosion
++ class ErosionController:
++-    # Инкапсулирует работу с Electroerosion
++     def __init__(self, erosion_cls, filename=None, logger=None, **params):
++         self.filename = filename
++         self.params = params
++@@ -20,7 +18,6 @@ class ErosionController:
++         self.erosion_instance.stop()
++ 
++ 
++-#G-code обработчик
++ class GCodeProcessor:
++     # Отвечает за прогресс по точкам G-code
++     def __init__(self, gcode_points, total_time):
++
+
+
+FILE: src/log_text/__init__.py
+LANG: py
+
++similarity index 100%
++rename from src/LogText/__init__.py
++rename to src/log_text/__init__.py
++
+
+
+FILE: src/log_text/log_text_box_erosion.py
+LANG: py
+
++similarity index 100%
++rename from src/LogText/LogTextBoxErrosion.py
++rename to src/log_text/log_text_box_erosion.py
++
+
+
+FILE: src/qt_interface.py
+LANG: py
+
++index 3bbebb3..cefb403 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -28,14 +28,14 @@ from mpl_toolkits.mplot3d import proj3d
++ from .log import Log
++ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++ from src.services.xyz_trajectory_service import XYZTrajectoryService
++ from src.services.joint_trajectory_service import JointTrajectoryService
++ from src.presenters.xyz_control_presenter import XYZControlPresenter
++ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
++ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
++-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
++ from src.VideoStream.VideoStreamThread import VideoStreamThread
++ from src.presenters.joint_control_presenter import JointControlPresenter
++ from src.domain.xyz_availability_service import XYZAvailabilityService
++@@ -43,7 +43,7 @@ from src.domain.joint_availability_service import JointAvailabilityService
++ from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
++ from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
++ from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
++-
+++from src.erosion_process.erosion_process_tab import ErosionProcessTab
++ 
++ 
++ 
++
+
+
+FILE: tests/ErosionProcessTab/test_erosion_presenter_run.py
+LANG: py
+
++index c701e73..455a890 100644
++--- a/tests/ErosionProcessTab/test_erosion_presenter_run.py
+++++ b/tests/ErosionProcessTab/test_erosion_presenter_run.py
++@@ -2,7 +2,7 @@ import queue
++ import pytest
++ from unittest.mock import Mock
++ 
++-from src.ErossionProcess.ErosionProcessTab import (
+++from src.erosion_process.erosion_process_tab import (
++     ErosionProcessPresenter,
++     ErosionRunParams,
++ )
++
+
+
+FILE: tests/LogTextBoxErrosion/test_log_text_errosion.py
+LANG: py
+
++index 5163b6d..1a6fec7 100644
++--- a/tests/LogTextBoxErrosion/test_log_text_errosion.py
+++++ b/tests/LogTextBoxErrosion/test_log_text_errosion.py
++@@ -4,7 +4,7 @@ import time
++ import pytest
++ from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
++ 
++-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
++ 
++ 
++ @pytest.fixture(scope="session", autouse=True)
+
+
+FILE: scripts/commits/9a7d27b271304fae17e35b12f536a010a8e7fd3b/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..7ac165e
+--- /dev/null
++++ b/scripts/commits/9a7d27b271304fae17e35b12f536a010a8e7fd3b/chunk_0.txt
+@@ -0,0 +1,294 @@
++commit 9a7d27b271304fae17e35b12f536a010a8e7fd3b
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Wed Jan 21 23:51:55 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Wed Jan 21 23:51:55 2026 +0500
++
++    chore: fix naming + add scripts
++
++
++FILES:
++
++FILE: scripts/aggregate_commit.py
++LANG: py
++
++new file mode 100644
++index 0000000..7f91c40
++--- /dev/null
+++++ b/scripts/aggregate_commit.py
++@@ -0,0 +1,28 @@
+++import json
+++from statistics import mean
+++from pathlib import Path
+++
+++def aggregate(results: list[dict]) -> dict:
+++    scores = {k: [] for k in ["SRP", "OCP", "LSP", "ISP", "DIP"]}

@@ -1,0 +1,17 @@
+LANG: py
+
+index 365ce68..b3efdc8 100644
+--- a/src/services/xyz_trajectory_service.py
++++ b/src/services/xyz_trajectory_service.py
+@@ -5,10 +5,7 @@ PointXYZ = Tuple[float, float, float]
+ 
+ 
+ class XYZTrajectoryService:
+-    """
+-    Отвечает ТОЛЬКО за хранение и управление XYZ-траекторией.
+-    Не знает ничего про Qt, controller и UI.
+-    """
++    """ Отвечает за хранение и управление XYZ-траекторией. """
+ 
+     def __init__(self) -> None:
+         self._points: List[PointXYZ] = []

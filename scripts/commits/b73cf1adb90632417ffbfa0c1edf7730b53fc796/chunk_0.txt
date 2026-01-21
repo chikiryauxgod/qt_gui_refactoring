@@ -1,0 +1,92 @@
+commit b73cf1adb90632417ffbfa0c1edf7730b53fc796
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 14:07:57 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 14:07:57 2026 +0500
+
+    feat: add new controller
+
+
+FILES:
+
+FILE: src/ports/robot_controller_port.py
+LANG: py
+
+new file mode 100644
+index 0000000..1d1b743
+--- /dev/null
++++ b/src/ports/robot_controller_port.py
+@@ -0,0 +1,7 @@
++from typing import Protocol
++
++
++class RobotControllerPort(Protocol):
++    def move_xyz(self, dx: float, dy: float, dz: float) -> None: ...
++    def set_coord_pos(self, x: float, y: float, z: float) -> None: ...
++    def return_to_zero_xyz(self) -> None: ...
+
+
+FILE: src/presenters/xyz_control_presenter.py
+LANG: py
+
+new file mode 100644
+index 0000000..5a44785
+--- /dev/null
++++ b/src/presenters/xyz_control_presenter.py
+@@ -0,0 +1,17 @@
++from src.ports.robot_controller_port import RobotControllerPort
++
++
++class XYZControlPresenter:
++    """ Управляет XYZ-движением робота. """
++
++    def __init__(self, controller: RobotControllerPort):
++        self._controller = controller
++
++    def move(self, dx: float, dy: float, dz: float) -> None:
++        self._controller.move_xyz(dx, dy, dz)
++
++    def set_position(self, x: float, y: float, z: float) -> None:
++        self._controller.set_coord_pos(x, y, z)
++
++    def return_to_zero(self) -> None:
++        self._controller.return_to_zero_xyz()
+
+
+FILE: tests/presenters/test_xyz_control_presenter.py
+LANG: py
+
+new file mode 100644
+index 0000000..cb6e8fd
+--- /dev/null
++++ b/tests/presenters/test_xyz_control_presenter.py
+@@ -0,0 +1,29 @@
++from unittest.mock import Mock
++from src.presenters.xyz_control_presenter import XYZControlPresenter
++
++
++def test_move_xyz_calls_controller():
++    controller = Mock()
++    presenter = XYZControlPresenter(controller)
++
++    presenter.move(1.0, 2.0, 3.0)
++
++    controller.move_xyz.assert_called_once_with(1.0, 2.0, 3.0)
++
++
++def test_set_position_calls_controller():
++    controller = Mock()
++    presenter = XYZControlPresenter(controller)
++
++    presenter.set_position(10.0, 20.0, 30.0)
++
++    controller.set_coord_pos.assert_called_once_with(10.0, 20.0, 30.0)
++
++
++def test_return_to_zero_calls_controller():
++    controller = Mock()
++    presenter = XYZControlPresenter(controller)
++
++    presenter.return_to_zero()
++
++    controller.return_to_zero_xyz.assert_called_once()

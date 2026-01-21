@@ -1,0 +1,199 @@
++ 
++-    monkeypatch.setattr(qi.cv2, "VideoCapture", fake_videocapture)
++-    monkeypatch.setattr(qi.cv2, "cvtColor", fake_cvtcolor)
++ 
+++def test_run_finishes_when_source_ends():
+++    source = FakeSource()
+++    converter = FakeConverter()
++ 
++-def test_run_finishes_when_capture_ends(patch_cv2):
++-    """
++-    Тест НЕ проверяет сигнал new_frame.
++-    Он проверяет главное: run() не уходит в вечный цикл, если камера "закончилась".
++-    """
++-    t = VideoStreamThread(camera_idx=0, width=640, height=480, latency=1)
+++    t = VideoStreamThread(source=source, converter=converter, latency=1)
++ 
++-    
++-    t.running = True
+++    # Важно: мы вызываем run() напрямую (как ты делал), без start()
++     t.run()
++ 
++-    
++-    assert t.cap.isOpened() is False'''
++\ No newline at end of file
+++    assert source.closed is True
++\ No newline at end of file
+
+
+FILE: scripts/commits/cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..2cc2f99
+--- /dev/null
++++ b/scripts/commits/cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11/chunk_0.txt
+@@ -0,0 +1,215 @@
++commit cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11
++Author:     Matvey <matveykroychelove4ek@gmail.com>
++AuthorDate: Wed Jan 21 15:54:50 2026 +0500
++Commit:     Matvey <matveykroychelove4ek@gmail.com>
++CommitDate: Wed Jan 21 15:54:50 2026 +0500
++
++    feat: refactor VideoStreamThread class, upd test
++
++
++FILES:
++
++FILE: src/VideoStream/VideoStreamThread.py
++LANG: py
++
++new file mode 100644
++index 0000000..c9e27aa
++--- /dev/null
+++++ b/src/VideoStream/VideoStreamThread.py
++@@ -0,0 +1,108 @@
+++from __future__ import annotations
+++
+++from abc import ABC, abstractmethod
+++from typing import Optional, Tuple
+++
+++import cv2
+++import numpy as np
+++
+++from PySide6.QtCore import QThread, Signal
+++from PySide6.QtGui import QImage
+++
+++class FrameSource(ABC):
+++    @abstractmethod
+++    def open(self) -> bool: ...
+++    @abstractmethod
+++    def is_opened(self) -> bool: ...
+++    @abstractmethod
+++    def read(self) -> Tuple[bool, Optional[np.ndarray]]: ...
+++    @abstractmethod
+++    def close(self) -> None: ...
+++
+++
+++class FrameConverter(ABC):
+++    @abstractmethod
+++    def to_qimage(self, frame_bgr: np.ndarray) -> QImage: ...
+++
+++
+++class OpenCVCameraSource(FrameSource):
+++    def __init__(self, camera_idx: int = 0, width: int = 640, height: int = 480):
+++        self._camera_idx = camera_idx
+++        self._width = width
+++        self._height = height
+++        self._cap: Optional[cv2.VideoCapture] = None
+++
+++    def open(self) -> bool:
+++        self._cap = cv2.VideoCapture(self._camera_idx)
+++        if not self._cap or not self._cap.isOpened():
+++            self._cap = None
+++            return False
+++
+++        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self._width)
+++        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self._height)
+++        return True
+++
+++    def is_opened(self) -> bool:
+++        return bool(self._cap and self._cap.isOpened())
+++
+++    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+++        if not self.is_opened():
+++            return False, None
+++        ret, frame = self._cap.read()
+++        return ret, frame if ret else None
+++
+++    def close(self) -> None:
+++        if self._cap and self._cap.isOpened():
+++            self._cap.release()
+++        self._cap = None
+++
+++
+++class BGRToRGB888QImageConverter(FrameConverter):
+++    def to_qimage(self, frame_bgr: np.ndarray) -> QImage:
+++        rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+++        h, w, ch = rgb.shape
+++        bytes_per_line = ch * w
+++        return QImage(rgb.data, w, h, bytes_per_line, QImage.Format_RGB888).copy()
+++
+++class VideoStreamThread(QThread):
+++    new_frame = Signal(QImage)
+++    error = Signal(str)
+++
+++    def __init__(
+++        self,
+++        source: Optional[FrameSource] = None,
+++        converter: Optional[FrameConverter] = None,
+++        latency: int = 30,
+++    ):
+++        super().__init__()
+++        self._source = source or OpenCVCameraSource(camera_idx=0, width=640, height=480)
+++        self._converter = converter or BGRToRGB888QImageConverter()
+++        self._latency = latency
+++        self._running = True
+++
+++    def run(self):
+++        if not self._source.open():
+++            self.error.emit("Не удалось открыть видеопоток (источник не открылся).")
+++            return
+++
+++        try:
+++            while self._running:
+++                if not self._source.is_opened():
+++                    self.error.emit("Видеопоток недоступен (источник закрылся).")
+++                    break
+++
+++                ret, frame = self._source.read()
+++                if not ret or frame is None:
+++                    self.error.emit("Ошибка чтения кадра (ret=False).")
+++                    break
+++
+++                qt_image = self._converter.to_qimage(frame)
+++                self.new_frame.emit(qt_image)
+++
+++                self.msleep(self._latency)
+++        finally:
+++            self._source.close()
+++
+++    def stop(self):
+++        self._running = False
+++        self.wait()
++\ No newline at end of file
++
++
++FILE: src/VideoStream/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: src/qt_interface.py
++LANG: py
++
++index 8fc3ffe..e7b4e1a 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -30,6 +30,7 @@ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++ from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++ from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.VideoStream.VideoStreamThread import VideoStreamThread
++ 
++ 
++ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
++@@ -57,7 +58,7 @@ q = queue.Queue()
++ #filename = None
++ 
++ # Поток для видеозахвата
++-class VideoStreamThread(QThread):
+++""" class VideoStreamThread(QThread):
++     new_frame = Signal(QImage)
++     
++     def __init__(self, camera_idx=0, width=640, height=480, latency=30):
++@@ -89,7 +90,7 @@ class VideoStreamThread(QThread):
++         self.wait()
++         if self.cap.isOpened():
