@@ -1,0 +1,171 @@
++
++    add pico.py stubs for qt_interface.py
++
++
+
+
+FILE: src/pico.py
+LANG: py
+
++new file mode 100644
++index 0000000..4cec485
++--- /dev/null
+++++ b/src/pico.py
++@@ -0,0 +1,9 @@
+++class Pico:
+++    def __init__(self, *args, **kwargs):
+++        pass
+++
+++    def pump_in(self, state: int):
+++        print(f"[PICO] pump_in = {state}")
+++
+++    def pump_out(self, state: int):
+++        print(f"[PICO] pump_out = {state}")
+
+
+FILE: scripts/commits/eb79f5c56bde79ce86d09d520e326c4ba63b17f2/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..e27d625
+--- /dev/null
++++ b/scripts/commits/eb79f5c56bde79ce86d09d520e326c4ba63b17f2/chunk_0.txt
+@@ -0,0 +1,28 @@
++commit eb79f5c56bde79ce86d09d520e326c4ba63b17f2
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:32:43 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:32:43 2026 +0500
++
++    add pico.py stubs for qt_interface.py
++
++
++FILES:
++
++FILE: src/pico.py
++LANG: py
++
++new file mode 100644
++index 0000000..4cec485
++--- /dev/null
+++++ b/src/pico.py
++@@ -0,0 +1,9 @@
+++class Pico:
+++    def __init__(self, *args, **kwargs):
+++        pass
+++
+++    def pump_in(self, state: int):
+++        print(f"[PICO] pump_in = {state}")
+++
+++    def pump_out(self, state: int):
+++        print(f"[PICO] pump_out = {state}")
+\ No newline at end of file
+
+
+FILE: scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..46faf08
+--- /dev/null
++++ b/scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.norm
+@@ -0,0 +1,26 @@
++commit f6e04f4d82dbb8d1230dfc01f28feb128c11389f
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:14:05 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:14:05 2026 +0500
++
++    update requirements.txt
++
++
++FILES:
++
++FILE: requirements.txt
++LANG: txt
++
++index 74e62c3..0a0dc05 100644
++--- a/requirements.txt
+++++ b/requirements.txt
++@@ -7,7 +7,7 @@ iniconfig==2.3.0
++ kiwisolver==1.4.9
++ matplotlib==3.8.2
++ mpmath==1.3.0
++-numpy==2.4.1
+++numpy==1.26.4
++ opencv-python==4.9.0.80
++ packaging==25.0
++ pillow==12.1.0
+
+
+FILE: scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..714628b
+--- /dev/null
++++ b/scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.raw
+@@ -0,0 +1,21 @@
++commit f6e04f4d82dbb8d1230dfc01f28feb128c11389f
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:14:05 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:14:05 2026 +0500
++
++    update requirements.txt
++
++
+
+
+FILE: requirements.txt
+LANG: txt
+
++index 74e62c3..0a0dc05 100644
++--- a/requirements.txt
+++++ b/requirements.txt
++@@ -7,7 +7,7 @@ iniconfig==2.3.0
++ kiwisolver==1.4.9
++ matplotlib==3.8.2
++ mpmath==1.3.0
++-numpy==2.4.1
+++numpy==1.26.4
++ opencv-python==4.9.0.80
++ packaging==25.0
++ pillow==12.1.0
+
+
+FILE: scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..1c0165e
+--- /dev/null
++++ b/scripts/commits/f6e04f4d82dbb8d1230dfc01f28feb128c11389f/chunk_0.txt
+@@ -0,0 +1,26 @@
++commit f6e04f4d82dbb8d1230dfc01f28feb128c11389f
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:14:05 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:14:05 2026 +0500
++
++    update requirements.txt
++
++
++FILES:
++
++FILE: requirements.txt
++LANG: txt
++
++index 74e62c3..0a0dc05 100644
++--- a/requirements.txt
+++++ b/requirements.txt
++@@ -7,7 +7,7 @@ iniconfig==2.3.0
++ kiwisolver==1.4.9
++ matplotlib==3.8.2
++ mpmath==1.3.0
++-numpy==2.4.1
+++numpy==1.26.4
++ opencv-python==4.9.0.80
++ packaging==25.0
++ pillow==12.1.0
+\ No newline at end of file

@@ -1,0 +1,184 @@
++AuthorDate: Wed Jan 21 14:44:00 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 14:44:00 2026 +0500
++
++    Merge pull request #15 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactored class LogTextBoxErrosion, add test
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/50969b34241935b6b8af148cfd5fd95896e905f6.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..796c15a
+--- /dev/null
++++ b/scripts/commits/50969b34241935b6b8af148cfd5fd95896e905f6.raw
+@@ -0,0 +1,11 @@
++commit 50969b34241935b6b8af148cfd5fd95896e905f6
++Merge: c76309f 5bc47e2
++Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
++AuthorDate: Wed Jan 21 14:44:00 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 14:44:00 2026 +0500
++
++    Merge pull request #15 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactored class LogTextBoxErrosion, add test
++
+
+
+FILE: scripts/commits/50969b34241935b6b8af148cfd5fd95896e905f6/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..80c2fb7
+--- /dev/null
++++ b/scripts/commits/50969b34241935b6b8af148cfd5fd95896e905f6/chunk_0.txt
+@@ -0,0 +1,13 @@
++commit 50969b34241935b6b8af148cfd5fd95896e905f6
++Merge: c76309f 5bc47e2
++Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
++AuthorDate: Wed Jan 21 14:44:00 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 14:44:00 2026 +0500
++
++    Merge pull request #15 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactored class LogTextBoxErrosion, add test
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/54ef76b364ff38d1832a2779a9dd9f38483a5971.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..cafcbbb
+--- /dev/null
++++ b/scripts/commits/54ef76b364ff38d1832a2779a9dd9f38483a5971.norm
+@@ -0,0 +1,245 @@
++commit 54ef76b364ff38d1832a2779a9dd9f38483a5971
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Mon Jan 19 23:06:13 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Mon Jan 19 23:06:13 2026 +0500
++
++    refactor: axis_control_widget class + test
++
++
++FILES:
++
++FILE: src/widgets/axis_control_widget.py
++LANG: py
++
++index e69de29..049ddf3 100644
++--- a/src/widgets/axis_control_widget.py
+++++ b/src/widgets/axis_control_widget.py
++@@ -0,0 +1,101 @@
+++from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout
+++from PySide6.QtCore import Qt, Signal
+++
+++from .axis_control_config import AxisControlConfig
+++
+++
+++class AxisControlWidget(QWidget):
+++    """
+++    Widget for controlling single axis movement.
+++    
+++    Provides buttons for incremental movement with configurable step sizes.
+++    Emits signal when position changes.
+++    
+++    Signals:
+++        position_changed: Emitted with (axis_name, new_position)
+++    """
+++    
+++    position_changed = Signal(str, float)
+++    
+++    def __init__(self, axis: str, config: AxisControlConfig = None):
+++        """
+++        Initialize axis control widget.
+++        
+++        Args:
+++            axis: Axis identifier (e.g., 'X', 'Y', 'Z')
+++            config: Configuration object. If None, uses default config.
+++        """
+++        super().__init__()
+++        self.axis = axis
+++        self.config = config if config is not None else AxisControlConfig()
+++        self.config.validate()
+++        
+++        self._current_value = self.config.initial_value
+++        self._create_widgets()
+++        
+++    def _create_widgets(self):
+++        """Create and layout UI widgets."""
+++        layout = QVBoxLayout()
+++        layout.setContentsMargins(5, 5, 5, 5)
+++        layout.setSpacing(5)
+++        
+++        title_label = QLabel(f"Ось {self.axis}")
+++        title_label.setAlignment(Qt.AlignCenter)
+++        title_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+++        layout.addWidget(title_label)
+++        
+++        self.value_label = QLabel(f"{self._current_value:.1f} мм")
+++        self.value_label.setAlignment(Qt.AlignCenter)
+++        self.value_label.setStyleSheet(
+++            "font-size: 12px; background-color: #f0f0f0; "
+++            "padding: 3px; border-radius: 3px;"
+++        )
+++        layout.addWidget(self.value_label)
+++        
+++        layout.addSpacing(5)
+++        
+++        button_layout = self._create_button_layout()
+++        layout.addLayout(button_layout)
+++        
+++        self.setLayout(layout)
+++        
+++    def _create_button_layout(self) -> QGridLayout:
+++        button_layout = QGridLayout()
+++        button_layout.setHorizontalSpacing(3)
+++        button_layout.setVerticalSpacing(3)
+++        
+++        for i, step in enumerate(self.config.step_sizes):
+++            minus_btn = self._create_button(f"-{step}", step, decrement=True)
+++            button_layout.addWidget(minus_btn, 0, i)
+++            
+++            step_label = QLabel(f"{step} мм")
+++            step_label.setAlignment(Qt.AlignCenter)
+++            step_label.setStyleSheet(f"font-size: {self.config.font_size}px;")
+++            button_layout.addWidget(step_label, 1, i)
+++            
+++            plus_btn = self._create_button(f"+{step}", step, decrement=False)
+++            button_layout.addWidget(plus_btn, 2, i)
+++        
+++        return button_layout
+++    
+++    def _create_button(self, text: str, step: float, decrement: bool) -> QPushButton:
+++        button = QPushButton(text)
+++        button.setFixedSize(self.config.button_width, self.config.button_height)
+++        button.setStyleSheet(f"font-size: {self.config.font_size}px;")
+++        
+++        delta = -step if decrement else step
+++        button.clicked.connect(lambda: self.change_position(delta))
+++        
+++        return button
+++        
+++    def change_position(self, delta: float):
+++        self._current_value += delta
+++        self.value_label.setText(f"{self._current_value:.1f} мм")
+++        self.position_changed.emit(self.axis, self._current_value)
+++    
+++    def get_current_value(self) -> float:
+++        return self._current_value
+++    
+++    def set_current_value(self, value: float):
+++        self._current_value = value

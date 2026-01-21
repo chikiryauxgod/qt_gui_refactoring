@@ -1,0 +1,217 @@
++ from src.VideoStream.VideoStreamThread import VideoStreamThread
++ from src.presenters.joint_control_presenter import JointControlPresenter
+\ No newline at end of file
+
+
+FILE: scripts/commits/9a7d27b271304fae17e35b12f536a010a8e7fd3b/chunk_2.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..0ef878e
+--- /dev/null
++++ b/scripts/commits/9a7d27b271304fae17e35b12f536a010a8e7fd3b/chunk_2.txt
+@@ -0,0 +1,44 @@
++ from src.domain.xyz_availability_service import XYZAvailabilityService
++@@ -43,7 +43,7 @@ from src.domain.joint_availability_service import JointAvailabilityService
++ from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
++ from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
++ from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
++-
+++from src.erosion_process.erosion_process_tab import ErosionProcessTab
++ 
++ 
++ 
++
++
++FILE: tests/ErosionProcessTab/test_erosion_presenter_run.py
++LANG: py
++
++index c701e73..455a890 100644
++--- a/tests/ErosionProcessTab/test_erosion_presenter_run.py
+++++ b/tests/ErosionProcessTab/test_erosion_presenter_run.py
++@@ -2,7 +2,7 @@ import queue
++ import pytest
++ from unittest.mock import Mock
++ 
++-from src.ErossionProcess.ErosionProcessTab import (
+++from src.erosion_process.erosion_process_tab import (
++     ErosionProcessPresenter,
++     ErosionRunParams,
++ )
++
++
++FILE: tests/LogTextBoxErrosion/test_log_text_errosion.py
++LANG: py
++
++index 5163b6d..1a6fec7 100644
++--- a/tests/LogTextBoxErrosion/test_log_text_errosion.py
+++++ b/tests/LogTextBoxErrosion/test_log_text_errosion.py
++@@ -4,7 +4,7 @@ import time
++ import pytest
++ from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
++ 
++-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
++ 
++ 
++ @pytest.fixture(scope="session", autouse=True)
+\ No newline at end of file
+
+
+FILE: scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..aeff09d
+--- /dev/null
++++ b/scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0.norm
+@@ -0,0 +1,13 @@
++commit 9ef4dc41d6384066267ee12e065a6eda305d67d0
++Merge: 50969b3 cf9b977
++Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
++AuthorDate: Wed Jan 21 15:55:56 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 15:55:56 2026 +0500
++
++    Merge pull request #16 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactor VideoStreamThread class, upd test
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..8e810c7
+--- /dev/null
++++ b/scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0.raw
+@@ -0,0 +1,11 @@
++commit 9ef4dc41d6384066267ee12e065a6eda305d67d0
++Merge: 50969b3 cf9b977
++Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
++AuthorDate: Wed Jan 21 15:55:56 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 15:55:56 2026 +0500
++
++    Merge pull request #16 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactor VideoStreamThread class, upd test
++
+
+
+FILE: scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..aeff09d
+--- /dev/null
++++ b/scripts/commits/9ef4dc41d6384066267ee12e065a6eda305d67d0/chunk_0.txt
+@@ -0,0 +1,13 @@
++commit 9ef4dc41d6384066267ee12e065a6eda305d67d0
++Merge: 50969b3 cf9b977
++Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
++AuthorDate: Wed Jan 21 15:55:56 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 15:55:56 2026 +0500
++
++    Merge pull request #16 from chikiryauxgod/feature/Log_Text_Box_Errosion
++    
++    feat: refactor VideoStreamThread class, upd test
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/a01131a97c2b49bd222ab88191a69d942319bb22.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..b8cdad3
+--- /dev/null
++++ b/scripts/commits/a01131a97c2b49bd222ab88191a69d942319bb22.norm
+@@ -0,0 +1,129 @@
++commit a01131a97c2b49bd222ab88191a69d942319bb22
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Wed Jan 21 12:22:50 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Wed Jan 21 12:22:50 2026 +0500
++
++    feat: add xyz_trajectory_service + test
++
++
++FILES:
++
++FILE: src/services/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: src/services/xyz_trajectory_service.py
++LANG: py
++
++new file mode 100644
++index 0000000..365ce68
++--- /dev/null
+++++ b/src/services/xyz_trajectory_service.py
++@@ -0,0 +1,34 @@
+++from typing import List, Tuple
+++
+++
+++PointXYZ = Tuple[float, float, float]
+++
+++
+++class XYZTrajectoryService:
+++    """
+++    Отвечает ТОЛЬКО за хранение и управление XYZ-траекторией.
+++    Не знает ничего про Qt, controller и UI.
+++    """
+++
+++    def __init__(self) -> None:
+++        self._points: List[PointXYZ] = []
+++
+++    def set_initial_point(self, x: float, y: float, z: float) -> None:
+++        self._points = [(x, y, z)]
+++
+++    def add_point(self, x: float, y: float, z: float) -> None:
+++        self._points.append((x, y, z))
+++
+++    def remove_point(self, index: int) -> None:
+++        if index < 0 or index >= len(self._points):
+++            raise IndexError("Trajectory point index out of range")
+++        self._points.pop(index)
+++
+++    def clear(self) -> None:
+++        self._points.clear()
+++
+++    def get_points(self) -> List[PointXYZ]:
+++        return list(self._points)
+++
+++    def is_empty(self) -> bool:
+++        return not self._points
++
++
++FILE: tests/ServiceTab/test_xyz_trajectory_service.py
++LANG: py
++
++new file mode 100644
++index 0000000..8be5f93
++--- /dev/null
+++++ b/tests/ServiceTab/test_xyz_trajectory_service.py
++@@ -0,0 +1,51 @@
+++import pytest
+++from src.services.xyz_trajectory_service import XYZTrajectoryService
+++
+++
+++def test_set_initial_point():
+++    service = XYZTrajectoryService()
+++
+++    service.set_initial_point(1.0, 2.0, 3.0)
+++
+++    assert service.get_points() == [(1.0, 2.0, 3.0)]

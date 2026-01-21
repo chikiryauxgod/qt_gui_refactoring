@@ -1,0 +1,266 @@
++AuthorDate: Mon Jan 19 23:04:35 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Mon Jan 19 23:04:35 2026 +0500
++
++    Merge pull request #5 from chikiryauxgod/feature/arrow3d_to_solid
++    
++    refactoring: class Arrow3D
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/1eefeb4c6524eebc5d7b13942836c99699cce431.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..7ace4b4
+--- /dev/null
++++ b/scripts/commits/1eefeb4c6524eebc5d7b13942836c99699cce431.raw
+@@ -0,0 +1,11 @@
++commit 1eefeb4c6524eebc5d7b13942836c99699cce431
++Merge: c18b939 b3c2fc2
++Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
++AuthorDate: Mon Jan 19 23:04:35 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Mon Jan 19 23:04:35 2026 +0500
++
++    Merge pull request #5 from chikiryauxgod/feature/arrow3d_to_solid
++    
++    refactoring: class Arrow3D
++
+
+
+FILE: scripts/commits/1eefeb4c6524eebc5d7b13942836c99699cce431/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..d8b02ab
+--- /dev/null
++++ b/scripts/commits/1eefeb4c6524eebc5d7b13942836c99699cce431/chunk_0.txt
+@@ -0,0 +1,13 @@
++commit 1eefeb4c6524eebc5d7b13942836c99699cce431
++Merge: c18b939 b3c2fc2
++Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
++AuthorDate: Mon Jan 19 23:04:35 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Mon Jan 19 23:04:35 2026 +0500
++
++    Merge pull request #5 from chikiryauxgod/feature/arrow3d_to_solid
++    
++    refactoring: class Arrow3D
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..0fb6d7b
+--- /dev/null
++++ b/scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.norm
+@@ -0,0 +1,34 @@
++commit 2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:33:20 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:33:20 2026 +0500
++
++    add robot.py stubs for qt_interface.py
++
++
++FILES:
++
++FILE: src/robot.py
++LANG: py
++
++new file mode 100644
++index 0000000..9fe3739
++--- /dev/null
+++++ b/src/robot.py
++@@ -0,0 +1,14 @@
+++class Robot:
+++    def __init__(self, *args, **kwargs):
+++        self.current_x = 0.0
+++        self.current_y = 0.0
+++        self.current_z = 0.0
+++
+++    def emergency_stop(self):
+++        print("[ROBOT] Emergency stop")
+++
+++    def start_erosion_process(self, *args, **kwargs):
+++        print("[ROBOT] start_erosion_process called")
+++
+++    def stop_erosion_process(self):
+++        print("[ROBOT] stop_erosion_process called")
++\ No newline at end of file
+
+
+FILE: scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..f55e545
+--- /dev/null
++++ b/scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.raw
+@@ -0,0 +1,29 @@
++commit 2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:33:20 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:33:20 2026 +0500
++
++    add robot.py stubs for qt_interface.py
++
++
+
+
+FILE: src/robot.py
+LANG: py
+
++new file mode 100644
++index 0000000..9fe3739
++--- /dev/null
+++++ b/src/robot.py
++@@ -0,0 +1,14 @@
+++class Robot:
+++    def __init__(self, *args, **kwargs):
+++        self.current_x = 0.0
+++        self.current_y = 0.0
+++        self.current_z = 0.0
+++
+++    def emergency_stop(self):
+++        print("[ROBOT] Emergency stop")
+++
+++    def start_erosion_process(self, *args, **kwargs):
+++        print("[ROBOT] start_erosion_process called")
+++
+++    def stop_erosion_process(self):
+++        print("[ROBOT] stop_erosion_process called")
++\ No newline at end of file
+
+
+FILE: scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..e4943e0
+--- /dev/null
++++ b/scripts/commits/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e/chunk_0.txt
+@@ -0,0 +1,34 @@
++commit 2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:33:20 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:33:20 2026 +0500
++
++    add robot.py stubs for qt_interface.py
++
++
++FILES:
++
++FILE: src/robot.py
++LANG: py
++
++new file mode 100644
++index 0000000..9fe3739
++--- /dev/null
+++++ b/src/robot.py
++@@ -0,0 +1,14 @@
+++class Robot:
+++    def __init__(self, *args, **kwargs):
+++        self.current_x = 0.0
+++        self.current_y = 0.0
+++        self.current_z = 0.0
+++
+++    def emergency_stop(self):
+++        print("[ROBOT] Emergency stop")
+++
+++    def start_erosion_process(self, *args, **kwargs):
+++        print("[ROBOT] start_erosion_process called")
+++
+++    def stop_erosion_process(self):
+++        print("[ROBOT] stop_erosion_process called")
++\ No newline at end of file
+\ No newline at end of file
+
+
+FILE: scripts/commits/36b4638877d4182f8344757ca6e85b5ea46bc83d.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..b14582b
+--- /dev/null
++++ b/scripts/commits/36b4638877d4182f8344757ca6e85b5ea46bc83d.norm
+@@ -0,0 +1,58 @@
++commit 36b4638877d4182f8344757ca6e85b5ea46bc83d
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Mon Jan 19 21:53:50 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Mon Jan 19 21:53:50 2026 +0500
++
++    feat: add new dir for the tests
++
++
++FILES:
++
++FILE: tests/Arrow3D/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/AxisControlWidget/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/ErosionProcessTab/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/ErosionWorker/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/LogTextBoxErrosion/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/MainWindow/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
++
++
++FILE: tests/ServiceTab/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
+
+
+FILE: scripts/commits/36b4638877d4182f8344757ca6e85b5ea46bc83d.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..bb854fd
+--- /dev/null
++++ b/scripts/commits/36b4638877d4182f8344757ca6e85b5ea46bc83d.raw

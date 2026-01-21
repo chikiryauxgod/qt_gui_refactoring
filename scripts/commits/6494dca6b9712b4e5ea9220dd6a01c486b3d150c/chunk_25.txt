@@ -1,0 +1,146 @@
++-                              QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
++-                              QScrollArea, QFrame, QSplitter, QSizePolicy, QGridLayout,
++-                              QLineEdit, QStackedWidget, QListWidget, QListWidgetItem,
+++from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget,
+++                                QWidget, QVBoxLayout, QHBoxLayout, 
+++                                QLabel, QPushButton, QDoubleSpinBox, 
+++                                QSpinBox,QProgressBar, QTextEdit, 
+++                                QGroupBox, QFileDialog, QMessageBox,
+++                              QScrollArea, QFrame, QSplitter, 
+++                              QSizePolicy, QGridLayout,QLineEdit,
+++                              QStackedWidget, QListWidget, QListWidgetItem,
++                               QCheckBox, QComboBox, QSlider, QDialog, QDialogButtonBox)
++ from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot, QPropertyAnimation, QEasingCurve, QEvent
++ from PySide6.QtGui import QImage, QPixmap, QFont, QPalette, QColor, QTextCursor 
++@@ -68,13 +71,14 @@ class Arrow3D(FancyArrowPatch):
++ class VideoStreamThread(QThread):
++     new_frame = Signal(QImage)
++     
++-    def __init__(self):
+++    def __init__(self, camera_idx=0, width=640, height=480, latency=30):
++         super().__init__()
++         self.running = True
++-        self.cap = cv2.VideoCapture(0)
+++        self.latency = latency
+++        self.cap = cv2.VideoCapture(camera_idx)
++         if self.cap.isOpened():
++-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
++-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+++            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+++            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
++         
++     def run(self):
++         while self.running:
++@@ -86,13 +90,15 @@ class VideoStreamThread(QThread):
++                     bytes_per_line = ch * w
++                     qt_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
++                     self.new_frame.emit(qt_image)
++-            QThread.msleep(30)
+++            self.msleep(self.latency)
++             
++     def stop(self):
++         self.running = False
++         self.wait()
++         if self.cap.isOpened():
++             self.cap.release()
+++
+++
++ # Виджет управления осью
++ class AxisControlWidget(QWidget):
++     position_changed = Signal(str, float)
+\ No newline at end of file
+
+
+FILE: scripts/commits/3e61e64c0ce465133bbc7f88bb82fa78d73f9520.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..1031fd5
+--- /dev/null
++++ b/scripts/commits/3e61e64c0ce465133bbc7f88bb82fa78d73f9520.norm
+@@ -0,0 +1,181 @@
++commit 3e61e64c0ce465133bbc7f88bb82fa78d73f9520
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Wed Jan 21 12:40:33 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Wed Jan 21 12:40:33 2026 +0500
++
++    refactor: include new class into main code
++
++
++FILES:
++
++FILE: src/qt_interface.py
++LANG: py
++
++index 1395c15..327fec7 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -29,7 +29,7 @@ from .log import Log
++ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++ from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
++-
+++from src.services.xyz_trajectory_service import XYZTrajectoryService
++ 
++ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
++ #+ Выводить содержимое очереди в textbox процесса эрозии
++@@ -943,7 +943,7 @@ class ServiceTab(QWidget):
++     def __init__(self, controller):
++         super().__init__()
++         self.controller = controller
++-        self.trajectory_points_xyz = []
+++        self.trajectory_service = XYZTrajectoryService()
++         self.trajectory_points_joints = []
++         self.continuous_move_timer = QTimer()
++         self.continuous_move_timer.timeout.connect(self.continuous_move)
++@@ -1796,9 +1796,15 @@ class ServiceTab(QWidget):
++     # Методы траекторий XYZ
++     @Slot()
++     def add_initial_xyz_point(self):
++-        point = (self.controller.current_x, self.controller.current_y, self.controller.current_z)
++-        self.trajectory_points_xyz = [point]
++-        self.xyz_listbox.addItem(f"1: X: {point[0]:.2f}, Y: {point[1]:.2f}, Z: {point[2]:.2f}")
+++        x = self.controller.current_x
+++        y = self.controller.current_y
+++        z = self.controller.current_z
+++
+++        self.trajectory_service.set_initial_point(x, y, z)
+++
+++        self.xyz_listbox.clear()
+++        self.xyz_listbox.addItem(f"1: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+++
++         self.update_xyz_trajectory_plot()
++ 
++     @Slot()
++@@ -1808,10 +1814,12 @@ class ServiceTab(QWidget):
++         z = self.new_z.value()
++         
++         if self.check_point_availability(x, y, z):
++-            point = (x, y, z)
++-            self.trajectory_points_xyz.append(point)
++-            index = len(self.trajectory_points_xyz)
++-            self.xyz_listbox.addItem(f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+++            self.xyz_trajectory_service.add_point(x, y, z)
+++
+++            index = len(self.xyz_trajectory_service.get_points())
+++            self.xyz_listbox.addItem(
+++                f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+++            )
++             self.update_xyz_trajectory_plot()
++         else:
++             logger("The point cannot be moved.", queue=q)
++@@ -1821,21 +1829,25 @@ class ServiceTab(QWidget):
++         current_row = self.xyz_listbox.currentRow()
++         if current_row >= 0:
++             self.xyz_listbox.takeItem(current_row)
++-            self.trajectory_points_xyz.pop(current_row)
++-            
+++            self.xyz_trajectory_service.remove_point(current_row)
+++
++             self.xyz_listbox.clear()
++-            for i, point in enumerate(self.trajectory_points_xyz):
++-                x, y, z = point
++-                self.xyz_listbox.addItem(f"{i+1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
++-            
+++            for i, (x, y, z) in enumerate(

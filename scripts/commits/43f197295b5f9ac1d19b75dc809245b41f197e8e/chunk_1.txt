@@ -1,0 +1,73 @@
++    assert presenter.set_position.call_count == 2
+
+
+FILE: tests/ServiceTab/presenters/test_joint_control_presenter.py
+LANG: py
+
+new file mode 100644
+index 0000000..5e1b7bb
+--- /dev/null
++++ b/tests/ServiceTab/presenters/test_joint_control_presenter.py
+@@ -0,0 +1,12 @@
++from unittest.mock import Mock
++from src.presenters.joint_control_presenter import JointControlPresenter
++
++
++def test_set_position_calls_controller():
++    controller = Mock()
++    presenter = JointControlPresenter(controller)
++
++    joints = [1, 2, 3, 4, 5, 6]
++    presenter.set_position(joints)
++
++    controller.set_joint_pos.assert_called_once_with(joints)
+
+
+FILE: tests/ServiceTab/services/test_joint_trajectory_service.py
+LANG: py
+
+similarity index 100%
+rename from tests/ServiceTab/test_joint_trajectory_service.py
+rename to tests/ServiceTab/services/test_joint_trajectory_service.py
+
+
+FILE: tests/ServiceTab/services/test_xyz_trajectory_service.py
+LANG: py
+
+similarity index 100%
+rename from tests/ServiceTab/test_xyz_trajectory_service.py
+rename to tests/ServiceTab/services/test_xyz_trajectory_service.py
+
+
+FILE: tests/ServiceTab/test_xyz_trajectory_executor.py
+LANG: py
+
+deleted file mode 100644
+index 58161fd..0000000
+--- a/tests/ServiceTab/test_xyz_trajectory_executor.py
++++ /dev/null
+@@ -1,24 +0,0 @@
+-from unittest.mock import Mock
+-
+-from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+-
+-
+-def test_xyz_trajectory_execution_calls_controller_in_order():
+-    controller = Mock()
+-    trajectory_service = Mock()
+-    trajectory_service.get_points.return_value = [
+-        (1, 2, 3),
+-        (4, 5, 6),
+-    ]
+-
+-    executor = XYZTrajectoryExecutor(
+-        controller=controller,
+-        trajectory_service=trajectory_service,
+-        delay_sec=0,
+-    )
+-
+-    executor.execute()
+-
+-    controller.set_coord_pos.assert_any_call(1, 2, 3)
+-    controller.set_coord_pos.assert_any_call(4, 5, 6)
+-    assert controller.set_coord_pos.call_count == 2

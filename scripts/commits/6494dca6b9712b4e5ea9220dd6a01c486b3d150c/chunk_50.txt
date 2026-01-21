@@ -1,0 +1,253 @@
+LANG: norm
+
+new file mode 100644
+index 0000000..bbf6ecf
+--- /dev/null
++++ b/scripts/commits/794f80a9f91730cd86ba11811d943ac44baef10c.norm
+@@ -0,0 +1,16 @@
++commit 794f80a9f91730cd86ba11811d943ac44baef10c
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Mon Jan 19 21:48:34 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Mon Jan 19 21:48:34 2026 +0500
++
++    feat: add __init__.py
++
++
++FILES:
++
++FILE: tests/VideoStreamThread/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
+
+
+FILE: scripts/commits/794f80a9f91730cd86ba11811d943ac44baef10c.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..5fc237a
+--- /dev/null
++++ b/scripts/commits/794f80a9f91730cd86ba11811d943ac44baef10c.raw
+@@ -0,0 +1,11 @@
++commit 794f80a9f91730cd86ba11811d943ac44baef10c
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Mon Jan 19 21:48:34 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Mon Jan 19 21:48:34 2026 +0500
++
++    feat: add __init__.py
++
++
+
+
+FILE: tests/VideoStreamThread/__init__.py
+LANG: py
+
++new file mode 100644
++index 0000000..e69de29
+
+
+FILE: scripts/commits/794f80a9f91730cd86ba11811d943ac44baef10c/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..daa2acc
+--- /dev/null
++++ b/scripts/commits/794f80a9f91730cd86ba11811d943ac44baef10c/chunk_0.txt
+@@ -0,0 +1,16 @@
++commit 794f80a9f91730cd86ba11811d943ac44baef10c
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Mon Jan 19 21:48:34 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Mon Jan 19 21:48:34 2026 +0500
++
++    feat: add __init__.py
++
++
++FILES:
++
++FILE: tests/VideoStreamThread/__init__.py
++LANG: py
++
++new file mode 100644
++index 0000000..e69de29
+\ No newline at end of file
+
+
+FILE: scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..f9eddda
+--- /dev/null
++++ b/scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76.norm
+@@ -0,0 +1,30 @@
++commit 799f5f6ecba8053eab774bb7187c6caa12867f76
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:32:29 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:32:29 2026 +0500
++
++    add log.py stubs for qt_interface.py
++
++
++FILES:
++
++FILE: src/log.py
++LANG: py
++
++new file mode 100644
++index 0000000..3dc81bc
++--- /dev/null
+++++ b/src/log.py
++@@ -0,0 +1,10 @@
+++import sys
+++
+++class Log:
+++    def __call__(self, message, queue=None, file=None):
+++        # вывод в указанный поток или в stdout по умолчанию
+++        if file is None:
+++            file = sys.stdout
+++        print(f"LOG: {message}", file=file)
+++        if queue is not None:
+++            queue.put(message)
++\ No newline at end of file
+
+
+FILE: scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..f024864
+--- /dev/null
++++ b/scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76.raw
+@@ -0,0 +1,25 @@
++commit 799f5f6ecba8053eab774bb7187c6caa12867f76
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:32:29 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:32:29 2026 +0500
++
++    add log.py stubs for qt_interface.py
++
++
+
+
+FILE: src/log.py
+LANG: py
+
++new file mode 100644
++index 0000000..3dc81bc
++--- /dev/null
+++++ b/src/log.py
++@@ -0,0 +1,10 @@
+++import sys
+++
+++class Log:
+++    def __call__(self, message, queue=None, file=None):
+++        # вывод в указанный поток или в stdout по умолчанию
+++        if file is None:
+++            file = sys.stdout
+++        print(f"LOG: {message}", file=file)
+++        if queue is not None:
+++            queue.put(message)
++\ No newline at end of file
+
+
+FILE: scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..8108799
+--- /dev/null
++++ b/scripts/commits/799f5f6ecba8053eab774bb7187c6caa12867f76/chunk_0.txt
+@@ -0,0 +1,30 @@
++commit 799f5f6ecba8053eab774bb7187c6caa12867f76
++Author:     faweddd <igormaluh010@mail.ru>
++AuthorDate: Sat Jan 17 22:32:29 2026 +0500
++Commit:     faweddd <igormaluh010@mail.ru>
++CommitDate: Sat Jan 17 22:32:29 2026 +0500
++
++    add log.py stubs for qt_interface.py
++
++
++FILES:
++
++FILE: src/log.py
++LANG: py
++
++new file mode 100644
++index 0000000..3dc81bc
++--- /dev/null
+++++ b/src/log.py
++@@ -0,0 +1,10 @@
+++import sys
+++
+++class Log:
+++    def __call__(self, message, queue=None, file=None):
+++        # вывод в указанный поток или в stdout по умолчанию
+++        if file is None:
+++            file = sys.stdout
+++        print(f"LOG: {message}", file=file)
+++        if queue is not None:
+++            queue.put(message)
++\ No newline at end of file
+\ No newline at end of file
+
+
+FILE: scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..9d7267d
+--- /dev/null
++++ b/scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026.norm
+@@ -0,0 +1,13 @@
++commit 8091299dbce968dbd5617a6eb5cdffb8193c9026
++Merge: 9ef4dc4 db55179
++Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
++AuthorDate: Wed Jan 21 16:25:11 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 16:25:11 2026 +0500
++
++    Merge pull request #17 from chikiryauxgod/feature/service_tab_refactoring
++    
++    Feature/service tab refactoring
++
++
++FILES:
+\ No newline at end of file
+
+
+FILE: scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026.raw
+LANG: raw
+
+new file mode 100644
+index 0000000..8a2c1ee
+--- /dev/null
++++ b/scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026.raw
+@@ -0,0 +1,11 @@
++commit 8091299dbce968dbd5617a6eb5cdffb8193c9026
++Merge: 9ef4dc4 db55179
++Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
++AuthorDate: Wed Jan 21 16:25:11 2026 +0500
++Commit:     GitHub <noreply@github.com>
++CommitDate: Wed Jan 21 16:25:11 2026 +0500
++
++    Merge pull request #17 from chikiryauxgod/feature/service_tab_refactoring
++    
++    Feature/service tab refactoring
++
+
+
+FILE: scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026/chunk_0.txt
+LANG: txt
+
+new file mode 100644
+index 0000000..9d7267d
+--- /dev/null
++++ b/scripts/commits/8091299dbce968dbd5617a6eb5cdffb8193c9026/chunk_0.txt
+@@ -0,0 +1,13 @@
++commit 8091299dbce968dbd5617a6eb5cdffb8193c9026

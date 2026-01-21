@@ -1,0 +1,207 @@
+++    view.set_stopped_ui_state = Mock()
+++    view.set_paused_ui_state = Mock()
+++    view.set_running_ui_state = Mock()
+++    return view
+++
+++
+++@pytest.fixture
+++def fake_controller():
+++    controller = Mock()
+++    controller.start_erosion_process = Mock()
+++    controller.stop_erosion_process = Mock()
+++    controller.set_coord_pos = Mock()
+++    controller.X0 = 0
+++    controller.Y0 = 0
+++    controller.Z0 = 0
+++    return controller
+++
+++
+++@pytest.fixture
+++def q_ref():
+++    return queue.Queue()
++\ No newline at end of file
++
++
++FILE: tests/ErosionProcessTab/test_erosion_presenter_load.py
++LANG: py
++
++index e69de29..a5e1203 100644
++--- a/tests/ErosionProcessTab/test_erosion_presenter_load.py
+++++ b/tests/ErosionProcessTab/test_erosion_presenter_load.py
++@@ -0,0 +1,31 @@
+++from src.erosion_process.erosion_process_tab import ErosionProcessPresenter
+++import pytest
+++
+++
+++def test_load_gcode_success(tmp_path, fake_view, fake_controller, q_ref):
+++    gcode = "G1 X1 Y2 Z3"
+++    path = tmp_path / "ok.gcode"
+++    path.write_text(gcode)
+++
+++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
+++    presenter.load_gcode(str(path))
+++
+++    fake_view.set_gcode_info.assert_called_once()
+++    fake_view.plot_gcode.assert_called_once()
+++
+++    points = fake_view.plot_gcode.call_args.args[0]
+++    assert points == [(1.0, 2.0, 3.0)]
+++
+++
+++def test_load_gcode_wrong_extension(fake_view, fake_controller, q_ref):
+++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
+++    presenter.load_gcode("file.txt")
+++
+++    fake_view.show_error.assert_called_once()
+++
+++
+++def test_load_gcode_missing_file(fake_view, fake_controller, q_ref):
+++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
+++    presenter.load_gcode("missing.gcode")
+++
+++    fake_view.show_error.assert_called_once()
++
++
++FILE: tests/ErosionProcessTab/test_erosion_process_tab.py
++LANG: py
++
++deleted file mode 100644
++index e69de29..0000000
++
++
++FILE: tests/ErosionProcessTab/test_gcode_metrics.py
++LANG: py
++
++index e69de29..46cd28f 100644
++--- a/tests/ErosionProcessTab/test_gcode_metrics.py
+++++ b/tests/ErosionProcessTab/test_gcode_metrics.py
++@@ -0,0 +1,25 @@
+++from src.erosion_process.erosion_process_tab import GCodeMetrics
+++
+++
+++def test_path_length():
+++    points = [
+++        (0, 0, 0),
+++        (3, 4, 0),  # 5
+++        (3, 4, 12), # 12
+++    ]
+++    length = GCodeMetrics.path_length(points)
+++    assert length == 17.0
+++
+++
+++def test_ranges():
+++    points = [
+++        (-1, 2, 3),
+++        (4, -2, 10),
+++        (0, 0, -1),
+++    ]
+++
+++    xr, yr, zr = GCodeMetrics.ranges(points)
+++
+++    assert xr == (-1, 4)
+++    assert yr == (-2, 2)
+++    assert zr == (-1, 10)
++\ No newline at end of file
++
++
++FILE: tests/ErosionProcessTab/test_gcode_parser.py
++LANG: py
++
++index e69de29..fe85c52 100644
++--- a/tests/ErosionProcessTab/test_gcode_parser.py
+++++ b/tests/ErosionProcessTab/test_gcode_parser.py
++@@ -0,0 +1,29 @@
+++from src.erosion_process.erosion_process_tab import GCodeParser
+++
+++
+++def test_parse_simple_gcode(tmp_path):
+++    gcode = """
+++    G0 X0 Y0 Z0
+++    G1 X10 Y0 Z0
+++    G1 X10 Y10 Z-1
+++    """
+++    path = tmp_path / "test.gcode"
+++    path.write_text(gcode)
+++
+++    parser = GCodeParser()
+++    points = parser.parse_file(str(path))
+++
+++    assert points == [
+++    (10.0, 0.0, 0.0),
+++    (10.0, 10.0, -1.0),
+++]
+++
+++
+++def test_parse_empty_file_returns_origin(tmp_path):
+++    path = tmp_path / "empty.gcode"
+++    path.write_text("")
+++
+++    parser = GCodeParser()
+++    points = parser.parse_file(str(path))
+++
+++    assert points == [(0.0, 0.0, 0.0)]
++\ No newline at end of file
+\ No newline at end of file
+
+
+FILE: scripts/commits/0e968927ff1e20b388a28dae8b96f31e3def0877.norm
+LANG: norm
+
+new file mode 100644
+index 0000000..e653112
+--- /dev/null
++++ b/scripts/commits/0e968927ff1e20b388a28dae8b96f31e3def0877.norm
+@@ -0,0 +1,61 @@
++commit 0e968927ff1e20b388a28dae8b96f31e3def0877
++Author:     lewace37 <lewace37@yandex.ru>
++AuthorDate: Wed Jan 21 13:21:41 2026 +0500
++Commit:     lewace37 <lewace37@yandex.ru>
++CommitDate: Wed Jan 21 13:21:41 2026 +0500
++
++    refactor: migration to new class
++
++
++FILES:
++
++FILE: src/qt_interface.py
++LANG: py
++
++index 02425f6..5a8b13e 100644
++--- a/src/qt_interface.py
+++++ b/src/qt_interface.py
++@@ -30,6 +30,7 @@ from src.arrow3D import Arrow3D, Arrow3DData
++ from src.widgets.axis_control_widget import AxisControlWidget
++ from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
++ from src.services.xyz_trajectory_service import XYZTrajectoryService
+++from src.services.joint_trajectory_service import JointTrajectoryService
++ 
++ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
++ #+ Выводить содержимое очереди в textbox процесса эрозии
++@@ -944,7 +945,7 @@ class ServiceTab(QWidget):
++         super().__init__()
++         self.controller = controller
++         self.trajectory_service = XYZTrajectoryService()
++-        self.trajectory_points_joints = []
+++        self.trajectory_points_joints = JointTrajectoryService()
++         self.continuous_move_timer = QTimer()
++         self.continuous_move_timer.timeout.connect(self.continuous_move)
++         self.continuous_move_data = None
++@@ -1654,7 +1655,7 @@ class ServiceTab(QWidget):
++         
++         # ★ Принудительное обновление интерфейса при необходимости
++         self.current_speed_label.repaint()  # :cite[5]
++-    
+++
++     # Методы управления осями XYZ
++     @Slot(str, float)
++     def set_xyz_position(self, axis, value):
++@@ -1912,7 +1913,7 @@ class ServiceTab(QWidget):
++         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
++         
++         if self.check_joints_availability(joints):
++-            self.trajectory_points_joints.append(joints)
+++            self.trajectory_points_joints.add_point(joints)
++             index = len(self.trajectory_points_joints)
++             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
++             self.update_joints_trajectory_plot()
++@@ -1925,7 +1926,7 @@ class ServiceTab(QWidget):
