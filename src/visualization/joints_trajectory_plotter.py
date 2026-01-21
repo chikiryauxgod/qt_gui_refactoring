@@ -10,9 +10,19 @@ class JointsTrajectoryPlotter:
             self._canvas.draw()
             return
 
-        for joint_index, joint_values in enumerate(zip(*trajectories)):
-            self._ax.plot(joint_values, label=f"J{joint_index}")
+        steps = range(len(trajectories))
 
-        self._ax.legend()
+        for joint_index, joint_values in enumerate(zip(*trajectories)):
+            self._ax.plot(
+                steps,
+                joint_values,
+                label=f"J{joint_index}"
+            )
+
+        self._ax.set_xlabel("Шаг траектории")
+        self._ax.set_ylabel("Угол сустава (°)")
         self._ax.set_title("Траектория суставов")
+        self._ax.legend()
+        self._ax.grid(True)
+
         self._canvas.draw()

@@ -1567,17 +1567,17 @@ class ServiceTab(QWidget):
     
     def create_joints_trajectory_tab(self):
         widget = QWidget()
-        layout = QHBoxLayout()
-        
+        main_layout = QHBoxLayout(widget)
+
         control_frame = QGroupBox("Управление траекторией суставов")
-        control_layout = QVBoxLayout()
-        
+        control_layout = QVBoxLayout(control_frame)
+
         joints_group = QGroupBox("Добавить позицию суставов")
-        joints_layout = QGridLayout()
-        
+        joints_layout = QGridLayout(joints_group)
+
         joints = ['J0', 'J1', 'J2', 'J3', 'J4', 'J5']
         self.new_joints = {}
-        
+
         for i, joint in enumerate(joints):
             joints_layout.addWidget(QLabel(f"{joint} (°):"), i, 0)
             spinbox = QDoubleSpinBox()
@@ -1587,65 +1587,65 @@ class ServiceTab(QWidget):
             spinbox.setSuffix(" °")
             joints_layout.addWidget(spinbox, i, 1)
             self.new_joints[joint] = spinbox
-        
+
         add_btn = QPushButton("Добавить позицию")
         add_btn.clicked.connect(self.add_joints_point)
         joints_layout.addWidget(add_btn, 6, 0, 1, 2)
-        
+
         joints_group.setLayout(joints_layout)
         control_layout.addWidget(joints_group)
         
         traj_control_layout = QHBoxLayout()
-        
+
         remove_btn = QPushButton("Удалить позицию")
         remove_btn.clicked.connect(self.remove_joints_point)
         traj_control_layout.addWidget(remove_btn)
-        
+
         clear_btn = QPushButton("Очистить все")
         clear_btn.clicked.connect(self.clear_joints_trajectory)
         traj_control_layout.addWidget(clear_btn)
-        
+
         home_btn = QPushButton("Вернуться в ноль")
         home_btn.clicked.connect(self.return_to_zero_joints)
         traj_control_layout.addWidget(home_btn)
-        
+
         control_layout.addLayout(traj_control_layout)
-        
+
         list_group = QGroupBox("Позиции траектории")
-        list_layout = QVBoxLayout()
-        
+        list_layout = QVBoxLayout(list_group)
+
         self.joints_listbox = QListWidget()
         list_layout.addWidget(self.joints_listbox)
-        
+
         execute_btn = QPushButton("Выполнить траекторию")
         execute_btn.clicked.connect(self.execute_joints_trajectory)
         list_layout.addWidget(execute_btn)
-        
+
         list_group.setLayout(list_layout)
         control_layout.addWidget(list_group)
-        
         control_frame.setLayout(control_layout)
-        layout.addWidget(control_frame)
+        main_layout.addWidget(control_frame)
         
         vis_frame = QGroupBox("Визуализация траектории")
-        vis_layout = QVBoxLayout()
-        
+        vis_layout = QVBoxLayout(vis_frame)
+
         self.joints_traj_fig = Figure(figsize=(6, 5), dpi=100)
-        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d')
-        
+        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d') 
+
         self.joints_traj_ax.set_xlabel('X (мм)')
         self.joints_traj_ax.set_ylabel('Y (мм)')
         self.joints_traj_ax.set_zlabel('Z (мм)')
         self.joints_traj_ax.set_title('Траектория движения суставов')
-        
+
         self.joints_traj_canvas = FigureCanvas(self.joints_traj_fig)
         vis_layout.addWidget(self.joints_traj_canvas)
-        
+
         vis_frame.setLayout(vis_layout)
-        layout.addWidget(vis_frame)
-        
-        widget.setLayout(layout)
+        main_layout.addWidget(vis_frame)
+
+        widget.setLayout(main_layout)
         return widget
+
 
     def robot_settings_tab(self):
         widget = QWidget()
