@@ -72,6 +72,9 @@ class VideoStreamThread(QThread):
         while self.running:
             if self.cap.isOpened():
                 ret, frame = self.cap.read()
+                if not ret:
+                    self.running = False
+                    break
                 if ret:
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     h, w, ch = rgb_image.shape
