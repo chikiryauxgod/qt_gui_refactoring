@@ -14,4 +14,9 @@ class XYZControlPresenter:
         self._controller.set_coord_pos(x, y, z)
 
     def return_to_zero(self) -> None:
-        self._controller.return_to_zero_xyz()
+        self._controller.set_coord_pos(
+            self._controller.X0,
+            self._controller.Y0,
+            self._controller.Z0
+        )
+

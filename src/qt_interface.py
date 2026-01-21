@@ -31,6 +31,8 @@ from src.widgets.axis_control_widget import AxisControlWidget
 from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
 from src.services.xyz_trajectory_service import XYZTrajectoryService
 from src.services.joint_trajectory_service import JointTrajectoryService
+from src.presenters.xyz_control_presenter import XYZControlPresenter
+from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
 #+ Выводить содержимое очереди в textbox процесса эрозии
@@ -944,8 +946,12 @@ class ServiceTab(QWidget):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
+        self.xyz_presenter = XYZControlPresenter(controller)
         self.trajectory_service = XYZTrajectoryService()
         self.trajectory_points_joints = JointTrajectoryService()
+        self.xyz_trajectory_executor = XYZTrajectoryExecutor(
+        controller=self.controller,
+        trajectory_service=self.trajectory_service,)
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
@@ -1670,7 +1676,7 @@ class ServiceTab(QWidget):
         }
         positions[axis] = value
         
-        self.controller.set_coord_pos(positions['X'], positions['Y'], positions['Z'])
+        self.xyz_presenter.set_position(positions['X'], positions['Y'], positions['Z'])
 
     @Slot(str, float)
     def move_xyz(self, axis, step):
@@ -1815,9 +1821,8 @@ class ServiceTab(QWidget):
         z = self.new_z.value()
         
         if self.check_point_availability(x, y, z):
-            self.xyz_trajectory_service.add_point(x, y, z)
-
-            index = len(self.xyz_trajectory_service.get_points())
+            self.trajectory_service.add_point(x, y, z)
+            index = len(self.trajectory_service.get_points())
             self.xyz_listbox.addItem(
                 f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
             )
@@ -1830,11 +1835,11 @@ class ServiceTab(QWidget):
         current_row = self.xyz_listbox.currentRow()
         if current_row >= 0:
             self.xyz_listbox.takeItem(current_row)
-            self.xyz_trajectory_service.remove_point(current_row)
+            self.trajectory_service.remove_point(current_row)
 
             self.xyz_listbox.clear()
             for i, (x, y, z) in enumerate(
-                self.xyz_trajectory_service.get_points()
+                self.trajectory_service.get_points()
             ):
                 self.xyz_listbox.addItem(
                     f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
@@ -1844,26 +1849,23 @@ class ServiceTab(QWidget):
 
     @Slot()
     def clear_xyz_trajectory(self):
-        self.xyz_trajectory_service.clear()
+        self.trajectory_service.clear()
         self.xyz_listbox.clear()
         self.update_xyz_trajectory_plot()
 
 
     @Slot()
     def return_to_zero_xyz(self):
-        self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
+        self.xyz_presenter.return_to_zero()
 
     @Slot()
     def execute_xyz_trajectory(self):
-        if not self.trajectory_points_xyz:
+        if not self.trajectory_service.get_points():
             QMessageBox.critical(self, "Ошибка", "Траектория не задана")
             return
-        
-        logger('Execution traectory XYZ...', queue=q)
-        for i, point in enumerate(self.trajectory_points_xyz):
-            x, y, z = point
-            self.controller.set_coord_pos(x, y, z)
-            time.sleep(1)  # Задержка для демонстрации
+
+        logger('Execution trajectory XYZ...', queue=q)
+        self.xyz_trajectory_executor.execute()
 
     @Slot()
     def update_xyz_trajectory_plot(self):
@@ -1914,7 +1916,7 @@ class ServiceTab(QWidget):
         
         if self.check_joints_availability(joints):
             self.trajectory_points_joints.add_point(joints)
-            index = len(self.trajectory_points_joints)
+            index = len(self.trajectory_points_joints.get_points())
             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
             self.update_joints_trajectory_plot()
         else:

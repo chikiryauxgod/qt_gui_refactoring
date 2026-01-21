@@ -22,8 +22,13 @@ def test_set_position_calls_controller():
 
 def test_return_to_zero_calls_controller():
     controller = Mock()
+    controller.X0 = 0.0
+    controller.Y0 = 0.0
+    controller.Z0 = 0.0
+
     presenter = XYZControlPresenter(controller)
 
     presenter.return_to_zero()
 
-    controller.return_to_zero_xyz.assert_called_once()
+    controller.set_coord_pos.assert_called_once_with(0.0, 0.0, 0.0)
+
