@@ -38,6 +38,8 @@ from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController,
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
 from src.presenters.joint_control_presenter import JointControlPresenter
+from src.domain.xyz_availability_service import XYZAvailabilityService
+from src.domain.joint_availability_service import JointAvailabilityService
 
 
 
@@ -967,6 +969,10 @@ class ServiceTab(QWidget):
         self.joint_trajectory_executor = JointTrajectoryExecutor(
             joint_presenter=self.joint_presenter,
             trajectory_service=self.trajectory_points_joints,)
+        self.xyz_availability_service = XYZAvailabilityService()
+        self.joint_availability_service = JointAvailabilityService()
+
+        
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
@@ -1835,7 +1841,7 @@ class ServiceTab(QWidget):
         y = self.new_y.value()
         z = self.new_z.value()
         
-        if self.check_point_availability(x, y, z):
+        if self.xyz_availability_service.is_available(x, y, z):
             self.trajectory_service.add_point(x, y, z)
             index = len(self.trajectory_service.get_points())
             self.xyz_listbox.addItem(
@@ -1929,7 +1935,7 @@ class ServiceTab(QWidget):
     def add_joints_point(self):
         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
         
-        if self.check_joints_availability(joints):
+        if self.joint_availability_service.is_available(joints):
             self.trajectory_points_joints.add_point(joints)
             index = len(self.trajectory_points_joints.get_points())
             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
@@ -2012,16 +2018,6 @@ class ServiceTab(QWidget):
             self.joints_traj_ax.legend()
             
             self.joints_traj_canvas.draw()
-
-    # Вспомогательные методы
-    def check_point_availability(self, x, y, z):
-        return (-500 <= x <= 500 and -500 <= y <= 500 and 0 <= z <= 500)
-
-    def check_joints_availability(self, joints):
-        for angle in joints:
-            if not (-180 <= angle <= 180):
-                return False
-        return True
 
     @Slot()
     def update_status(self):
