@@ -29,6 +29,7 @@ from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -289,7 +290,8 @@ class ErosionProcessTab(QWidget):
 
     def start_queue_reader(self):
         """Запуск потока чтения из очереди"""
-        self.queue_reader = LogTextBoxErrosion(q)
+        source = QueueMessageSource(q)
+        self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
         self.queue_reader.new_message.connect(self.append_to_status_text)
         self.queue_reader.start()
         
@@ -2501,10 +2503,10 @@ class MainWindow(QMainWindow):
             background-color: {color};
         """)
 
-class LogTextBoxErrosion(QThread):
+""" class LogTextBoxErrosion(QThread):
 
     new_message = Signal(str)
-    def __init__(self, queue):
+    def __init__(self, queue, latency=100):
         super().__init__()
         self.queue = queue
         self.running = True
@@ -2517,11 +2519,11 @@ class LogTextBoxErrosion(QThread):
                 self.new_message.emit(message)
             except queue.Empty:
                 # Если очередь пуста, ждем немного и продолжаем
-                QThread.msleep(100)
+                self.msleep(self.latency)
                 continue
 
     def stop(self):
-        self.running = False
+        self.running = False """
 
 
 # Запуск приложения
