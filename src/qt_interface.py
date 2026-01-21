@@ -1654,7 +1654,7 @@ class ServiceTab(QWidget):
         
         # ★ Принудительное обновление интерфейса при необходимости
         self.current_speed_label.repaint()  # :cite[5]
-
+    
     # Методы управления осями XYZ
     @Slot(str, float)
     def set_xyz_position(self, axis, value):
