@@ -2,9 +2,7 @@ from PySide6.QtCore import QThread, Signal
 import time
 import os
 
-#Класс-обёртка для Electroerosion
 class ErosionController:
-    # Инкапсулирует работу с Electroerosion
     def __init__(self, erosion_cls, filename=None, logger=None, **params):
         self.filename = filename
         self.params = params
@@ -20,7 +18,6 @@ class ErosionController:
         self.erosion_instance.stop()
 
 
-#G-code обработчик
 class GCodeProcessor:
     # Отвечает за прогресс по точкам G-code
     def __init__(self, gcode_points, total_time):

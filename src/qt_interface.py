@@ -28,14 +28,14 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.services.xyz_trajectory_service import XYZTrajectoryService
 from src.services.joint_trajectory_service import JointTrajectoryService
 from src.presenters.xyz_control_presenter import XYZControlPresenter
 from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
 from src.presenters.joint_control_presenter import JointControlPresenter
 from src.domain.xyz_availability_service import XYZAvailabilityService
@@ -43,7 +43,7 @@ from src.domain.joint_availability_service import JointAvailabilityService
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
-
+from src.erosion_process.erosion_process_tab import ErosionProcessTab
 
 
 
