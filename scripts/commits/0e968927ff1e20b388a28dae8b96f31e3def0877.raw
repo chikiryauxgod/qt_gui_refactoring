@@ -1,0 +1,56 @@
+commit 0e968927ff1e20b388a28dae8b96f31e3def0877
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 13:21:41 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 13:21:41 2026 +0500
+
+    refactor: migration to new class
+
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index 02425f6..5a8b13e 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -30,6 +30,7 @@ from src.arrow3D import Arrow3D, Arrow3DData
+ from src.widgets.axis_control_widget import AxisControlWidget
+ from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.services.xyz_trajectory_service import XYZTrajectoryService
++from src.services.joint_trajectory_service import JointTrajectoryService
+ 
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+ #+ Выводить содержимое очереди в textbox процесса эрозии
+@@ -944,7 +945,7 @@ class ServiceTab(QWidget):
+         super().__init__()
+         self.controller = controller
+         self.trajectory_service = XYZTrajectoryService()
+-        self.trajectory_points_joints = []
++        self.trajectory_points_joints = JointTrajectoryService()
+         self.continuous_move_timer = QTimer()
+         self.continuous_move_timer.timeout.connect(self.continuous_move)
+         self.continuous_move_data = None
+@@ -1654,7 +1655,7 @@ class ServiceTab(QWidget):
+         
+         # ★ Принудительное обновление интерфейса при необходимости
+         self.current_speed_label.repaint()  # :cite[5]
+-    
++
+     # Методы управления осями XYZ
+     @Slot(str, float)
+     def set_xyz_position(self, axis, value):
+@@ -1912,7 +1913,7 @@ class ServiceTab(QWidget):
+         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
+         
+         if self.check_joints_availability(joints):
+-            self.trajectory_points_joints.append(joints)
++            self.trajectory_points_joints.add_point(joints)
+             index = len(self.trajectory_points_joints)
+             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
+             self.update_joints_trajectory_plot()
+@@ -1925,7 +1926,7 @@ class ServiceTab(QWidget):
+         current_row = self.joints_listbox.currentRow()
+         if current_row >= 0:
+             self.joints_listbox.takeItem(current_row)
+-            self.trajectory_points_joints.pop(current_row)
++            self.joint_trajectory_service.remove_point(current_row)
+             self.update_joints_trajectory_plot()
+ 
+     @Slot()

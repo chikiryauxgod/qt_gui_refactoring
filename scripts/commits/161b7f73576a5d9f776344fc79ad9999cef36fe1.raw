@@ -1,0 +1,26 @@
+commit 161b7f73576a5d9f776344fc79ad9999cef36fe1
+Merge: cd54cf8 45cebe1
+Author:     Matthew Mcconaughey <138122966+yvelyu@users.noreply.github.com>
+AuthorDate: Tue Jan 20 15:35:56 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Tue Jan 20 15:35:56 2026 +0500
+
+    Merge branch 'main' into feature/upd_VideoStreamThread
+
+diff --cc src/qt_interface.py
+index b798b1e,84a08e8..a8d5176
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@@ -25,10 -25,9 +25,9 @@@ from matplotlib.backends.backend_qt5ag
+  from matplotlib.figure import Figure
+  from matplotlib.patches import FancyArrowPatch
+  from mpl_toolkits.mplot3d import proj3d
+ -from src.log import Log
+ +from .log import Log
+  from src.arrow3D import Arrow3D, Arrow3DData
+- from .widgets.axis_control_widget import AxisControlWidget
+- from .widgets.axis_control_config import AxisControlConfig
++ from src.widgets.axis_control_widget import AxisControlWidget
+  
+  
+  #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать

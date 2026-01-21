@@ -1,0 +1,153 @@
+commit 0e4e047ebf2f778d687568313a9b2de17ee58e08
+Author:     Matvey <matveykroychelove4ek@gmail.com>
+AuthorDate: Wed Jan 21 23:59:39 2026 +0500
+Commit:     Matvey <matveykroychelove4ek@gmail.com>
+CommitDate: Wed Jan 21 23:59:39 2026 +0500
+
+    feat: add tests
+
+diff --git a/tests/ErosionProcessTab/conftest.py b/tests/ErosionProcessTab/conftest.py
+index e69de29..cb52d13 100644
+--- a/tests/ErosionProcessTab/conftest.py
++++ b/tests/ErosionProcessTab/conftest.py
+@@ -0,0 +1,34 @@
++import pytest
++from unittest.mock import Mock
++import queue
++
++
++@pytest.fixture
++def fake_view():
++    view = Mock()
++    view.show_error = Mock()
++    view.set_gcode_info = Mock()
++    view.plot_gcode = Mock()
++    view.append_log = Mock()
++    view.set_started_ui_state = Mock()
++    view.set_stopped_ui_state = Mock()
++    view.set_paused_ui_state = Mock()
++    view.set_running_ui_state = Mock()
++    return view
++
++
++@pytest.fixture
++def fake_controller():
++    controller = Mock()
++    controller.start_erosion_process = Mock()
++    controller.stop_erosion_process = Mock()
++    controller.set_coord_pos = Mock()
++    controller.X0 = 0
++    controller.Y0 = 0
++    controller.Z0 = 0
++    return controller
++
++
++@pytest.fixture
++def q_ref():
++    return queue.Queue()
+\ No newline at end of file
+diff --git a/tests/ErosionProcessTab/test_erosion_presenter_load.py b/tests/ErosionProcessTab/test_erosion_presenter_load.py
+index e69de29..a5e1203 100644
+--- a/tests/ErosionProcessTab/test_erosion_presenter_load.py
++++ b/tests/ErosionProcessTab/test_erosion_presenter_load.py
+@@ -0,0 +1,31 @@
++from src.erosion_process.erosion_process_tab import ErosionProcessPresenter
++import pytest
++
++
++def test_load_gcode_success(tmp_path, fake_view, fake_controller, q_ref):
++    gcode = "G1 X1 Y2 Z3"
++    path = tmp_path / "ok.gcode"
++    path.write_text(gcode)
++
++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
++    presenter.load_gcode(str(path))
++
++    fake_view.set_gcode_info.assert_called_once()
++    fake_view.plot_gcode.assert_called_once()
++
++    points = fake_view.plot_gcode.call_args.args[0]
++    assert points == [(1.0, 2.0, 3.0)]
++
++
++def test_load_gcode_wrong_extension(fake_view, fake_controller, q_ref):
++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
++    presenter.load_gcode("file.txt")
++
++    fake_view.show_error.assert_called_once()
++
++
++def test_load_gcode_missing_file(fake_view, fake_controller, q_ref):
++    presenter = ErosionProcessPresenter(fake_controller, fake_view, q_ref)
++    presenter.load_gcode("missing.gcode")
++
++    fake_view.show_error.assert_called_once()
+diff --git a/tests/ErosionProcessTab/test_erosion_process_tab.py b/tests/ErosionProcessTab/test_erosion_process_tab.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/tests/ErosionProcessTab/test_gcode_metrics.py b/tests/ErosionProcessTab/test_gcode_metrics.py
+index e69de29..46cd28f 100644
+--- a/tests/ErosionProcessTab/test_gcode_metrics.py
++++ b/tests/ErosionProcessTab/test_gcode_metrics.py
+@@ -0,0 +1,25 @@
++from src.erosion_process.erosion_process_tab import GCodeMetrics
++
++
++def test_path_length():
++    points = [
++        (0, 0, 0),
++        (3, 4, 0),  # 5
++        (3, 4, 12), # 12
++    ]
++    length = GCodeMetrics.path_length(points)
++    assert length == 17.0
++
++
++def test_ranges():
++    points = [
++        (-1, 2, 3),
++        (4, -2, 10),
++        (0, 0, -1),
++    ]
++
++    xr, yr, zr = GCodeMetrics.ranges(points)
++
++    assert xr == (-1, 4)
++    assert yr == (-2, 2)
++    assert zr == (-1, 10)
+\ No newline at end of file
+diff --git a/tests/ErosionProcessTab/test_gcode_parser.py b/tests/ErosionProcessTab/test_gcode_parser.py
+index e69de29..fe85c52 100644
+--- a/tests/ErosionProcessTab/test_gcode_parser.py
++++ b/tests/ErosionProcessTab/test_gcode_parser.py
+@@ -0,0 +1,29 @@
++from src.erosion_process.erosion_process_tab import GCodeParser
++
++
++def test_parse_simple_gcode(tmp_path):
++    gcode = """
++    G0 X0 Y0 Z0
++    G1 X10 Y0 Z0
++    G1 X10 Y10 Z-1
++    """
++    path = tmp_path / "test.gcode"
++    path.write_text(gcode)
++
++    parser = GCodeParser()
++    points = parser.parse_file(str(path))
++
++    assert points == [
++    (10.0, 0.0, 0.0),
++    (10.0, 10.0, -1.0),
++]
++
++
++def test_parse_empty_file_returns_origin(tmp_path):
++    path = tmp_path / "empty.gcode"
++    path.write_text("")
++
++    parser = GCodeParser()
++    points = parser.parse_file(str(path))
++
++    assert points == [(0.0, 0.0, 0.0)]
+\ No newline at end of file

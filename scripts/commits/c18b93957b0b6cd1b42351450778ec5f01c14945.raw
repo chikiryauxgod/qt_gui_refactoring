@@ -1,0 +1,11 @@
+commit c18b93957b0b6cd1b42351450778ec5f01c14945
+Merge: 6189dc7 3d20602
+Author:     Lev Semenov <130220311+chikiryauxgod@users.noreply.github.com>
+AuthorDate: Mon Jan 19 23:04:16 2026 +0500
+Commit:     GitHub <noreply@github.com>
+CommitDate: Mon Jan 19 23:04:16 2026 +0500
+
+    Merge pull request #6 from chikiryauxgod/feature/upd_VideoStreamThread
+    
+    feat: upd .gitignore and upd VideoStreamThread
+

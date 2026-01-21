@@ -1,0 +1,25 @@
+commit 799f5f6ecba8053eab774bb7187c6caa12867f76
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Sat Jan 17 22:32:29 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Sat Jan 17 22:32:29 2026 +0500
+
+    add log.py stubs for qt_interface.py
+
+diff --git a/src/log.py b/src/log.py
+new file mode 100644
+index 0000000..3dc81bc
+--- /dev/null
++++ b/src/log.py
+@@ -0,0 +1,10 @@
++import sys
++
++class Log:
++    def __call__(self, message, queue=None, file=None):
++        # вывод в указанный поток или в stdout по умолчанию
++        if file is None:
++            file = sys.stdout
++        print(f"LOG: {message}", file=file)
++        if queue is not None:
++            queue.put(message)
+\ No newline at end of file

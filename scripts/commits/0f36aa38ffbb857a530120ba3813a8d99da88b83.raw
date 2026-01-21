@@ -1,0 +1,454 @@
+commit 0f36aa38ffbb857a530120ba3813a8d99da88b83
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 19:33:02 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 19:33:02 2026 +0500
+
+    feat: add plotters
+
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index 9889b09..162ac2f 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -40,6 +40,11 @@ from src.VideoStream.VideoStreamThread import VideoStreamThread
+ from src.presenters.joint_control_presenter import JointControlPresenter
+ from src.domain.xyz_availability_service import XYZAvailabilityService
+ from src.domain.joint_availability_service import JointAvailabilityService
++from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
++from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
++from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
++
++
+ 
+ 
+ 
+@@ -962,6 +967,7 @@ class ServiceTab(QWidget):
+         self.xyz_presenter = XYZControlPresenter(controller)
+         self.trajectory_service = XYZTrajectoryService()
+         self.trajectory_points_joints = JointTrajectoryService()
++        
+         self.xyz_trajectory_executor = XYZTrajectoryExecutor(
+             controller=self.controller,
+             trajectory_service=self.trajectory_service,)
+@@ -970,8 +976,7 @@ class ServiceTab(QWidget):
+             joint_presenter=self.joint_presenter,
+             trajectory_service=self.trajectory_points_joints,)
+         self.xyz_availability_service = XYZAvailabilityService()
+-        self.joint_availability_service = JointAvailabilityService()
+-
++        self.joint_availability_service = JointAvailabilityService()    
+         
+         self.continuous_move_timer = QTimer()
+         self.continuous_move_timer.timeout.connect(self.continuous_move)
+@@ -1155,6 +1160,12 @@ class ServiceTab(QWidget):
+         self.xyz_canvas = FigureCanvas(self.xyz_fig)
+         vis_layout.addWidget(self.xyz_canvas)
+         
++        self.xyz_kinematics_plotter = XYZKinematicsPlotter(
++            ax=self.xyz_ax,
++            canvas=self.xyz_canvas,
++            robot_chain=self.robot_chain,
++            ikpy_available=IKPY_AVAILABLE,)
++        
+         update_btn = QPushButton("Обновить визуализацию")
+         update_btn.clicked.connect(self.update_xyz_plot)
+         vis_layout.addWidget(update_btn)
+@@ -1369,6 +1380,9 @@ class ServiceTab(QWidget):
+         self.joints_canvas.setMinimumSize(400, 350)  # Фиксируем минимальный размер
+         vis_layout.addWidget(self.joints_canvas)
+         
++        self.joints_trajectory_plotter = JointsTrajectoryPlotter(
++            self.joints_ax, self.joints_canvas)
++        
+         update_btn = QPushButton("Обновить визуализацию")
+         update_btn.clicked.connect(self.update_joints_plot)
+         vis_layout.addWidget(update_btn)
+@@ -1539,6 +1553,10 @@ class ServiceTab(QWidget):
+         self.xyz_traj_canvas = FigureCanvas(self.xyz_traj_fig)
+         vis_layout.addWidget(self.xyz_traj_canvas)
+         
++        self.xyz_trajectory_plotter = XYZTrajectoryPlotter(
++            ax=self.xyz_traj_ax,
++            canvas=self.xyz_traj_canvas,)
++        
+         vis_frame.setLayout(vis_layout)
+         layout.addWidget(vis_frame)
+         
+@@ -1707,57 +1725,12 @@ class ServiceTab(QWidget):
+ 
+     @Slot()
+     def update_xyz_plot(self):
+-            """Обновление графика с кинематической цепочкой для осей XYZ"""
+-            self.xyz_ax.clear()
+-            
+-            x, y, z = self.controller.current_x, self.controller.current_y, self.controller.current_z
+-            
+-            # Отображаем кинематическую цепочку, если доступна
+-            if self.robot_chain and IKPY_AVAILABLE:
+-                try:
+-                    # Преобразуем координаты в метры для ikpy (из мм в метры)
+-                    target_position = [x/1000.0, y/1000.0, z/1000.0]
+-                    
+-                    # Вычисляем обратную кинематику
+-                    # Используем ориентацию по умолчанию (можно настроить под ваши нужды)
+-                    target_orientation = [0, 0, 0]  # [roll, pitch, yaw] в радианах
+-                    
+-                    # Вычисляем углы суставов через обратную кинематику
+-                    joint_angles = self.robot_chain.inverse_kinematics(
+-                        target_position=target_position,
+-                        target_orientation=target_orientation,
+-                        orientation_mode="all"
+-                    )
+-                    
+-                    # Отображаем кинематическую цепочку
+-                    self.robot_chain.plot(joint_angles, self.xyz_ax, target=target_position)
+-                    
+-                    # Добавляем целевую точку
+-                    self.xyz_ax.scatter([x/1000], [y/1000], [z/1000], 
+-                                    c='red', marker='o', s=100, label='Целевая позиция')
+-                    
+-                except Exception as e:
+-                    logger(f"Error inverse kinematic {e}", queue=q)
+-                    # Резервный вариант - просто показать точку
+-                    self.xyz_ax.scatter([x], [y], [z], c='r', marker='o', s=100, label='Позиция инструмента')
+-            else:
+-                # Резервный вариант без кинематики
+-                self.xyz_ax.scatter([x], [y], [z], c='r', marker='o', s=100, label='Позиция инструмента')
+-            
+-            # Настраиваем график
+-            self.xyz_ax.set_xlabel('X (м)')
+-            self.xyz_ax.set_ylabel('Y (м)')
+-            self.xyz_ax.set_zlabel('Z (м)')
+-            self.xyz_ax.set_title('Кинематическая цепочка робота')
+-            self.xyz_ax.legend()
+-            
+-            # Устанавливаем разумные пределы
+-            padding = 0.5  # 50 см в метрах
+-            self.xyz_ax.set_xlim([x/1000 - padding, x/1000 + padding])
+-            self.xyz_ax.set_ylim([y/1000 - padding, y/1000 + padding])
+-            self.xyz_ax.set_zlim([max(0, z/1000 - padding), z/1000 + padding])
+-            
+-            self.xyz_canvas.draw()
++        """Обновление графика XYZ"""
++        self.xyz_kinematics_plotter.plot(
++            x=self.controller.current_x,
++            y=self.controller.current_y,
++            z=self.controller.current_z,
++        )
+ 
+ 
+     # Методы управления суставами
+@@ -1833,7 +1806,9 @@ class ServiceTab(QWidget):
+         self.xyz_listbox.clear()
+         self.xyz_listbox.addItem(f"1: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+ 
+-        self.update_xyz_trajectory_plot()
++        self.xyz_trajectory_plotter.plot(
++            self.trajectory_service.get_points())
++
+ 
+     @Slot()
+     def add_xyz_point(self):
+@@ -1847,7 +1822,9 @@ class ServiceTab(QWidget):
+             self.xyz_listbox.addItem(
+                 f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+             )
+-            self.update_xyz_trajectory_plot()
++            self.xyz_trajectory_plotter.plot(
++                self.trajectory_service.get_points())
++            
+         else:
+             logger("The point cannot be moved.", queue=q)
+ 
+@@ -1866,13 +1843,15 @@ class ServiceTab(QWidget):
+                     f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+                 )
+ 
+-            self.update_xyz_trajectory_plot()
++            self.xyz_trajectory_plotter.plot(
++                self.trajectory_service.get_points())
+ 
+     @Slot()
+     def clear_xyz_trajectory(self):
+         self.trajectory_service.clear()
+         self.xyz_listbox.clear()
+-        self.update_xyz_trajectory_plot()
++        self.xyz_trajectory_plotter.plot(
++            self.trajectory_service.get_points())
+ 
+ 
+     @Slot()
+@@ -1939,7 +1918,8 @@ class ServiceTab(QWidget):
+             self.trajectory_points_joints.add_point(joints)
+             index = len(self.trajectory_points_joints.get_points())
+             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
+-            self.update_joints_trajectory_plot()
++            self.joints_trajectory_plotter.plot(
++                self.trajectory_points_joints.get_points())
+         else:
+             # QMessageBox.critical(self, "Ошибка", "Позиция недоступна для перемещения")
+             logger("The position cannot be moved.", queue=q)
+@@ -1950,13 +1930,14 @@ class ServiceTab(QWidget):
+         if current_row >= 0:
+             self.joints_listbox.takeItem(current_row)
+             self.joint_trajectory_service.remove_point(current_row)
+-            self.update_joints_trajectory_plot()
+-
++            self.joints_trajectory_plotter.plot(
++                self.trajectory_points_joints.get_points())
+     @Slot()
+     def clear_joints_trajectory(self):
+         self.joints_listbox.clear()
+         self.trajectory_points_joints.clear()
+-        self.update_joints_trajectory_plot()
++        self.joints_trajectory_plotter.plot(
++                self.trajectory_points_joints.get_points())
+ 
+     @Slot()
+     def return_to_zero_joints(self):
+diff --git a/src/visualization/joints_trajectory_plotter.py b/src/visualization/joints_trajectory_plotter.py
+new file mode 100644
+index 0000000..f7f9c53
+--- /dev/null
++++ b/src/visualization/joints_trajectory_plotter.py
+@@ -0,0 +1,18 @@
++class JointsTrajectoryPlotter:
++    def __init__(self, ax, canvas):
++        self._ax = ax
++        self._canvas = canvas
++
++    def plot(self, trajectories: list[list[float]]) -> None:
++        self._ax.clear()
++
++        if not trajectories:
++            self._canvas.draw()
++            return
++
++        for joint_index, joint_values in enumerate(zip(*trajectories)):
++            self._ax.plot(joint_values, label=f"J{joint_index}")
++
++        self._ax.legend()
++        self._ax.set_title("Траектория суставов")
++        self._canvas.draw()
+diff --git a/src/visualization/xyz_kinematics_plotter.py b/src/visualization/xyz_kinematics_plotter.py
+new file mode 100644
+index 0000000..cfdc2dd
+--- /dev/null
++++ b/src/visualization/xyz_kinematics_plotter.py
+@@ -0,0 +1,56 @@
++class XYZKinematicsPlotter:
++    def __init__(
++        self,
++        ax,
++        canvas,
++        robot_chain=None,
++        ikpy_available: bool = False,
++    ):
++        self._ax = ax
++        self._canvas = canvas
++        self._robot_chain = robot_chain
++        self._ikpy_available = ikpy_available
++
++    def plot(self, x: float, y: float, z: float) -> None:
++        self._ax.clear()
++
++        if self._robot_chain and self._ikpy_available:
++            self._plot_with_kinematics(x, y, z)
++        else:
++            self._plot_point(x, y, z)
++
++        self._configure_axes(x, y, z)
++        self._canvas.draw()
++
++    def _plot_with_kinematics(self, x, y, z):
++        try:
++            target = [x / 1000, y / 1000, z / 1000]
++            joint_angles = self._robot_chain.inverse_kinematics(
++                target_position=target,
++                target_orientation=[0, 0, 0],
++                orientation_mode="all",
++            )
++            self._robot_chain.plot(joint_angles, self._ax, target=target)
++            self._ax.scatter(*target, c="red", s=100)
++        except Exception:
++            self._plot_point(x, y, z)
++
++    def _plot_point(self, x, y, z):
++        self._ax.scatter(
++            [x / 1000],
++            [y / 1000],
++            [z / 1000],
++            c="red",
++            s=100,
++        )
++
++    def _configure_axes(self, x, y, z):
++        padding = 0.5
++        self._ax.set_title("Кинематическая цепочка робота")
++        self._ax.set_xlabel("X (м)")
++        self._ax.set_ylabel("Y (м)")
++        self._ax.set_zlabel("Z (м)")
++
++        self._ax.set_xlim([x / 1000 - padding, x / 1000 + padding])
++        self._ax.set_ylim([y / 1000 - padding, y / 1000 + padding])
++        self._ax.set_zlim([max(0, z / 1000 - padding), z / 1000 + padding])
+diff --git a/src/visualization/xyz_trajectory_plotter.py b/src/visualization/xyz_trajectory_plotter.py
+new file mode 100644
+index 0000000..c158798
+--- /dev/null
++++ b/src/visualization/xyz_trajectory_plotter.py
+@@ -0,0 +1,21 @@
++import numpy as np
++
++
++class XYZTrajectoryPlotter:
++    def __init__(self, ax, canvas):
++        self._ax = ax
++        self._canvas = canvas
++
++    def plot(self, points: list[tuple[float, float, float]]) -> None:
++        self._ax.clear()
++
++        if not points:
++            self._canvas.draw()
++            return
++
++        pts = np.array(points)
++        self._ax.plot(pts[:, 0], pts[:, 1], pts[:, 2])
++        self._ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2])
++
++        self._ax.set_title("Траектория XYZ")
++        self._canvas.draw()
+diff --git a/tests/test_joints_trajectory_plotter.py b/tests/test_joints_trajectory_plotter.py
+new file mode 100644
+index 0000000..5f4a550
+--- /dev/null
++++ b/tests/test_joints_trajectory_plotter.py
+@@ -0,0 +1,18 @@
++from unittest.mock import Mock
++from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
++
++
++def test_joints_trajectory_plot_calls_draw():
++    ax = Mock()
++    canvas = Mock()
++
++    plotter = JointsTrajectoryPlotter(ax, canvas)
++
++    trajectories = [
++        [0, 0, 0, 0, 0, 0],
++        [10, 20, 30, 40, 50, 60],
++    ]
++
++    plotter.plot(trajectories)
++
++    canvas.draw.assert_called_once()
+diff --git a/tests/test_xyz_kinematics_plotter.py b/tests/test_xyz_kinematics_plotter.py
+new file mode 100644
+index 0000000..67402f5
+--- /dev/null
++++ b/tests/test_xyz_kinematics_plotter.py
+@@ -0,0 +1,76 @@
++from unittest.mock import Mock
++from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
++
++def test_plot_calls_canvas_draw():
++    ax = Mock()
++    canvas = Mock()
++    robot_chain = Mock()
++
++    robot_chain.inverse_kinematics.return_value = [0, 0, 0]
++    robot_chain.plot.return_value = None
++
++    plotter = XYZKinematicsPlotter(
++        ax=ax,
++        canvas=canvas,
++        robot_chain=robot_chain,
++        ikpy_available=True,
++    )
++
++    plotter.plot(100, 200, 300)
++
++    canvas.draw.assert_called_once()
++
++def test_plot_with_kinematics_calls_inverse_kinematics():
++    ax = Mock()
++    canvas = Mock()
++    robot_chain = Mock()
++
++    robot_chain.inverse_kinematics.return_value = [1, 2, 3]
++
++    plotter = XYZKinematicsPlotter(
++        ax=ax,
++        canvas=canvas,
++        robot_chain=robot_chain,
++        ikpy_available=True,
++    )
++
++    plotter.plot(100, 200, 300)
++
++    robot_chain.inverse_kinematics.assert_called_once()
++    robot_chain.plot.assert_called_once()
++    
++def test_plot_without_kinematics_uses_scatter_only():
++    ax = Mock()
++    canvas = Mock()
++
++    plotter = XYZKinematicsPlotter(
++        ax=ax,
++        canvas=canvas,
++        robot_chain=None,
++        ikpy_available=False,
++    )
++
++    plotter.plot(100, 200, 300)
++
++    ax.scatter.assert_called_once()
++    canvas.draw.assert_called_once()
++
++def test_plot_kinematics_exception_falls_back_to_point():
++    ax = Mock()
++    canvas = Mock()
++    robot_chain = Mock()
++
++    robot_chain.inverse_kinematics.side_effect = Exception("IK error")
++
++    plotter = XYZKinematicsPlotter(
++        ax=ax,
++        canvas=canvas,
++        robot_chain=robot_chain,
++        ikpy_available=True,
++    )
++
++    plotter.plot(100, 200, 300)
++
++    ax.scatter.assert_called_once()
++    canvas.draw.assert_called_once()
++
+diff --git a/tests/test_xyz_trajectory_plotter.py b/tests/test_xyz_trajectory_plotter.py
+new file mode 100644
+index 0000000..ebcca02
+--- /dev/null
++++ b/tests/test_xyz_trajectory_plotter.py
+@@ -0,0 +1,21 @@
++from unittest.mock import Mock
++from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
++
++
++def test_plot_calls_canvas_draw():
++    ax = Mock()
++    canvas = Mock()
++
++    plotter = XYZTrajectoryPlotter(ax, canvas)
++    plotter.plot([(0, 0, 0), (1, 1, 1)])
++
++    canvas.draw.assert_called_once()
++
++def test_xyz_trajectory_plot_empty_points():
++    ax = Mock()
++    canvas = Mock()
++
++    plotter = XYZTrajectoryPlotter(ax, canvas)
++    plotter.plot([])
++
++    canvas.draw.assert_called_once()

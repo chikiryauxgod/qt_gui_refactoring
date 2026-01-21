@@ -1,0 +1,165 @@
+commit 4ba3a7b9365ec7c9d4e83c15e5a14a63039423be
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 18:44:28 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 18:44:28 2026 +0500
+
+    feat: availability checkers
+
+
+FILES:
+
+FILE: src/domain/joint_availability_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..941c3b5
+--- /dev/null
++++ b/src/domain/joint_availability_service.py
+@@ -0,0 +1,12 @@
++from typing import Sequence
++
++
++class JointAvailabilityService:
++    MIN_ANGLE = -180
++    MAX_ANGLE = 180
++
++    def is_available(self, joints: Sequence[float]) -> bool:
++        return all(
++            self.MIN_ANGLE <= angle <= self.MAX_ANGLE
++            for angle in joints
++        )
+
+
+FILE: src/domain/xyz_availability_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..7ed1be8
+--- /dev/null
++++ b/src/domain/xyz_availability_service.py
+@@ -0,0 +1,14 @@
++class XYZAvailabilityService:
++    X_MIN = -500
++    X_MAX = 500
++    Y_MIN = -500
++    Y_MAX = 500
++    Z_MIN = 0
++    Z_MAX = 500
++
++    def is_available(self, x: float, y: float, z: float) -> bool:
++        return (
++            self.X_MIN <= x <= self.X_MAX and
++            self.Y_MIN <= y <= self.Y_MAX and
++            self.Z_MIN <= z <= self.Z_MAX
++        )
+
+
+FILE: src/qt_interface.py
+LANG: py
+
+index 42ac979..9889b09 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -38,6 +38,8 @@ from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController,
+ from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+ from src.VideoStream.VideoStreamThread import VideoStreamThread
+ from src.presenters.joint_control_presenter import JointControlPresenter
++from src.domain.xyz_availability_service import XYZAvailabilityService
++from src.domain.joint_availability_service import JointAvailabilityService
+ 
+ 
+ 
+@@ -967,6 +969,10 @@ class ServiceTab(QWidget):
+         self.joint_trajectory_executor = JointTrajectoryExecutor(
+             joint_presenter=self.joint_presenter,
+             trajectory_service=self.trajectory_points_joints,)
++        self.xyz_availability_service = XYZAvailabilityService()
++        self.joint_availability_service = JointAvailabilityService()
++
++        
+         self.continuous_move_timer = QTimer()
+         self.continuous_move_timer.timeout.connect(self.continuous_move)
+         self.continuous_move_data = None
+@@ -1835,7 +1841,7 @@ class ServiceTab(QWidget):
+         y = self.new_y.value()
+         z = self.new_z.value()
+         
+-        if self.check_point_availability(x, y, z):
++        if self.xyz_availability_service.is_available(x, y, z):
+             self.trajectory_service.add_point(x, y, z)
+             index = len(self.trajectory_service.get_points())
+             self.xyz_listbox.addItem(
+@@ -1929,7 +1935,7 @@ class ServiceTab(QWidget):
+     def add_joints_point(self):
+         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
+         
+-        if self.check_joints_availability(joints):
++        if self.joint_availability_service.is_available(joints):
+             self.trajectory_points_joints.add_point(joints)
+             index = len(self.trajectory_points_joints.get_points())
+             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
+@@ -2013,16 +2019,6 @@ class ServiceTab(QWidget):
+             
+             self.joints_traj_canvas.draw()
+ 
+-    # Вспомогательные методы
+-    def check_point_availability(self, x, y, z):
+-        return (-500 <= x <= 500 and -500 <= y <= 500 and 0 <= z <= 500)
+-
+-    def check_joints_availability(self, joints):
+-        for angle in joints:
+-            if not (-180 <= angle <= 180):
+-                return False
+-        return True
+-
+     @Slot()
+     def update_status(self):
+         status = "Текущий статус системы:\n"
+
+
+FILE: tests/ServiceTab/domain/test_joint_availability_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..090c472
+--- /dev/null
++++ b/tests/ServiceTab/domain/test_joint_availability_service.py
+@@ -0,0 +1,11 @@
++from src.domain.joint_availability_service import JointAvailabilityService
++
++
++def test_joints_valid():
++    service = JointAvailabilityService()
++    assert service.is_available([0, 10, -20, 30, 40, 50]) is True
++
++
++def test_joint_out_of_range():
++    service = JointAvailabilityService()
++    assert service.is_available([0, 0, 0, 0, 0, 200]) is False
+
+
+FILE: tests/ServiceTab/domain/test_xyz_availability_service.py
+LANG: py
+
+new file mode 100644
+index 0000000..458ffe2
+--- /dev/null
++++ b/tests/ServiceTab/domain/test_xyz_availability_service.py
+@@ -0,0 +1,16 @@
++from src.domain.xyz_availability_service import XYZAvailabilityService
++
++
++def test_xyz_valid_point():
++    service = XYZAvailabilityService()
++    assert service.is_available(0, 0, 100) is True
++
++
++def test_xyz_out_of_range_x():
++    service = XYZAvailabilityService()
++    assert service.is_available(1000, 0, 100) is False
++
++
++def test_xyz_negative_z():
++    service = XYZAvailabilityService()
++    assert service.is_available(0, 0, -10) is False

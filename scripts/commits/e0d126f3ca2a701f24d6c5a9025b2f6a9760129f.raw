@@ -1,0 +1,160 @@
+commit e0d126f3ca2a701f24d6c5a9025b2f6a9760129f
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Tue Jan 20 16:49:55 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Tue Jan 20 16:49:55 2026 +0500
+
+    refactor: errosionWorker class
+
+diff --git a/src/erosionWorker/__init__.py b/src/erosionWorker/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/src/erosionWorker/errosionWorker.py b/src/erosionWorker/errosionWorker.py
+new file mode 100644
+index 0000000..077ae2e
+--- /dev/null
++++ b/src/erosionWorker/errosionWorker.py
+@@ -0,0 +1,104 @@
++from PySide6.QtCore import QThread, Signal
++import time
++import os
++
++#Класс-обёртка для Electroerosion
++class ErosionController:
++    # Инкапсулирует работу с Electroerosion
++    def __init__(self, erosion_cls, filename=None, logger=None, **params):
++        self.filename = filename
++        self.params = params
++        self.logger = logger  # получаем logger из qt_interface
++        self.erosion_instance = erosion_cls(filename=filename, **params)
++
++    def start_erosion(self):
++        if self.logger:
++            self.logger(f"Starting erosion: filename={self.filename}, params={self.params}")
++        self.erosion_instance.start()
++
++    def stop_erosion(self):
++        self.erosion_instance.stop()
++
++
++#G-code обработчик
++class GCodeProcessor:
++    # Отвечает за прогресс по точкам G-code
++    def __init__(self, gcode_points, total_time):
++        self.gcode_points = gcode_points
++        self.total_time = total_time
++        self.current_index = 0
++        self.total_points = len(gcode_points)
++
++    def get_progress(self):
++        return min(100, (self.current_index + 1) / self.total_points * 100)
++
++    def get_remaining_time(self, elapsed):
++        remaining = max(0, self.total_time - elapsed)
++        return f"{int(remaining // 60):02d}:{int(remaining % 60):02d}"
++
++
++#Поток выполнения
++class ErosionWorker(QThread):
++    progress_updated = Signal(float)
++    time_updated = Signal(str)
++    finished = Signal()
++    paused = Signal()
++    resumed = Signal()
++
++    def __init__(self, erosion_controller: ErosionController, gcode_processor: GCodeProcessor):
++        super().__init__()
++        self.controller = erosion_controller
++        self.processor = gcode_processor
++        self.is_running = True
++        self.is_paused = False
++        self.start_time = None
++        self.pause_start_time = None
++        self.total_paused_time = 0
++
++    def run(self):
++        self.start_time = time.time()
++        try:
++            # Раскоментировать для работы
++            self.controller.start_erosion()
++
++            # Имитация прогресса по G-code
++            #for i, point in enumerate(self.processor.gcode_points[self.processor.current_index:],
++            #                          self.processor.current_index):
++            #    if not self.is_running:
++            #        break
++
++            #    # Обработка паузы
++            #    while self.is_paused and self.is_running:
++            #        if self.pause_start_time is None:
++            #            self.pause_start_time = time.time()
++            #            self.paused.emit()
++            #        QThread.msleep(100)
++            #    if self.pause_start_time is not None:
++            #        self.total_paused_time += time.time() - self.pause_start_time
++            #        self.pause_start_time = None
++            #        self.resumed.emit()
++
++            #    # Обновляем прогресс
++            #    self.processor.current_index = i
++            #    elapsed = time.time() - self.start_time - self.total_paused_time
++            #    self.progress_updated.emit(self.processor.get_progress())
++            #   self.time_updated.emit(self.processor.get_remaining_time(elapsed))
++
++            #    QThread.msleep(50)  # имитация обработки точки
++
++            #self.finished.emit()
++        except Exception as e:
++            if self.controller.logger:
++                self.controller.logger(f"Error processing electroerosion: {e}")
++            self.finished.emit()
++
++    def pause(self):
++        self.is_paused = True
++
++    def resume(self):
++        self.is_paused = False
++
++    def stop(self):
++        self.is_running = False
++        self.is_paused = False
++        self.controller.stop_erosion()
+\ No newline at end of file
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index a8d5176..1395c15 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -28,6 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
+ from .log import Log
+ from src.arrow3D import Arrow3D, Arrow3DData
+ from src.widgets.axis_control_widget import AxisControlWidget
++from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+ 
+ 
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+@@ -71,9 +72,6 @@ class VideoStreamThread(QThread):
+         while self.running:
+             if self.cap.isOpened():
+                 ret, frame = self.cap.read()
+-                if not ret:
+-                    self.running = False
+-                    break
+                 if ret:
+                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                     h, w, ch = rgb_image.shape
+@@ -153,6 +151,7 @@ class VideoStreamThread(QThread):
+ #         new_value = current_value + delta
+ #         self.value_label.setText(f"{new_value:.1f} мм")
+ #         self.position_changed.emit(self.axis, new_value)
++'''
+ # Рабочий поток для эрозии
+ class ErosionWorker(QThread):
+     progress_updated = Signal(float)
+@@ -272,6 +271,7 @@ class ErosionWorker(QThread):
+     def stop(self):
+         self.is_running = False
+         self.is_paused = False
++'''
+ # Вкладка процесса эрозии
+ class ErosionProcessTab(QWidget):
+     def __init__(self, controller):

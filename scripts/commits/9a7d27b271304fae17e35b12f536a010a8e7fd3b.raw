@@ -1,0 +1,497 @@
+commit 9a7d27b271304fae17e35b12f536a010a8e7fd3b
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Wed Jan 21 23:51:55 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Wed Jan 21 23:51:55 2026 +0500
+
+    chore: fix naming + add scripts
+
+diff --git a/scripts/aggregate_commit.py b/scripts/aggregate_commit.py
+new file mode 100644
+index 0000000..7f91c40
+--- /dev/null
++++ b/scripts/aggregate_commit.py
+@@ -0,0 +1,28 @@
++import json
++from statistics import mean
++from pathlib import Path
++
++def aggregate(results: list[dict]) -> dict:
++    scores = {k: [] for k in ["SRP", "OCP", "LSP", "ISP", "DIP"]}
++
++    for r in results:
++        if "error" in r:
++            continue
++        for k in scores:
++            scores[k].append(r[k]["score"])
++
++    return {
++        k: round(mean(v), 2) if v else None
++        for k, v in scores.items()
++    }
++
++def main():
++    for file in Path("results").glob("*.json"):
++        data = json.loads(file.read_text())
++        summary = aggregate(data)
++        file.with_suffix(".summary.json").write_text(
++            json.dumps(summary, indent=2)
++        )
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/analyze_all.py b/scripts/analyze_all.py
+new file mode 100644
+index 0000000..93d1cbd
+--- /dev/null
++++ b/scripts/analyze_all.py
+@@ -0,0 +1,27 @@
++from pathlib import Path
++import json
++from ollama_client import analyze_chunk
++
++OUT = Path("results")
++OUT.mkdir(exist_ok=True)
++
++def main():
++    for commit_dir in Path("commits").iterdir():
++        if not commit_dir.is_dir():
++            continue
++
++        commit_results = []
++
++        for chunk in commit_dir.glob("chunk_*.txt"):
++            try:
++                result = analyze_chunk(chunk.read_text())
++                commit_results.append(result)
++            except Exception as e:
++                commit_results.append({"error": str(e)})
++
++        (OUT / f"{commit_dir.name}.json").write_text(
++            json.dumps(commit_results, indent=2)
++        )
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/chunk_commits.py b/scripts/chunk_commits.py
+new file mode 100644
+index 0000000..29a1ced
+--- /dev/null
++++ b/scripts/chunk_commits.py
+@@ -0,0 +1,34 @@
++from pathlib import Path
++
++MAX_CHARS = 6000  
++
++def chunk_commit(text: str) -> list[str]:
++    chunks = []
++    current = []
++
++    for line in text.splitlines():
++        if sum(len(l) for l in current) > MAX_CHARS:
++            chunks.append("\n".join(current))
++            current = []
++
++        current.append(line)
++
++    if current:
++        chunks.append("\n".join(current))
++
++    return chunks
++
++
++def main():
++    for norm_file in Path("commits").glob("*.norm"):
++        chunks = chunk_commit(norm_file.read_text())
++
++        out_dir = norm_file.with_suffix("")
++        out_dir.mkdir(exist_ok=True)
++
++        for i, chunk in enumerate(chunks):
++            (out_dir / f"chunk_{i}.txt").write_text(chunk)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/extract_commits.py b/scripts/extract_commits.py
+new file mode 100644
+index 0000000..30ac252
+--- /dev/null
++++ b/scripts/extract_commits.py
+@@ -0,0 +1,32 @@
++import subprocess
++from pathlib import Path
++
++OUT_DIR = Path("commits")
++OUT_DIR.mkdir(exist_ok=True)
++
++def get_commits():
++    return subprocess.check_output(
++        ["git", "rev-list", "--reverse", "HEAD"],
++        text=True
++    ).splitlines()
++
++def get_commit_diff(commit):
++    return subprocess.check_output(
++        [
++            "git", "show", commit,
++            "--patch",
++            "--no-color",
++            "--format=fuller"
++        ],
++        text=True
++    )
++
++def main():
++    for commit in get_commits():
++        diff = get_commit_diff(commit)
++        (OUT_DIR / f"{commit}.raw").write_text(diff)
++
++if __name__ == "__main__":
++    main()
++
++
+diff --git a/scripts/normalize_commit.py b/scripts/normalize_commit.py
+new file mode 100644
+index 0000000..a1c3ac3
+--- /dev/null
++++ b/scripts/normalize_commit.py
+@@ -0,0 +1,66 @@
++import re
++from pathlib import Path
++
++EXCLUDED_DIRS = (
++    "vendor/",
++    "node_modules/",
++    "dist/",
++    "build/",
++)
++
++MAX_LINES = 300
++
++def detect_language(path):
++    return Path(path).suffix.lstrip(".")
++
++def normalize_commit(raw: str) -> str:
++    lines = raw.splitlines()
++    header, diff = [], []
++    in_diff = False
++
++    for line in lines:
++        if line.startswith("diff --git"):
++            in_diff = True
++        if in_diff:
++            diff.append(line)
++        else:
++            header.append(line)
++
++    result = ["\n".join(header), "\nFILES:"]
++
++    blocks = "\n".join(diff).split("diff --git ")
++
++    for block in blocks:
++        if not block.strip():
++            continue
++
++        m = re.search(r"a/(.*?) b/(.*?)$", block.splitlines()[0])
++        if not m:
++            continue
++
++        path = m.group(2)
++        if path.startswith(EXCLUDED_DIRS):
++            continue
++
++        content = block.splitlines()[1:]
++        if len(content) > MAX_LINES:
++            continue
++
++        result.append(
++            f"""
++FILE: {path}
++LANG: {detect_language(path)}
++
++{chr(10).join(content)}
++"""
++        )
++
++    return "\n".join(result)
++
++def main():
++    for raw_file in Path("commits").glob("*.raw"):
++        normalized = normalize_commit(raw_file.read_text())
++        raw_file.with_suffix(".norm").write_text(normalized)
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/ollama_client.py b/scripts/ollama_client.py
+new file mode 100644
+index 0000000..86342dc
+--- /dev/null
++++ b/scripts/ollama_client.py
+@@ -0,0 +1,60 @@
++import requests
++import json
++import time
++
++OLLAMA_URL = "http://localhost:11434/api/generate"
++MODEL = "qwen2.5:7b"
++
++SYSTEM_PROMPT = """
++Ты — software architect.
++Оцени изменения кода на соответствие принципам SOLID.
++
++Ответ строго в JSON следующего формата:
++{
++  "solid_score": 0-10,
++  "reason": ""
++}
++
++Никакого текста вне JSON.
++"""
++
++def analyze_chunk(chunk: str) -> dict:
++    try:
++        r = requests.post(
++            OLLAMA_URL,
++            json={
++                "model": MODEL,
++                "prompt": SYSTEM_PROMPT + "\n\n" + chunk,
++                "stream": False,
++                "options": {
++                    "temperature": 0,
++                    "num_predict": 400
++                }
++            },
++            timeout=60
++        )
++    except requests.Timeout:
++        return {"error": "timeout"}
++
++    text = r.json().get("response", "").strip()
++
++    if not text:
++        return {"error": "empty_response"}
++
++    # попытка вытащить JSON даже если модель напортачила
++    start = text.find("{")
++    end = text.rfind("}")
++
++    if start == -1 or end == -1:
++        return {
++            "error": "no_json_found",
++            "raw": text[:500]
++        }
++
++    try:
++        return json.loads(text[start:end + 1])
++    except json.JSONDecodeError as e:
++        return {
++            "error": "invalid_json",
++            "raw": text[start:end + 1][:500]
++        }
+diff --git a/scripts/readme.md b/scripts/readme.md
+new file mode 100644
+index 0000000..b257189
+--- /dev/null
++++ b/scripts/readme.md
+@@ -0,0 +1,6 @@
++ollama serve
++python extract_commits.py
++python normalize_commit.py
++python chunk_commit.py
++python analyze_all.py
++python aggregate_commit.py
+diff --git a/src/ErossionProcess/__init__.py b/src/erosion_process/__init__.py
+similarity index 100%
+rename from src/ErossionProcess/__init__.py
+rename to src/erosion_process/__init__.py
+diff --git a/src/ErossionProcess/ErosionProcessTab.py b/src/erosion_process/erosion_process_tab.py
+similarity index 96%
+rename from src/ErossionProcess/ErosionProcessTab.py
+rename to src/erosion_process/erosion_process_tab.py
+index c5ef03a..d2194c2 100644
+--- a/src/ErossionProcess/ErosionProcessTab.py
++++ b/src/erosion_process/erosion_process_tab.py
+@@ -1,8 +1,5 @@
+ from __future__ import annotations
+ 
+-# =========================
+-# STANDARD
+-# =========================
+ import os
+ import re
+ import time
+@@ -12,9 +9,6 @@ from typing import Callable, Optional, Protocol, Sequence, Tuple, List
+ 
+ import numpy as np
+ 
+-# =========================
+-# QT
+-# =========================
+ from PySide6.QtWidgets import (
+     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox,
+     QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox, QGridLayout,
+@@ -22,27 +16,15 @@ from PySide6.QtWidgets import (
+ )
+ from PySide6.QtCore import Qt, Slot
+ from PySide6.QtGui import QTextCursor
+-
+-# =========================
+-# MATPLOTLIB
+-# =========================
+ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+ from matplotlib.figure import Figure
+-
+-# =========================
+-# PROJECT IMPORTS
+-# =========================
+-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
+ from src.widgets.axis_control_widget import AxisControlWidget
+ from src.arrow3D import Arrow3DData
+ 
+ 
+ Point3D = Tuple[float, float, float]
+ 
+-
+-# ==========================================================
+-# Presenter stack (NO cyclic imports)
+-# ==========================================================
+ class ILogReader(Protocol):
+     def isRunning(self) -> bool: ...
+     def start(self) -> None: ...
+@@ -243,10 +225,6 @@ class ErosionProcessPresenter:
+     def return_to_zero(self) -> None:
+         self._controller.set_coord_pos(self._controller.X0, self._controller.Y0, self._controller.Z0)
+ 
+-
+-# ==========================================================
+-# VIEW (OLD UI preserved)
+-# ==========================================================
+ class ErosionProcessTab(QWidget):
+     def __init__(self, controller, q_ref):
+         super().__init__()
+@@ -258,7 +236,6 @@ class ErosionProcessTab(QWidget):
+         self.erosion_worker = None
+         self.is_process_paused = False
+ 
+-        # ✅ correct presenter
+         self._presenter = ErosionProcessPresenter(
+             controller=controller,
+             view=self,
+@@ -267,7 +244,7 @@ class ErosionProcessTab(QWidget):
+ 
+         self.create_widgets()
+ 
+-    # -------- View API --------
++    
+     def show_error(self, title: str, text: str) -> None:
+         QMessageBox.critical(self, title, text)
+ 
+@@ -311,7 +288,7 @@ class ErosionProcessTab(QWidget):
+         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+         self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+ 
+-    # -------- OLD UI --------
++
+     def create_widgets(self):
+         main_layout = QVBoxLayout()
+ 
+@@ -615,7 +592,6 @@ class ErosionProcessTab(QWidget):
+         self._presenter.stop_erosion(self.erosion_worker)
+         self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
+ 
+-    # -------- helper methods --------
+     def visualize_gcode(self):
+         self.gcode_ax.clear()
+         if self.gcode_points:
+diff --git a/src/erosion_worker/errosion_worker.py b/src/erosion_worker/erosion_worker.py
+similarity index 95%
+rename from src/erosion_worker/errosion_worker.py
+rename to src/erosion_worker/erosion_worker.py
+index 185431c..dcb670b 100644
+--- a/src/erosion_worker/errosion_worker.py
++++ b/src/erosion_worker/erosion_worker.py
+@@ -2,9 +2,7 @@ from PySide6.QtCore import QThread, Signal
+ import time
+ import os
+ 
+-#Класс-обёртка для Electroerosion
+ class ErosionController:
+-    # Инкапсулирует работу с Electroerosion
+     def __init__(self, erosion_cls, filename=None, logger=None, **params):
+         self.filename = filename
+         self.params = params
+@@ -20,7 +18,6 @@ class ErosionController:
+         self.erosion_instance.stop()
+ 
+ 
+-#G-code обработчик
+ class GCodeProcessor:
+     # Отвечает за прогресс по точкам G-code
+     def __init__(self, gcode_points, total_time):
+diff --git a/src/LogText/__init__.py b/src/log_text/__init__.py
+similarity index 100%
+rename from src/LogText/__init__.py
+rename to src/log_text/__init__.py
+diff --git a/src/LogText/LogTextBoxErrosion.py b/src/log_text/log_text_box_erosion.py
+similarity index 100%
+rename from src/LogText/LogTextBoxErrosion.py
+rename to src/log_text/log_text_box_erosion.py
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index 3bbebb3..cefb403 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -28,14 +28,14 @@ from mpl_toolkits.mplot3d import proj3d
+ from .log import Log
+ from src.arrow3D import Arrow3D, Arrow3DData
+ from src.widgets.axis_control_widget import AxisControlWidget
+-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+ from src.services.xyz_trajectory_service import XYZTrajectoryService
+ from src.services.joint_trajectory_service import JointTrajectoryService
+ from src.presenters.xyz_control_presenter import XYZControlPresenter
+ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+-from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
++from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
+ from src.VideoStream.VideoStreamThread import VideoStreamThread
+ from src.presenters.joint_control_presenter import JointControlPresenter
+ from src.domain.xyz_availability_service import XYZAvailabilityService
+@@ -43,7 +43,7 @@ from src.domain.joint_availability_service import JointAvailabilityService
+ from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
+ from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
+ from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
+-
++from src.erosion_process.erosion_process_tab import ErosionProcessTab
+ 
+ 
+ 
+diff --git a/tests/ErosionProcessTab/test_erosion_presenter_run.py b/tests/ErosionProcessTab/test_erosion_presenter_run.py
+index c701e73..455a890 100644
+--- a/tests/ErosionProcessTab/test_erosion_presenter_run.py
++++ b/tests/ErosionProcessTab/test_erosion_presenter_run.py
+@@ -2,7 +2,7 @@ import queue
+ import pytest
+ from unittest.mock import Mock
+ 
+-from src.ErossionProcess.ErosionProcessTab import (
++from src.erosion_process.erosion_process_tab import (
+     ErosionProcessPresenter,
+     ErosionRunParams,
+ )
+diff --git a/tests/LogTextBoxErrosion/test_log_text_errosion.py b/tests/LogTextBoxErrosion/test_log_text_errosion.py
+index 5163b6d..1a6fec7 100644
+--- a/tests/LogTextBoxErrosion/test_log_text_errosion.py
++++ b/tests/LogTextBoxErrosion/test_log_text_errosion.py
+@@ -4,7 +4,7 @@ import time
+ import pytest
+ from PySide6.QtCore import QCoreApplication, QEventLoop, QTimer
+ 
+-from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
++from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
+ 
+ 
+ @pytest.fixture(scope="session", autouse=True)

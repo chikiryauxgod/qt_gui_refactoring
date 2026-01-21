@@ -1,0 +1,11 @@
+commit 794f80a9f91730cd86ba11811d943ac44baef10c
+Author:     lewace37 <lewace37@yandex.ru>
+AuthorDate: Mon Jan 19 21:48:34 2026 +0500
+Commit:     lewace37 <lewace37@yandex.ru>
+CommitDate: Mon Jan 19 21:48:34 2026 +0500
+
+    feat: add __init__.py
+
+diff --git a/tests/VideoStreamThread/__init__.py b/tests/VideoStreamThread/__init__.py
+new file mode 100644
+index 0000000..e69de29
