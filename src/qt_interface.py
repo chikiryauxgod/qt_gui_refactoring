@@ -37,7 +37,15 @@ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
-from src.ErossionProcess.ErosionProcessTab import *
+from src.presenters.joint_control_presenter import JointControlPresenter
+from src.domain.xyz_availability_service import XYZAvailabilityService
+from src.domain.joint_availability_service import JointAvailabilityService
+from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
+from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
+from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
+
+
+
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -959,12 +967,17 @@ class ServiceTab(QWidget):
         self.xyz_presenter = XYZControlPresenter(controller)
         self.trajectory_service = XYZTrajectoryService()
         self.trajectory_points_joints = JointTrajectoryService()
+        
         self.xyz_trajectory_executor = XYZTrajectoryExecutor(
-        controller=self.controller,
-        trajectory_service=self.trajectory_service,)
+            controller=self.controller,
+            trajectory_service=self.trajectory_service,)
+        self.joint_presenter = JointControlPresenter(self.controller)
         self.joint_trajectory_executor = JointTrajectoryExecutor(
-        controller=self.controller,
-        trajectory_service=self.trajectory_points_joints,)
+            joint_presenter=self.joint_presenter,
+            trajectory_service=self.trajectory_points_joints,)
+        self.xyz_availability_service = XYZAvailabilityService()
+        self.joint_availability_service = JointAvailabilityService()    
+        
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
@@ -1146,6 +1159,12 @@ class ServiceTab(QWidget):
         
         self.xyz_canvas = FigureCanvas(self.xyz_fig)
         vis_layout.addWidget(self.xyz_canvas)
+        
+        self.xyz_kinematics_plotter = XYZKinematicsPlotter(
+            ax=self.xyz_ax,
+            canvas=self.xyz_canvas,
+            robot_chain=self.robot_chain,
+            ikpy_available=IKPY_AVAILABLE,)
         
         update_btn = QPushButton("Обновить визуализацию")
         update_btn.clicked.connect(self.update_xyz_plot)
@@ -1361,6 +1380,9 @@ class ServiceTab(QWidget):
         self.joints_canvas.setMinimumSize(400, 350)  # Фиксируем минимальный размер
         vis_layout.addWidget(self.joints_canvas)
         
+        self.joints_trajectory_plotter = JointsTrajectoryPlotter(
+            self.joints_ax, self.joints_canvas)
+        
         update_btn = QPushButton("Обновить визуализацию")
         update_btn.clicked.connect(self.update_joints_plot)
         vis_layout.addWidget(update_btn)
@@ -1531,6 +1553,10 @@ class ServiceTab(QWidget):
         self.xyz_traj_canvas = FigureCanvas(self.xyz_traj_fig)
         vis_layout.addWidget(self.xyz_traj_canvas)
         
+        self.xyz_trajectory_plotter = XYZTrajectoryPlotter(
+            ax=self.xyz_traj_ax,
+            canvas=self.xyz_traj_canvas,)
+        
         vis_frame.setLayout(vis_layout)
         layout.addWidget(vis_frame)
         
@@ -1541,17 +1567,17 @@ class ServiceTab(QWidget):
     
     def create_joints_trajectory_tab(self):
         widget = QWidget()
-        layout = QHBoxLayout()
-        
+        main_layout = QHBoxLayout(widget)
+
         control_frame = QGroupBox("Управление траекторией суставов")
-        control_layout = QVBoxLayout()
-        
+        control_layout = QVBoxLayout(control_frame)
+
         joints_group = QGroupBox("Добавить позицию суставов")
-        joints_layout = QGridLayout()
-        
+        joints_layout = QGridLayout(joints_group)
+
         joints = ['J0', 'J1', 'J2', 'J3', 'J4', 'J5']
         self.new_joints = {}
-        
+
         for i, joint in enumerate(joints):
             joints_layout.addWidget(QLabel(f"{joint} (°):"), i, 0)
             spinbox = QDoubleSpinBox()
@@ -1561,65 +1587,65 @@ class ServiceTab(QWidget):
             spinbox.setSuffix(" °")
             joints_layout.addWidget(spinbox, i, 1)
             self.new_joints[joint] = spinbox
-        
+
         add_btn = QPushButton("Добавить позицию")
         add_btn.clicked.connect(self.add_joints_point)
         joints_layout.addWidget(add_btn, 6, 0, 1, 2)
-        
+
         joints_group.setLayout(joints_layout)
         control_layout.addWidget(joints_group)
         
         traj_control_layout = QHBoxLayout()
-        
+
         remove_btn = QPushButton("Удалить позицию")
         remove_btn.clicked.connect(self.remove_joints_point)
         traj_control_layout.addWidget(remove_btn)
-        
+
         clear_btn = QPushButton("Очистить все")
         clear_btn.clicked.connect(self.clear_joints_trajectory)
         traj_control_layout.addWidget(clear_btn)
-        
+
         home_btn = QPushButton("Вернуться в ноль")
         home_btn.clicked.connect(self.return_to_zero_joints)
         traj_control_layout.addWidget(home_btn)
-        
+
         control_layout.addLayout(traj_control_layout)
-        
+
         list_group = QGroupBox("Позиции траектории")
-        list_layout = QVBoxLayout()
-        
+        list_layout = QVBoxLayout(list_group)
+
         self.joints_listbox = QListWidget()
         list_layout.addWidget(self.joints_listbox)
-        
+
         execute_btn = QPushButton("Выполнить траекторию")
         execute_btn.clicked.connect(self.execute_joints_trajectory)
         list_layout.addWidget(execute_btn)
-        
+
         list_group.setLayout(list_layout)
         control_layout.addWidget(list_group)
-        
         control_frame.setLayout(control_layout)
-        layout.addWidget(control_frame)
+        main_layout.addWidget(control_frame)
         
         vis_frame = QGroupBox("Визуализация траектории")
-        vis_layout = QVBoxLayout()
-        
+        vis_layout = QVBoxLayout(vis_frame)
+
         self.joints_traj_fig = Figure(figsize=(6, 5), dpi=100)
-        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d')
-        
+        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d') 
+
         self.joints_traj_ax.set_xlabel('X (мм)')
         self.joints_traj_ax.set_ylabel('Y (мм)')
         self.joints_traj_ax.set_zlabel('Z (мм)')
         self.joints_traj_ax.set_title('Траектория движения суставов')
-        
+
         self.joints_traj_canvas = FigureCanvas(self.joints_traj_fig)
         vis_layout.addWidget(self.joints_traj_canvas)
-        
+
         vis_frame.setLayout(vis_layout)
-        layout.addWidget(vis_frame)
-        
-        widget.setLayout(layout)
+        main_layout.addWidget(vis_frame)
+
+        widget.setLayout(main_layout)
         return widget
+
 
     def robot_settings_tab(self):
         widget = QWidget()
@@ -1699,57 +1725,12 @@ class ServiceTab(QWidget):
 
     @Slot()
     def update_xyz_plot(self):
-            """Обновление графика с кинематической цепочкой для осей XYZ"""
-            self.xyz_ax.clear()
-            
-            x, y, z = self.controller.current_x, self.controller.current_y, self.controller.current_z
-            
-            # Отображаем кинематическую цепочку, если доступна
-            if self.robot_chain and IKPY_AVAILABLE:
-                try:
-                    # Преобразуем координаты в метры для ikpy (из мм в метры)
-                    target_position = [x/1000.0, y/1000.0, z/1000.0]
-                    
-                    # Вычисляем обратную кинематику
-                    # Используем ориентацию по умолчанию (можно настроить под ваши нужды)
-                    target_orientation = [0, 0, 0]  # [roll, pitch, yaw] в радианах
-                    
-                    # Вычисляем углы суставов через обратную кинематику
-                    joint_angles = self.robot_chain.inverse_kinematics(
-                        target_position=target_position,
-                        target_orientation=target_orientation,
-                        orientation_mode="all"
-                    )
-                    
-                    # Отображаем кинематическую цепочку
-                    self.robot_chain.plot(joint_angles, self.xyz_ax, target=target_position)
-                    
-                    # Добавляем целевую точку
-                    self.xyz_ax.scatter([x/1000], [y/1000], [z/1000], 
-                                    c='red', marker='o', s=100, label='Целевая позиция')
-                    
-                except Exception as e:
-                    logger(f"Error inverse kinematic {e}", queue=q)
-                    # Резервный вариант - просто показать точку
-                    self.xyz_ax.scatter([x], [y], [z], c='r', marker='o', s=100, label='Позиция инструмента')
-            else:
-                # Резервный вариант без кинематики
-                self.xyz_ax.scatter([x], [y], [z], c='r', marker='o', s=100, label='Позиция инструмента')
-            
-            # Настраиваем график
-            self.xyz_ax.set_xlabel('X (м)')
-            self.xyz_ax.set_ylabel('Y (м)')
-            self.xyz_ax.set_zlabel('Z (м)')
-            self.xyz_ax.set_title('Кинематическая цепочка робота')
-            self.xyz_ax.legend()
-            
-            # Устанавливаем разумные пределы
-            padding = 0.5  # 50 см в метрах
-            self.xyz_ax.set_xlim([x/1000 - padding, x/1000 + padding])
-            self.xyz_ax.set_ylim([y/1000 - padding, y/1000 + padding])
-            self.xyz_ax.set_zlim([max(0, z/1000 - padding), z/1000 + padding])
-            
-            self.xyz_canvas.draw()
+        """Обновление графика XYZ"""
+        self.xyz_kinematics_plotter.plot(
+            x=self.controller.current_x,
+            y=self.controller.current_y,
+            z=self.controller.current_z,
+        )
 
 
     # Методы управления суставами
@@ -1825,7 +1806,9 @@ class ServiceTab(QWidget):
         self.xyz_listbox.clear()
         self.xyz_listbox.addItem(f"1: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
 
-        self.update_xyz_trajectory_plot()
+        self.xyz_trajectory_plotter.plot(
+            self.trajectory_service.get_points())
+
 
     @Slot()
     def add_xyz_point(self):
@@ -1833,13 +1816,15 @@ class ServiceTab(QWidget):
         y = self.new_y.value()
         z = self.new_z.value()
         
-        if self.check_point_availability(x, y, z):
+        if self.xyz_availability_service.is_available(x, y, z):
             self.trajectory_service.add_point(x, y, z)
             index = len(self.trajectory_service.get_points())
             self.xyz_listbox.addItem(
                 f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
             )
-            self.update_xyz_trajectory_plot()
+            self.xyz_trajectory_plotter.plot(
+                self.trajectory_service.get_points())
+            
         else:
             logger("The point cannot be moved.", queue=q)
 
@@ -1858,13 +1843,15 @@ class ServiceTab(QWidget):
                     f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
                 )
 
-            self.update_xyz_trajectory_plot()
+            self.xyz_trajectory_plotter.plot(
+                self.trajectory_service.get_points())
 
     @Slot()
     def clear_xyz_trajectory(self):
         self.trajectory_service.clear()
         self.xyz_listbox.clear()
-        self.update_xyz_trajectory_plot()
+        self.xyz_trajectory_plotter.plot(
+            self.trajectory_service.get_points())
 
 
     @Slot()
@@ -1927,11 +1914,12 @@ class ServiceTab(QWidget):
     def add_joints_point(self):
         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
         
-        if self.check_joints_availability(joints):
+        if self.joint_availability_service.is_available(joints):
             self.trajectory_points_joints.add_point(joints)
             index = len(self.trajectory_points_joints.get_points())
             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
-            self.update_joints_trajectory_plot()
+            self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
         else:
             # QMessageBox.critical(self, "Ошибка", "Позиция недоступна для перемещения")
             logger("The position cannot be moved.", queue=q)
@@ -1942,13 +1930,14 @@ class ServiceTab(QWidget):
         if current_row >= 0:
             self.joints_listbox.takeItem(current_row)
             self.joint_trajectory_service.remove_point(current_row)
-            self.update_joints_trajectory_plot()
-
+            self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
     @Slot()
     def clear_joints_trajectory(self):
         self.joints_listbox.clear()
         self.trajectory_points_joints.clear()
-        self.update_joints_trajectory_plot()
+        self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
 
     @Slot()
     def return_to_zero_joints(self):
@@ -2010,16 +1999,6 @@ class ServiceTab(QWidget):
             self.joints_traj_ax.legend()
             
             self.joints_traj_canvas.draw()
-
-    # Вспомогательные методы
-    def check_point_availability(self, x, y, z):
-        return (-500 <= x <= 500 and -500 <= y <= 500 and 0 <= z <= 500)
-
-    def check_joints_availability(self, joints):
-        for angle in joints:
-            if not (-180 <= angle <= 180):
-                return False
-        return True
 
     @Slot()
     def update_status(self):
