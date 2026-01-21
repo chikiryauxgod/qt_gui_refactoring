@@ -8,7 +8,7 @@ class ErosionController:
     def __init__(self, erosion_cls, filename=None, logger=None, **params):
         self.filename = filename
         self.params = params
-        self.logger = logger  # получаем logger из qt_interface
+        self.logger = logger
         self.erosion_instance = erosion_cls(filename=filename, **params)
 
     def start_erosion(self):
