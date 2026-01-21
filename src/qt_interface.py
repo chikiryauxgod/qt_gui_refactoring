@@ -33,6 +33,7 @@ from src.services.xyz_trajectory_service import XYZTrajectoryService
 from src.services.joint_trajectory_service import JointTrajectoryService
 from src.presenters.xyz_control_presenter import XYZControlPresenter
 from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
 #+ Выводить содержимое очереди в textbox процесса эрозии
@@ -952,6 +953,9 @@ class ServiceTab(QWidget):
         self.xyz_trajectory_executor = XYZTrajectoryExecutor(
         controller=self.controller,
         trajectory_service=self.trajectory_service,)
+        self.joint_trajectory_executor = JointTrajectoryExecutor(
+        controller=self.controller,
+        trajectory_service=self.trajectory_points_joints,)
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
@@ -1863,7 +1867,7 @@ class ServiceTab(QWidget):
         if not self.trajectory_service.get_points():
             QMessageBox.critical(self, "Ошибка", "Траектория не задана")
             return
-
+    
         logger('Execution trajectory XYZ...', queue=q)
         self.xyz_trajectory_executor.execute()
 
@@ -1934,7 +1938,7 @@ class ServiceTab(QWidget):
     @Slot()
     def clear_joints_trajectory(self):
         self.joints_listbox.clear()
-        self.trajectory_points_joints = []
+        self.trajectory_points_joints.clear()
         self.update_joints_trajectory_plot()
 
     @Slot()
@@ -1943,14 +1947,11 @@ class ServiceTab(QWidget):
 
     @Slot()
     def execute_joints_trajectory(self):
-        if not self.trajectory_points_joints:
+        if not self.trajectory_points_joints.get_points():
             QMessageBox.critical(self, "Ошибка", "Траектория не задана")
             return
-        
-        logger('Execution traectory joints...', queue=q)
-        for joints in self.trajectory_points_joints:
-            self.controller.set_joint_pos(joints)
-            time.sleep(1)
+
+        self.joint_trajectory_executor.execute()
 
     @Slot()
     def update_joints_trajectory_plot(self):
