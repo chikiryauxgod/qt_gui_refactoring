@@ -34,6 +34,10 @@ from src.services.joint_trajectory_service import JointTrajectoryService
 from src.presenters.xyz_control_presenter import XYZControlPresenter
 from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
+from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
+from src.VideoStream.VideoStreamThread import VideoStreamThread
+
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
 #+ Выводить содержимое очереди в textbox процесса эрозии
@@ -60,7 +64,7 @@ q = queue.Queue()
 #filename = None
 
 # Поток для видеозахвата
-class VideoStreamThread(QThread):
+""" class VideoStreamThread(QThread):
     new_frame = Signal(QImage)
     
     def __init__(self, camera_idx=0, width=640, height=480, latency=30):
@@ -76,6 +80,9 @@ class VideoStreamThread(QThread):
         while self.running:
             if self.cap.isOpened():
                 ret, frame = self.cap.read()
+                if not ret:
+                    self.running = False
+                    break
                 if ret:
                     rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     h, w, ch = rgb_image.shape
@@ -89,7 +96,7 @@ class VideoStreamThread(QThread):
         self.wait()
         if self.cap.isOpened():
             self.cap.release()
-
+ """
 
 # Виджет управления осью
 # class AxisControlWidget(QWidget):
@@ -290,7 +297,8 @@ class ErosionProcessTab(QWidget):
 
     def start_queue_reader(self):
         """Запуск потока чтения из очереди"""
-        self.queue_reader = LogTextBoxErrosion(q)
+        source = QueueMessageSource(q)
+        self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
         self.queue_reader.new_message.connect(self.append_to_status_text)
         self.queue_reader.start()
         
@@ -2528,10 +2536,10 @@ class MainWindow(QMainWindow):
             background-color: {color};
         """)
 
-class LogTextBoxErrosion(QThread):
+""" class LogTextBoxErrosion(QThread):
 
     new_message = Signal(str)
-    def __init__(self, queue):
+    def __init__(self, queue, latency=100):
         super().__init__()
         self.queue = queue
         self.running = True
@@ -2544,11 +2552,11 @@ class LogTextBoxErrosion(QThread):
                 self.new_message.emit(message)
             except queue.Empty:
                 # Если очередь пуста, ждем немного и продолжаем
-                QThread.msleep(100)
+                self.msleep(self.latency)
                 continue
 
     def stop(self):
-        self.running = False
+        self.running = False """
 
 
 # Запуск приложения

@@ -1,69 +1,50 @@
 import numpy as np
 import pytest
-import sys, types
+
+from src.VideoStream.VideoStreamThread import *
+from PySide6.QtGui import QImage
 
 
-sys.modules["electoerosion"] = types.ModuleType("electoerosion")
-sys.modules["pico"] = types.ModuleType("pico")
-sys.modules["robot"] = types.ModuleType("robot")
-
-import src.qt_interface as qi
-from src.qt_interface import VideoStreamThread
-
-
-class FakeCapture:
-    """
-    Фейковая камера:
-    - 1 раз отдаёт кадр
-    - затем "закрывается" и возвращает ret=False
-    """
-    def __init__(self, idx):
-        self._released = False
+class FakeSource(FrameSource):
+    """1 кадр -> потом ret=False."""
+    def __init__(self):
+        self._opened = False
         self._read_count = 0
+        self.closed = False
 
-    def isOpened(self):
-        return not self._released
-
-    def set(self, *_):
+    def open(self) -> bool:
+        self._opened = True
         return True
+
+    def is_opened(self) -> bool:
+        return self._opened and not self.closed
 
     def read(self):
         self._read_count += 1
         if self._read_count == 1:
             frame = np.zeros((10, 10, 3), dtype=np.uint8)
             return True, frame
-
-   
-        self._released = True
+        # заканчиваем поток
+        self.closed = True
         return False, None
 
-    def release(self):
-        self._released = True
+    def close(self) -> None:
+        self.closed = True
 
 
-@pytest.fixture
-def patch_cv2(monkeypatch):
-    """Патчим cv2 внутри src.qt_interface, чтобы не трогать реальную камеру."""
-    def fake_videocapture(idx):
-        return FakeCapture(idx)
-
-    def fake_cvtcolor(frame, code):
-        return frame  
-
-    monkeypatch.setattr(qi.cv2, "VideoCapture", fake_videocapture)
-    monkeypatch.setattr(qi.cv2, "cvtColor", fake_cvtcolor)
+class FakeConverter(FrameConverter):
+    def to_qimage(self, frame_bgr: np.ndarray) -> QImage:
+        h, w, ch = frame_bgr.shape
+        return QImage(w, h, QImage.Format_RGB888)
 
 
-def test_run_finishes_when_capture_ends(patch_cv2):
-    """
-    Тест НЕ проверяет сигнал new_frame.
-    Он проверяет главное: run() не уходит в вечный цикл, если камера "закончилась".
-    """
-    t = VideoStreamThread(camera_idx=0, width=640, height=480, latency=1)
+def test_run_finishes_when_source_ends():
+    source = FakeSource()
+    converter = FakeConverter()
 
-    
-    t.running = True
+    t = VideoStreamThread(source=source, converter=converter, latency=1)
+
+    # Важно: мы вызываем run() напрямую (как ты делал), без start()
     t.run()
 
-    
-    assert t.cap.isOpened() is False
+    assert source.closed is True
