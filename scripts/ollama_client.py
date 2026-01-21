@@ -3,6 +3,7 @@ import json
 import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
+RUN_ID = "qwen_7_b"
 MODEL = "qwen2.5:7b"
 
 SYSTEM_PROMPT = """
