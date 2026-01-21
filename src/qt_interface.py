@@ -28,7 +28,7 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
-from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.services.xyz_trajectory_service import XYZTrajectoryService
 from src.services.joint_trajectory_service import JointTrajectoryService
 from src.presenters.xyz_control_presenter import XYZControlPresenter
@@ -37,6 +37,7 @@ from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
+from src.ErossionProcess.ErosionProcessTab import *
 
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
@@ -284,671 +285,671 @@ class ErosionWorker(QThread):
         self.is_paused = False
 '''
 # Вкладка процесса эрозии
-class ErosionProcessTab(QWidget):
-    def __init__(self, controller):
-        super().__init__()
-        self.controller = controller
-        self.current_step = 0
-        self.gcode_points = []
-        self.erosion_worker = None
-        self.is_process_paused = False
-        self.queue_reader = None    #Ссылка на поток чтения очереди
-        self.create_widgets()
+# class ErosionProcessTab(QWidget):
+#     def __init__(self, controller):
+#         super().__init__()
+#         self.controller = controller
+#         self.current_step = 0
+#         self.gcode_points = []
+#         self.erosion_worker = None
+#         self.is_process_paused = False
+#         self.queue_reader = None    #Ссылка на поток чтения очереди
+#         self.create_widgets()
 
-    def start_queue_reader(self):
-        """Запуск потока чтения из очереди"""
-        source = QueueMessageSource(q)
-        self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
-        self.queue_reader.new_message.connect(self.append_to_status_text)
-        self.queue_reader.start()
+#     def start_queue_reader(self):
+#         """Запуск потока чтения из очереди"""
+#         source = QueueMessageSource(q)
+#         self.queue_reader = LogTextBoxErrosion(source, latency_ms =100)
+#         self.queue_reader.new_message.connect(self.append_to_status_text)
+#         self.queue_reader.start()
         
-    def stop_queue_reader(self):
-        """Остановка потока чтения из очереди"""
-        if self.queue_reader and self.queue_reader.isRunning():
-            self.queue_reader.stop()
-            self.queue_reader.wait(1000)  # Ждем до 1 секунды для завершения 
+#     def stop_queue_reader(self):
+#         """Остановка потока чтения из очереди"""
+#         if self.queue_reader and self.queue_reader.isRunning():
+#             self.queue_reader.stop()
+#             self.queue_reader.wait(1000)  # Ждем до 1 секунды для завершения 
 
-    @Slot(str)
-    def append_to_status_text(self, message):
-        """Добавление сообщения в текстовый виджет (вызывается из главного потока)"""
-        self.status_text.append(message)
+#     @Slot(str)
+#     def append_to_status_text(self, message):
+#         """Добавление сообщения в текстовый виджет (вызывается из главного потока)"""
+#         self.status_text.append(message)
 
-        # Автопрокрутка вниз
-        cursor = self.status_text.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.status_text.setTextCursor(cursor)
+#         # Автопрокрутка вниз
+#         cursor = self.status_text.textCursor()
+#         cursor.movePosition(QTextCursor.End)
+#         self.status_text.setTextCursor(cursor)
 
 
-    def create_widgets(self):
-        main_layout = QVBoxLayout()
+#     def create_widgets(self):
+#         main_layout = QVBoxLayout()
         
-        title_label = QLabel("Процесс электроэрозии")
-        title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+#         title_label = QLabel("Процесс электроэрозии")
+#         title_label.setStyleSheet("font-size: 14pt; font-weight: bold;")
+#         title_label.setAlignment(Qt.AlignCenter)
+#         main_layout.addWidget(title_label)
         
-        self.step_indicator = QLabel("Шаг 0: Загрузка G-code файла")
-        self.step_indicator.setStyleSheet("font-weight: bold;")
-        self.step_indicator.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(self.step_indicator)
+#         self.step_indicator = QLabel("Шаг 0: Загрузка G-code файла")
+#         self.step_indicator.setStyleSheet("font-weight: bold;")
+#         self.step_indicator.setAlignment(Qt.AlignCenter)
+#         main_layout.addWidget(self.step_indicator)
         
-        self.stacked_widget = QStackedWidget()
+#         self.stacked_widget = QStackedWidget()
         
-        step0_widget = self.create_step0()
-        self.stacked_widget.addWidget(step0_widget)
+#         step0_widget = self.create_step0()
+#         self.stacked_widget.addWidget(step0_widget)
         
-        step1_widget = self.create_step1()
-        self.stacked_widget.addWidget(step1_widget)
+#         step1_widget = self.create_step1()
+#         self.stacked_widget.addWidget(step1_widget)
         
-        step2_widget = self.create_step2()
-        self.stacked_widget.addWidget(step2_widget)
+#         step2_widget = self.create_step2()
+#         self.stacked_widget.addWidget(step2_widget)
         
-        step3_widget = self.create_step3()
-        self.stacked_widget.addWidget(step3_widget)
+#         step3_widget = self.create_step3()
+#         self.stacked_widget.addWidget(step3_widget)
         
-        main_layout.addWidget(self.stacked_widget)
+#         main_layout.addWidget(self.stacked_widget)
         
-        nav_layout = QHBoxLayout()
+#         nav_layout = QHBoxLayout()
         
-        self.prev_btn = QPushButton("Назад")
-        self.prev_btn.clicked.connect(self.prev_step)
-        self.prev_btn.setEnabled(False)
-        nav_layout.addWidget(self.prev_btn)
+#         self.prev_btn = QPushButton("Назад")
+#         self.prev_btn.clicked.connect(self.prev_step)
+#         self.prev_btn.setEnabled(False)
+#         nav_layout.addWidget(self.prev_btn)
         
-        self.next_btn = QPushButton("Далее")
-        self.next_btn.clicked.connect(self.next_step)
-        # self.next_btn.setStyleSheet("background-color: green; color: white;")
-        nav_layout.addWidget(self.next_btn)
+#         self.next_btn = QPushButton("Далее")
+#         self.next_btn.clicked.connect(self.next_step)
+#         # self.next_btn.setStyleSheet("background-color: green; color: white;")
+#         nav_layout.addWidget(self.next_btn)
         
         
         
-        nav_layout.addStretch()
-        main_layout.addLayout(nav_layout)
+#         nav_layout.addStretch()
+#         main_layout.addLayout(nav_layout)
         
-        self.setLayout(main_layout)
-        self.show_step(0)
+#         self.setLayout(main_layout)
+#         self.show_step(0)
     
-    def create_step0(self):
-        widget = QWidget()
-        layout = QHBoxLayout()
+#     def create_step0(self):
+#         widget = QWidget()
+#         layout = QHBoxLayout()
         
-        left_widget = QGroupBox("Загрузка G-code файла")
-        left_layout = QVBoxLayout()
+#         left_widget = QGroupBox("Загрузка G-code файла")
+#         left_layout = QVBoxLayout()
         
-        file_frame = QWidget()
-        file_layout = QHBoxLayout(file_frame)
+#         file_frame = QWidget()
+#         file_layout = QHBoxLayout(file_frame)
         
-        self.gcode_file_edit = QLineEdit()
-        self.gcode_file_edit.setPlaceholderText("Выберите G-code файл...")
-        file_layout.addWidget(self.gcode_file_edit)
+#         self.gcode_file_edit = QLineEdit()
+#         self.gcode_file_edit.setPlaceholderText("Выберите G-code файл...")
+#         file_layout.addWidget(self.gcode_file_edit)
         
-        browse_btn = QPushButton("Обзор")
-        browse_btn.clicked.connect(self.select_gcode_file)
-        file_layout.addWidget(browse_btn)
+#         browse_btn = QPushButton("Обзор")
+#         browse_btn.clicked.connect(self.select_gcode_file)
+#         file_layout.addWidget(browse_btn)
         
-        left_layout.addWidget(file_frame)
+#         left_layout.addWidget(file_frame)
         
-        info_group = QGroupBox("Информация о G-code")
-        info_layout = QVBoxLayout()
+#         info_group = QGroupBox("Информация о G-code")
+#         info_layout = QVBoxLayout()
         
-        self.gcode_info_text = QTextEdit()
-        self.gcode_info_text.setReadOnly(True)
-        info_layout.addWidget(self.gcode_info_text)
+#         self.gcode_info_text = QTextEdit()
+#         self.gcode_info_text.setReadOnly(True)
+#         info_layout.addWidget(self.gcode_info_text)
         
-        info_group.setLayout(info_layout)
-        left_layout.addWidget(info_group)
+#         info_group.setLayout(info_layout)
+#         left_layout.addWidget(info_group)
         
-        left_widget.setLayout(left_layout)
-        layout.addWidget(left_widget)
+#         left_widget.setLayout(left_layout)
+#         layout.addWidget(left_widget)
         
-        right_widget = QGroupBox("Визуализация G-code")
-        right_layout = QVBoxLayout()
+#         right_widget = QGroupBox("Визуализация G-code")
+#         right_layout = QVBoxLayout()
         
-        self.gcode_fig = Figure(figsize=(6, 5), dpi=100)
-        self.gcode_ax = self.gcode_fig.add_subplot(111, projection='3d')
+#         self.gcode_fig = Figure(figsize=(6, 5), dpi=100)
+#         self.gcode_ax = self.gcode_fig.add_subplot(111, projection='3d')
         
-        self.gcode_ax.set_xlabel('X (мм)')
-        self.gcode_ax.set_ylabel('Y (мм)')
-        self.gcode_ax.set_zlabel('Z (мм)')
-        self.gcode_ax.set_title('Визуализация траектории G-code')
+#         self.gcode_ax.set_xlabel('X (мм)')
+#         self.gcode_ax.set_ylabel('Y (мм)')
+#         self.gcode_ax.set_zlabel('Z (мм)')
+#         self.gcode_ax.set_title('Визуализация траектории G-code')
         
-        self.gcode_canvas = FigureCanvas(self.gcode_fig)
-        right_layout.addWidget(self.gcode_canvas)
+#         self.gcode_canvas = FigureCanvas(self.gcode_fig)
+#         right_layout.addWidget(self.gcode_canvas)
         
-        right_widget.setLayout(right_layout)
-        layout.addWidget(right_widget)
+#         right_widget.setLayout(right_layout)
+#         layout.addWidget(right_widget)
         
-        widget.setLayout(layout)
-        return widget
+#         widget.setLayout(layout)
+#         return widget
     
-    def create_step1(self):
-        widget = QWidget()
-        layout = QHBoxLayout()
+#     def create_step1(self):
+#         widget = QWidget()
+#         layout = QHBoxLayout()
         
-        left_widget = QGroupBox("Видеопоток с камеры")
-        left_layout = QVBoxLayout()
+#         left_widget = QGroupBox("Видеопоток с камеры")
+#         left_layout = QVBoxLayout()
         
-        self.video_label = QLabel()
-        self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setMinimumSize(640, 480)
-        self.video_label.setStyleSheet("border: 1px solid gray;")
-        self.video_label.setText("Загрузка видеопотока...")
-        left_layout.addWidget(self.video_label)
+#         self.video_label = QLabel()
+#         self.video_label.setAlignment(Qt.AlignCenter)
+#         self.video_label.setMinimumSize(640, 480)
+#         self.video_label.setStyleSheet("border: 1px solid gray;")
+#         self.video_label.setText("Загрузка видеопотока...")
+#         left_layout.addWidget(self.video_label)
         
-        left_widget.setLayout(left_layout)
-        layout.addWidget(left_widget)
+#         left_widget.setLayout(left_layout)
+#         layout.addWidget(left_widget)
         
-        right_widget = QGroupBox("Управление положением робота")
-        right_layout = QVBoxLayout()
+#         right_widget = QGroupBox("Управление положением робота")
+#         right_layout = QVBoxLayout()
         
-        axes_widget = QWidget()
-        axes_layout = QHBoxLayout()
+#         axes_widget = QWidget()
+#         axes_layout = QHBoxLayout()
         
-        self.x_control = AxisControlWidget('X')
-        self.x_control.set_current_value(self.controller.current_x)
+#         self.x_control = AxisControlWidget('X')
+#         self.x_control.set_current_value(self.controller.current_x)
 
-        self.y_control = AxisControlWidget('Y')
-        self.y_control.set_current_value(self.controller.current_y)
+#         self.y_control = AxisControlWidget('Y')
+#         self.y_control.set_current_value(self.controller.current_y)
         
-        self.z_control = AxisControlWidget('Z')
-        self.z_control.set_current_value(self.controller.current_z)
+#         self.z_control = AxisControlWidget('Z')
+#         self.z_control.set_current_value(self.controller.current_z)
         
-                # Кнопка возврата в нулевое положение
-        reset_btn = QPushButton("Вернуться в нулевое положение")
-        reset_btn.clicked.connect(self.return_to_zero_xyz)
-        reset_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ff6b6b;
-                color: white;
-                font-weight: bold;
-                border: none;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #ff5252;
-            }
-            QPushButton:pressed {
-                background-color: #e53935;
-            }
-            QPushButton:disabled {
-                background-color: #808080;
-            }
-        """)
-        # reset_btn.clicked.connect(self.reset_to_zero)
+#                 # Кнопка возврата в нулевое положение
+#         reset_btn = QPushButton("Вернуться в нулевое положение")
+#         reset_btn.clicked.connect(self.return_to_zero_xyz)
+#         reset_btn.setStyleSheet("""
+#             QPushButton {
+#                 background-color: #ff6b6b;
+#                 color: white;
+#                 font-weight: bold;
+#                 border: none;
+#                 border-radius: 4px;
+#             }
+#             QPushButton:hover {
+#                 background-color: #ff5252;
+#             }
+#             QPushButton:pressed {
+#                 background-color: #e53935;
+#             }
+#             QPushButton:disabled {
+#                 background-color: #808080;
+#             }
+#         """)
+#         # reset_btn.clicked.connect(self.reset_to_zero)
         
 
-        self.x_control.position_changed.connect(self.on_position_changed)
-        self.y_control.position_changed.connect(self.on_position_changed)
-        self.z_control.position_changed.connect(self.on_position_changed)
+#         self.x_control.position_changed.connect(self.on_position_changed)
+#         self.y_control.position_changed.connect(self.on_position_changed)
+#         self.z_control.position_changed.connect(self.on_position_changed)
         
-        axes_layout.addWidget(self.x_control)
-        axes_layout.addWidget(self.y_control)
-        axes_layout.addWidget(self.z_control)
-        axes_widget.setLayout(axes_layout)
+#         axes_layout.addWidget(self.x_control)
+#         axes_layout.addWidget(self.y_control)
+#         axes_layout.addWidget(self.z_control)
+#         axes_widget.setLayout(axes_layout)
 
-        right_layout.addWidget(axes_widget)
-        right_layout.addStretch(1)
-        right_layout.addWidget(reset_btn)       
+#         right_layout.addWidget(axes_widget)
+#         right_layout.addStretch(1)
+#         right_layout.addWidget(reset_btn)       
 
-        right_widget.setLayout(right_layout)
-        layout.addWidget(right_widget)
+#         right_widget.setLayout(right_layout)
+#         layout.addWidget(right_widget)
         
-        widget.setLayout(layout)
-        return widget
+#         widget.setLayout(layout)
+#         return widget
     
-    def create_step2(self):
-        widget = QWidget()
-        layout = QVBoxLayout()
+#     def create_step2(self):
+#         widget = QWidget()
+#         layout = QVBoxLayout()
         
-        params_group = QGroupBox("Параметры электроэрозионной обработки")
-        params_layout = QGridLayout()
+#         params_group = QGroupBox("Параметры электроэрозионной обработки")
+#         params_layout = QGridLayout()
         
-        parameters = [
-            ('Толщина электрода (мм)', 'electrode_diameter', 2.0, 0.1, 10.0),
-            ('Длина электрода (мм)', 'electrode_length', 100.0, 10.0, 500.0),
-            ('Время прожига (с)', 'erosion_time', 10.0, 1.0, 60.0),
-            ('Время поднятия электрода (с)', 'erosion_up_time', 5.0, 1.0, 30.0),
-            ('Глубина прожига (мм)', 'erosion_depth', 0.1, 0.01, 1.0),
-            ('Скорость перемещения (мм/с)', 'erosion_speed', 10.0, 1.0, 100.0)
-        ]
+#         parameters = [
+#             ('Толщина электрода (мм)', 'electrode_diameter', 2.0, 0.1, 10.0),
+#             ('Длина электрода (мм)', 'electrode_length', 100.0, 10.0, 500.0),
+#             ('Время прожига (с)', 'erosion_time', 10.0, 1.0, 60.0),
+#             ('Время поднятия электрода (с)', 'erosion_up_time', 5.0, 1.0, 30.0),
+#             ('Глубина прожига (мм)', 'erosion_depth', 0.1, 0.01, 1.0),
+#             ('Скорость перемещения (мм/с)', 'erosion_speed', 10.0, 1.0, 100.0)
+#         ]
         
-        self.param_spinboxes = {}
-        self.mode = None
+#         self.param_spinboxes = {}
+#         self.mode = None
         
-        for i, (label, name, default, min_val, max_val) in enumerate(parameters):
-            params_layout.addWidget(QLabel(label), i, 0)
+#         for i, (label, name, default, min_val, max_val) in enumerate(parameters):
+#             params_layout.addWidget(QLabel(label), i, 0)
             
-            spinbox = QDoubleSpinBox()
-            spinbox.setRange(min_val, max_val)
-            spinbox.setValue(default)
-            spinbox.setSingleStep(0.1 if max_val > 10 else 0.01)
-            spinbox.setSuffix(" мм" if "мм" in label else " с")
-            self.param_spinboxes[name] = spinbox
+#             spinbox = QDoubleSpinBox()
+#             spinbox.setRange(min_val, max_val)
+#             spinbox.setValue(default)
+#             spinbox.setSingleStep(0.1 if max_val > 10 else 0.01)
+#             spinbox.setSuffix(" мм" if "мм" in label else " с")
+#             self.param_spinboxes[name] = spinbox
             
-            params_layout.addWidget(spinbox, i, 1)
+#             params_layout.addWidget(spinbox, i, 1)
 
-        params_layout.addWidget(QLabel("Режим эррозии"), 6, 0)
-        self.coombbox = QComboBox()
-        self.coombbox.addItems(["emulated", "work", "test"])
-        # self.mode = self.coombbox.currentText()
-        params_layout.addWidget(self.coombbox, 6, 1)
+#         params_layout.addWidget(QLabel("Режим эррозии"), 6, 0)
+#         self.coombbox = QComboBox()
+#         self.coombbox.addItems(["emulated", "work", "test"])
+#         # self.mode = self.coombbox.currentText()
+#         params_layout.addWidget(self.coombbox, 6, 1)
         
-        params_group.setLayout(params_layout)
-        layout.addWidget(params_group)
+#         params_group.setLayout(params_layout)
+#         layout.addWidget(params_group)
         
-        scheme_label = QLabel("Схема параметров электроэрозии")
-        scheme_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(scheme_label)
+#         scheme_label = QLabel("Схема параметров электроэрозии")
+#         scheme_label.setAlignment(Qt.AlignCenter)
+#         layout.addWidget(scheme_label)
         
-        scheme_placeholder = QLabel("Место для схемы параметров")
-        scheme_placeholder.setAlignment(Qt.AlignCenter)
-        scheme_placeholder.setStyleSheet("border: 1px dashed gray; min-height: 200px;")
-        layout.addWidget(scheme_placeholder)
+#         scheme_placeholder = QLabel("Место для схемы параметров")
+#         scheme_placeholder.setAlignment(Qt.AlignCenter)
+#         scheme_placeholder.setStyleSheet("border: 1px dashed gray; min-height: 200px;")
+#         layout.addWidget(scheme_placeholder)
         
-        layout.addStretch()
-        widget.setLayout(layout)
-        return widget
+#         layout.addStretch()
+#         widget.setLayout(layout)
+#         return widget
     
-    def create_step3(self):
-        widget = QWidget()
-        layout = QVBoxLayout()
-        layout.setContentsMargins(10, 10, 10, 10)
+#     def create_step3(self):
+#         widget = QWidget()
+#         layout = QVBoxLayout()
+#         layout.setContentsMargins(10, 10, 10, 10)
     
-        # Статус процесса
-        status_group = QGroupBox("Статус процесса")
-        status_layout = QVBoxLayout()
+#         # Статус процесса
+#         status_group = QGroupBox("Статус процесса")
+#         status_layout = QVBoxLayout()
         
-        self.process_status_label = QLabel("Готов к запуску")
-        self.process_status_label.setStyleSheet("""
-            font-weight: bold; 
-            font-size: 12pt; 
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #ecf0f1;
-        """)
-        self.process_status_label.setAlignment(Qt.AlignCenter)
-        self.process_status_label.setMinimumHeight(40)
-        status_layout.addWidget(self.process_status_label)
+#         self.process_status_label = QLabel("Готов к запуску")
+#         self.process_status_label.setStyleSheet("""
+#             font-weight: bold; 
+#             font-size: 12pt; 
+#             padding: 10px;
+#             border-radius: 5px;
+#             background-color: #ecf0f1;
+#         """)
+#         self.process_status_label.setAlignment(Qt.AlignCenter)
+#         self.process_status_label.setMinimumHeight(40)
+#         status_layout.addWidget(self.process_status_label)
         
-        status_group.setLayout(status_layout)
-        layout.addWidget(status_group)
+#         status_group.setLayout(status_layout)
+#         layout.addWidget(status_group)
         
-        progress_group = QGroupBox("Прогресс выполнения")
-        progress_layout = QVBoxLayout()
+#         progress_group = QGroupBox("Прогресс выполнения")
+#         progress_layout = QVBoxLayout()
         
-        progress_bar_layout = QHBoxLayout()
-        progress_bar_layout.addWidget(QLabel("Прогресс:"))
+#         progress_bar_layout = QHBoxLayout()
+#         progress_bar_layout.addWidget(QLabel("Прогресс:"))
         
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        progress_bar_layout.addWidget(self.progress_bar, 1)
+#         self.progress_bar = QProgressBar()
+#         self.progress_bar.setRange(0, 100)
+#         progress_bar_layout.addWidget(self.progress_bar, 1)
         
-        self.time_label = QLabel("Осталось: --:--")
-        progress_bar_layout.addWidget(self.time_label)
+#         self.time_label = QLabel("Осталось: --:--")
+#         progress_bar_layout.addWidget(self.time_label)
         
-        progress_layout.addLayout(progress_bar_layout)
-        progress_group.setLayout(progress_layout)
-        layout.addWidget(progress_group)
+#         progress_layout.addLayout(progress_bar_layout)
+#         progress_group.setLayout(progress_layout)
+#         layout.addWidget(progress_group)
         
-        status_group = QGroupBox("Текущие параметры")
-        status_layout = QVBoxLayout()
+#         status_group = QGroupBox("Текущие параметры")
+#         status_layout = QVBoxLayout()
         
-        self.status_text = QTextEdit()
-        self.status_text.setReadOnly(True)
+#         self.status_text = QTextEdit()
+#         self.status_text.setReadOnly(True)
 
 
-        status_layout.addWidget(self.status_text)
+#         status_layout.addWidget(self.status_text)
         
-        status_group.setLayout(status_layout)
-        layout.addWidget(status_group)
+#         status_group.setLayout(status_layout)
+#         layout.addWidget(status_group)
         
-        control_layout = QHBoxLayout()
+#         control_layout = QHBoxLayout()
         
-        self.start_btn = QPushButton("Запуск")
-        self.start_btn.clicked.connect(self.start_erosion)
-        control_layout.addWidget(self.start_btn)
+#         self.start_btn = QPushButton("Запуск")
+#         self.start_btn.clicked.connect(self.start_erosion)
+#         control_layout.addWidget(self.start_btn)
         
-        self.pause_btn = QPushButton("⏸ Пауза")
-        self.pause_btn.setEnabled(False)
-        self.pause_btn.setMinimumHeight(40)
-        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
-        self.pause_btn.clicked.connect(self.toggle_pause)
-        control_layout.addWidget(self.pause_btn)
+#         self.pause_btn = QPushButton("⏸ Пауза")
+#         self.pause_btn.setEnabled(False)
+#         self.pause_btn.setMinimumHeight(40)
+#         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+#         self.pause_btn.clicked.connect(self.toggle_pause)
+#         control_layout.addWidget(self.pause_btn)
         
-        self.stop_btn = QPushButton("Стоп")
-        self.stop_btn.clicked.connect(self.stop_erosion)
-        control_layout.addWidget(self.stop_btn)
+#         self.stop_btn = QPushButton("Стоп")
+#         self.stop_btn.clicked.connect(self.stop_erosion)
+#         control_layout.addWidget(self.stop_btn)
 
-        self.changetool = QPushButton("Заменить инструмент")
-        self.changetool.clicked.connect(self.ChangeTools)
-        control_layout.addWidget(self.changetool)
+#         self.changetool = QPushButton("Заменить инструмент")
+#         self.changetool.clicked.connect(self.ChangeTools)
+#         control_layout.addWidget(self.changetool)
         
-        control_layout.addStretch()
-        layout.addLayout(control_layout)
+#         control_layout.addStretch()
+#         layout.addLayout(control_layout)
         
-        widget.setLayout(layout)
-        return widget
+#         widget.setLayout(layout)
+#         return widget
 
-    @Slot()
-    def select_gcode_file(self):
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Выберите G-code файл",
-            "",
-            "G-code files (*.gcode *.nc);;All files (*.*)"
-        )
-        if filename:
-            self.gcode_file_edit.setText(filename)
+#     @Slot()
+#     def select_gcode_file(self):
+#         filename, _ = QFileDialog.getOpenFileName(
+#             self,
+#             "Выберите G-code файл",
+#             "",
+#             "G-code files (*.gcode *.nc);;All files (*.*)"
+#         )
+#         if filename:
+#             self.gcode_file_edit.setText(filename)
 
-        if not filename.lower().endswith(('.gcode', '.nc')):
-            QMessageBox.critical(
-                self, 
-                "Ошибка", 
-                "Выбранный файл не является файлом G-code.\n"
-                "Поддерживаемые расширения: .gcode, .nc"
-            )
-            return
+#         if not filename.lower().endswith(('.gcode', '.nc')):
+#             QMessageBox.critical(
+#                 self, 
+#                 "Ошибка", 
+#                 "Выбранный файл не является файлом G-code.\n"
+#                 "Поддерживаемые расширения: .gcode, .nc"
+#             )
+#             return
 
-        if not filename:
-            QMessageBox.critical(self, "Ошибка", "Выберите файл G-code")
-            return
+#         if not filename:
+#             QMessageBox.critical(self, "Ошибка", "Выберите файл G-code")
+#             return
         
-        try:
-            self.gcode_points = self.parse_gcode_file(filename)
-            self.visualize_gcode()
+#         try:
+#             self.gcode_points = self.parse_gcode_file(filename)
+#             self.visualize_gcode()
             
-            info_text = f"Файл: {os.path.basename(filename)}\n"
-            info_text += f"Количество точек: {len(self.gcode_points)}\n"
+#             info_text = f"Файл: {os.path.basename(filename)}\n"
+#             info_text += f"Количество точек: {len(self.gcode_points)}\n"
             
-            if self.gcode_points:
-                x_values = [p[0] for p in self.gcode_points]
-                y_values = [p[1] for p in self.gcode_points]
-                z_values = [p[2] for p in self.gcode_points]
+#             if self.gcode_points:
+#                 x_values = [p[0] for p in self.gcode_points]
+#                 y_values = [p[1] for p in self.gcode_points]
+#                 z_values = [p[2] for p in self.gcode_points]
                 
-                info_text += f"Диапазон X: {min(x_values):.2f} - {max(x_values):.2f} мм\n"
-                info_text += f"Диапазон Y: {min(y_values):.2f} - {max(y_values):.2f} мм\n"
-                info_text += f"Диапазон Z: {min(z_values):.2f} - {max(z_values):.2f} мм\n"
-                info_text += f"Общая длина траектории: {self.calculate_path_length(self.gcode_points):.2f} мм\n"
+#                 info_text += f"Диапазон X: {min(x_values):.2f} - {max(x_values):.2f} мм\n"
+#                 info_text += f"Диапазон Y: {min(y_values):.2f} - {max(y_values):.2f} мм\n"
+#                 info_text += f"Диапазон Z: {min(z_values):.2f} - {max(z_values):.2f} мм\n"
+#                 info_text += f"Общая длина траектории: {self.calculate_path_length(self.gcode_points):.2f} мм\n"
             
-            self.gcode_info_text.setPlainText(info_text)
+#             self.gcode_info_text.setPlainText(info_text)
             
             
-        except Exception as e:
-            logger(f"Failed to upload file: {str(e)}", queue=q)            
+#         except Exception as e:
+#             logger(f"Failed to upload file: {str(e)}", queue=q)            
 
-    def parse_gcode_file(self, filename):
-        points = []
-        current_x, current_y, current_z = 0, 0, 0
+#     def parse_gcode_file(self, filename):
+#         points = []
+#         current_x, current_y, current_z = 0, 0, 0
         
-        with open(filename, 'r') as file:
-            for line in file:
-                line = line.strip()
-                if line.startswith(';') or not line:
-                    continue
+#         with open(filename, 'r') as file:
+#             for line in file:
+#                 line = line.strip()
+#                 if line.startswith(';') or not line:
+#                     continue
                 
-                if ';' in line:
-                    line = line.split(';')[0].strip()
+#                 if ';' in line:
+#                     line = line.split(';')[0].strip()
                 
-                if line.startswith('G1') or line.startswith('G0') or line.startswith('G01') or line.startswith('G00'):
-                    x = self.extract_coordinate(line, 'X', current_x)
-                    y = self.extract_coordinate(line, 'Y', current_y)
-                    z = self.extract_coordinate(line, 'Z', current_z)
+#                 if line.startswith('G1') or line.startswith('G0') or line.startswith('G01') or line.startswith('G00'):
+#                     x = self.extract_coordinate(line, 'X', current_x)
+#                     y = self.extract_coordinate(line, 'Y', current_y)
+#                     z = self.extract_coordinate(line, 'Z', current_z)
                     
-                    if (x, y, z) != (current_x, current_y, current_z):
-                        points.append((x, y, z))
-                        current_x, current_y, current_z = x, y, z
+#                     if (x, y, z) != (current_x, current_y, current_z):
+#                         points.append((x, y, z))
+#                         current_x, current_y, current_z = x, y, z
         
-        return points if points else [(0, 0, 0)]
+#         return points if points else [(0, 0, 0)]
 
-    def extract_coordinate(self, line, axis, default):
-        pattern = f'{axis}([+-]?\\d*\\.?\\d+)'
-        match = re.search(pattern, line)
-        return float(match.group(1)) if match else default
+#     def extract_coordinate(self, line, axis, default):
+#         pattern = f'{axis}([+-]?\\d*\\.?\\d+)'
+#         match = re.search(pattern, line)
+#         return float(match.group(1)) if match else default
 
-    def calculate_path_length(self, points):
-        if len(points) < 2:
-            return 0
+#     def calculate_path_length(self, points):
+#         if len(points) < 2:
+#             return 0
         
-        total_length = 0
-        for i in range(1, len(points)):
-            x1, y1, z1 = points[i-1]
-            x2, y2, z2 = points[i]
-            distance = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
-            total_length += distance
+#         total_length = 0
+#         for i in range(1, len(points)):
+#             x1, y1, z1 = points[i-1]
+#             x2, y2, z2 = points[i]
+#             distance = np.sqrt((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)
+#             total_length += distance
         
-        return total_length
+#         return total_length
 
-    def visualize_gcode(self):
-        self.gcode_ax.clear()
+#     def visualize_gcode(self):
+#         self.gcode_ax.clear()
         
-        if self.gcode_points:
-            points = np.array(self.gcode_points)
+#         if self.gcode_points:
+#             points = np.array(self.gcode_points)
             
-            self.gcode_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
-            self.gcode_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c=range(len(points)), 
-                                cmap='viridis', s=20, alpha=0.6)
+#             self.gcode_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
+#             self.gcode_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c=range(len(points)), 
+#                                 cmap='viridis', s=20, alpha=0.6)
             
-            if len(points) > 1:
-                self.gcode_ax.plot([points[0, 0]], [points[0, 1]], [points[0, 2]], 
-                                 'go', markersize=8, label='Начало')
-                self.gcode_ax.plot([points[-1, 0]], [points[-1, 1]], [points[-1, 2]], 
-                                 'rs', markersize=8, label='Конец')
-                self.gcode_ax.legend()
+#             if len(points) > 1:
+#                 self.gcode_ax.plot([points[0, 0]], [points[0, 1]], [points[0, 2]], 
+#                                  'go', markersize=8, label='Начало')
+#                 self.gcode_ax.plot([points[-1, 0]], [points[-1, 1]], [points[-1, 2]], 
+#                                  'rs', markersize=8, label='Конец')
+#                 self.gcode_ax.legend()
             
-            if len(points) > 1:
-                for i in range(0, len(points)-1, max(1, len(points)//10)):
-                    x1, y1, z1 = points[i]
-                    x2, y2, z2 = points[i+1]
+#             if len(points) > 1:
+#                 for i in range(0, len(points)-1, max(1, len(points)//10)):
+#                     x1, y1, z1 = points[i]
+#                     x2, y2, z2 = points[i+1]
                     
-                    dx, dy, dz = x2-x1, y2-y1, z2-z1
-                    length = np.sqrt(dx**2 + dy**2 + dz**2)
-                    if length > 0:
-                        dx, dy, dz = dx/length*10, dy/length*10, dz/length*10
+#                     dx, dy, dz = x2-x1, y2-y1, z2-z1
+#                     length = np.sqrt(dx**2 + dy**2 + dz**2)
+#                     if length > 0:
+#                         dx, dy, dz = dx/length*10, dy/length*10, dz/length*10
                         
-                        arrow = Arrow3DData([x1, x1+dx], [y1, y1+dy], [z1, z1+dz], 
-                                       mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7)
-                        self.gcode_ax.add_artist(arrow)
+#                         arrow = Arrow3DData([x1, x1+dx], [y1, y1+dy], [z1, z1+dz], 
+#                                        mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7)
+#                         self.gcode_ax.add_artist(arrow)
         
-        self.gcode_ax.set_xlabel('X (мм)')
-        self.gcode_ax.set_ylabel('Y (мм)')
-        self.gcode_ax.set_zlabel('Z (мм)')
-        self.gcode_ax.set_title('Визуализация траектории G-code')
+#         self.gcode_ax.set_xlabel('X (мм)')
+#         self.gcode_ax.set_ylabel('Y (мм)')
+#         self.gcode_ax.set_zlabel('Z (мм)')
+#         self.gcode_ax.set_title('Визуализация траектории G-code')
         
-        if self.gcode_points and len(self.gcode_points) > 1:
-            points = np.array(self.gcode_points)
-            max_range = max(points[:, 0].max()-points[:, 0].min(), 
-                           points[:, 1].max()-points[:, 1].min(), 
-                           points[:, 2].max()-points[:, 2].min()) * 0.6
+#         if self.gcode_points and len(self.gcode_points) > 1:
+#             points = np.array(self.gcode_points)
+#             max_range = max(points[:, 0].max()-points[:, 0].min(), 
+#                            points[:, 1].max()-points[:, 1].min(), 
+#                            points[:, 2].max()-points[:, 2].min()) * 0.6
             
-            mid_x = (points[:, 0].max()+points[:, 0].min()) * 0.5
-            mid_y = (points[:, 1].max()+points[:, 1].min()) * 0.5
-            mid_z = (points[:, 2].max()+points[:, 2].min()) * 0.5
+#             mid_x = (points[:, 0].max()+points[:, 0].min()) * 0.5
+#             mid_y = (points[:, 1].max()+points[:, 1].min()) * 0.5
+#             mid_z = (points[:, 2].max()+points[:, 2].min()) * 0.5
             
-            self.gcode_ax.set_xlim(mid_x - max_range, mid_x + max_range)
-            self.gcode_ax.set_ylim(mid_y - max_range, mid_y + max_range)
-            self.gcode_ax.set_zlim(max(0, mid_z - max_range), mid_z + max_range)
-        else:
-            self.gcode_ax.set_xlim([-100, 100])
-            self.gcode_ax.set_ylim([-100, 100])
-            self.gcode_ax.set_zlim([0, 200])
+#             self.gcode_ax.set_xlim(mid_x - max_range, mid_x + max_range)
+#             self.gcode_ax.set_ylim(mid_y - max_range, mid_y + max_range)
+#             self.gcode_ax.set_zlim(max(0, mid_z - max_range), mid_z + max_range)
+#         else:
+#             self.gcode_ax.set_xlim([-100, 100])
+#             self.gcode_ax.set_ylim([-100, 100])
+#             self.gcode_ax.set_zlim([0, 200])
         
-        self.gcode_canvas.draw()
+#         self.gcode_canvas.draw()
 
-    @Slot()
-    def show_step(self, step_index):
-        self.stacked_widget.setCurrentIndex(step_index)
-        self.current_step = step_index
+#     @Slot()
+#     def show_step(self, step_index):
+#         self.stacked_widget.setCurrentIndex(step_index)
+#         self.current_step = step_index
         
-        step_names = [
-            "Шаг 0: Загрузка G-code файла",
-            "Шаг 1: Настройка начального положения", 
-            "Шаг 2: Настройка процесса эрозии",
-            "Шаг 3: Запуск процесса эрозии"
-        ]
-        self.step_indicator.setText(step_names[step_index])
+#         step_names = [
+#             "Шаг 0: Загрузка G-code файла",
+#             "Шаг 1: Настройка начального положения", 
+#             "Шаг 2: Настройка процесса эрозии",
+#             "Шаг 3: Запуск процесса эрозии"
+#         ]
+#         self.step_indicator.setText(step_names[step_index])
         
-        self.prev_btn.setEnabled(step_index > 0)
+#         self.prev_btn.setEnabled(step_index > 0)
         
-        if step_index < self.stacked_widget.count() - 1:
-            self.next_btn.setEnabled(True)
-        else:
-            self.next_btn.setEnabled(False)
+#         if step_index < self.stacked_widget.count() - 1:
+#             self.next_btn.setEnabled(True)
+#         else:
+#             self.next_btn.setEnabled(False)
 
 
-    @Slot()
-    def next_step(self):
-        if self.current_step < self.stacked_widget.count() - 1:
-            self.show_step(self.current_step + 1)
-            if self.current_step == 2:
-                XS = self.controller.current_x
-                YS = self.controller.current_y
-                ZS = self.controller.current_z
-                logger(f'Param XS YS ZS set: {XS, YS, ZS}', queue=q)
+#     @Slot()
+#     def next_step(self):
+#         if self.current_step < self.stacked_widget.count() - 1:
+#             self.show_step(self.current_step + 1)
+#             if self.current_step == 2:
+#                 XS = self.controller.current_x
+#                 YS = self.controller.current_y
+#                 ZS = self.controller.current_z
+#                 logger(f'Param XS YS ZS set: {XS, YS, ZS}', queue=q)
 
-            elif self.current_step == 3:
-                self.mode = self.coombbox.currentText()   
-                logger(self.mode)
+#             elif self.current_step == 3:
+#                 self.mode = self.coombbox.currentText()   
+#                 logger(self.mode)
             
 
-    @Slot()
-    def prev_step(self):
-        if self.current_step > 0:
-            self.show_step(self.current_step - 1)
+#     @Slot()
+#     def prev_step(self):
+#         if self.current_step > 0:
+#             self.show_step(self.current_step - 1)
 
-    @Slot()
-    def stop_process(self):
-        self.controller.safe_finish()
-        self.show_step(0)
+#     @Slot()
+#     def stop_process(self):
+#         self.controller.safe_finish()
+#         self.show_step(0)
 
         
-    @Slot(str, float)
-    def on_position_changed(self, axis, value):
-        positions = {
-            'X': self.x_control,
-            'Y': self.y_control, 
-            'Z': self.z_control
-        }
+#     @Slot(str, float)
+#     def on_position_changed(self, axis, value):
+#         positions = {
+#             'X': self.x_control,
+#             'Y': self.y_control, 
+#             'Z': self.z_control
+#         }
         
-        x = float(positions['X'].value_label.text().split()[0])
-        y = float(positions['Y'].value_label.text().split()[0])
-        z = float(positions['Z'].value_label.text().split()[0])
+#         x = float(positions['X'].value_label.text().split()[0])
+#         y = float(positions['Y'].value_label.text().split()[0])
+#         z = float(positions['Z'].value_label.text().split()[0])
         
-        self.controller.set_coord_pos(x, y, z)
+#         self.controller.set_coord_pos(x, y, z)
 
-    def start_erosion(self):
-        if hasattr(self, 'gcode_points') and self.gcode_points:
+#     def start_erosion(self):
+#         if hasattr(self, 'gcode_points') and self.gcode_points:
                 
-                # Запускаем чтение из очереди ДО начала процесса эрозии
-                self.start_queue_reader()                
-                # Получаем filename из поля ввода
-                filename = self.gcode_file_edit.text().strip()
+#                 # Запускаем чтение из очереди ДО начала процесса эрозии
+#                 self.start_queue_reader()                
+#                 # Получаем filename из поля ввода
+#                 filename = self.gcode_file_edit.text().strip()
                 
-                if not filename or not os.path.exists(filename):
-                    QMessageBox.critical(self, "Ошибка", "G-code файл не выбран или не существует")
-                    return
+#                 if not filename or not os.path.exists(filename):
+#                     QMessageBox.critical(self, "Ошибка", "G-code файл не выбран или не существует")
+#                     return
                 
-                # Запускаем процесс с передачей filename
-                self.controller.start_erosion_process(
-                    self.gcode_points,
-                    self.param_spinboxes['electrode_diameter'].value(),
-                    self.param_spinboxes['electrode_length'].value(),
-                    self.param_spinboxes['erosion_time'].value(),
-                    self.param_spinboxes['erosion_up_time'].value(),
-                    self.param_spinboxes['erosion_depth'].value(),
-                    filename,  # Передаем filename
-                    # self.coombbox.currentText()
-                    self.mode
-                )
-                self.start_btn.setEnabled(False)
-                self.pause_btn.setEnabled(True)
-                self.pause_btn.setText("⏸ Пауза")
-                self.is_process_paused = False
-        else:
-            QMessageBox.critical(self, "Ошибка", "Сначала загрузите G-code файл")
+#                 # Запускаем процесс с передачей filename
+#                 self.controller.start_erosion_process(
+#                     self.gcode_points,
+#                     self.param_spinboxes['electrode_diameter'].value(),
+#                     self.param_spinboxes['electrode_length'].value(),
+#                     self.param_spinboxes['erosion_time'].value(),
+#                     self.param_spinboxes['erosion_up_time'].value(),
+#                     self.param_spinboxes['erosion_depth'].value(),
+#                     filename,  # Передаем filename
+#                     # self.coombbox.currentText()
+#                     self.mode
+#                 )
+#                 self.start_btn.setEnabled(False)
+#                 self.pause_btn.setEnabled(True)
+#                 self.pause_btn.setText("⏸ Пауза")
+#                 self.is_process_paused = False
+#         else:
+#             QMessageBox.critical(self, "Ошибка", "Сначала загрузите G-code файл")
     
-    def set_erosion_worker(self, worker):
-        """Установка рабочего потока для управления паузой"""
-        self.erosion_worker = worker
+#     def set_erosion_worker(self, worker):
+#         """Установка рабочего потока для управления паузой"""
+#         self.erosion_worker = worker
     
-    @Slot()
-    def toggle_pause(self):
-        """Переключение состояния паузы"""
-        # logger(f"Debug: toggle_pause called, worker: {self.erosion_worker}, is_running: {self.erosion_worker.is_running if self.erosion_worker else 'No worker'}", queue=q)
+#     @Slot()
+#     def toggle_pause(self):
+#         """Переключение состояния паузы"""
+#         # logger(f"Debug: toggle_pause called, worker: {self.erosion_worker}, is_running: {self.erosion_worker.is_running if self.erosion_worker else 'No worker'}", queue=q)
         
-        if self.erosion_worker is not None and self.erosion_worker.isRunning():
-            if not self.is_process_paused:
-                # Ставим на паузу
-                logger("Pausing process", queue=q)
-                self.erosion_worker.pause()
-                self.pause_btn.setText("▶ Продолжить")
-                self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
-                # logger(f"Процесс приостановлен", queue=q)
-                self.is_process_paused = True
-                self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
-            else:
-                # Возобновляем процесс
-                logger("Resuming process", queue=q)
-                self.erosion_worker.resume()
-                self.pause_btn.setText("⏸ Пауза")
-                self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
-                # logger(f" Процесс возобновлен", queue=q)
-                self.is_process_paused = False
-                self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
-        else:
-            logger("Worker not running or doesn't exist", queue=q)
-    @Slot()
-    def stop_erosion(self):
+#         if self.erosion_worker is not None and self.erosion_worker.isRunning():
+#             if not self.is_process_paused:
+#                 # Ставим на паузу
+#                 logger("Pausing process", queue=q)
+#                 self.erosion_worker.pause()
+#                 self.pause_btn.setText("▶ Продолжить")
+#                 self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+#                 # logger(f"Процесс приостановлен", queue=q)
+#                 self.is_process_paused = True
+#                 self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
+#             else:
+#                 # Возобновляем процесс
+#                 logger("Resuming process", queue=q)
+#                 self.erosion_worker.resume()
+#                 self.pause_btn.setText("⏸ Пауза")
+#                 self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+#                 # logger(f" Процесс возобновлен", queue=q)
+#                 self.is_process_paused = False
+#                 self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+#         else:
+#             logger("Worker not running or doesn't exist", queue=q)
+#     @Slot()
+#     def stop_erosion(self):
 
-        # Останавливаем чтение из очереди
-        self.stop_queue_reader()
-        """Полная остановка процесса"""
-        if self.erosion_worker and self.erosion_worker.isRunning():
-            self.erosion_worker.stop()
-            self.erosion_worker.wait(1000)  # Ждем до 1 секунды для завершения
+#         # Останавливаем чтение из очереди
+#         self.stop_queue_reader()
+#         """Полная остановка процесса"""
+#         if self.erosion_worker and self.erosion_worker.isRunning():
+#             self.erosion_worker.stop()
+#             self.erosion_worker.wait(1000)  # Ждем до 1 секунды для завершения
         
-        if hasattr(self.controller, 'stop_erosion_process'):
-            self.controller.stop_erosion_process()
+#         if hasattr(self.controller, 'stop_erosion_process'):
+#             self.controller.stop_erosion_process()
         
-        self.start_btn.setEnabled(True)
-        self.pause_btn.setEnabled(False)
-        self.pause_btn.setText("⏸ Пауза")
-        self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
-        self.is_process_paused = False
+#         self.start_btn.setEnabled(True)
+#         self.pause_btn.setEnabled(False)
+#         self.pause_btn.setText("⏸ Пауза")
+#         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+#         self.is_process_paused = False
         
-        # Сбрасываем прогресс
-        self.progress_bar.setValue(0)
-        self.time_label.setText("Остановлено")
+#         # Сбрасываем прогресс
+#         self.progress_bar.setValue(0)
+#         self.time_label.setText("Остановлено")
         
-        logger(f"[{time.strftime('%H:%M:%S')}] Процесс остановлен", queue=q)
-        self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
+#         logger(f"[{time.strftime('%H:%M:%S')}] Процесс остановлен", queue=q)
+#         self.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
 
-    def update_process_status(self, status, color="#ecf0f1"):
-        """Обновление статуса процесса"""
-        self.process_status_label.setText(status)
-        self.process_status_label.setStyleSheet(f"""
-            font-weight: bold; 
-            font-size: 12pt; 
-            padding: 10px;
-            border-radius: 5px;
-            background-color: {color};
-        """)
+#     def update_process_status(self, status, color="#ecf0f1"):
+#         """Обновление статуса процесса"""
+#         self.process_status_label.setText(status)
+#         self.process_status_label.setStyleSheet(f"""
+#             font-weight: bold; 
+#             font-size: 12pt; 
+#             padding: 10px;
+#             border-radius: 5px;
+#             background-color: {color};
+#         """)
 
-    @Slot()
-    def ChangeTools(self):
-        logger("Pausing process", queue=q)
-        self.erosion_worker.pause()
-        self.pause_btn.setText("▶ Продолжить")
-        self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
-        self.is_process_paused = True
-        self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
-        QMessageBox.information(self, "Смена инструмента", "Замените инструмент, затем нажмите кнопку продолжить")
-        logger("Нажата кнопка замены инструмента")
+#     @Slot()
+#     def ChangeTools(self):
+#         logger("Pausing process", queue=q)
+#         self.erosion_worker.pause()
+#         self.pause_btn.setText("▶ Продолжить")
+#         self.pause_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+#         self.is_process_paused = True
+#         self.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
+#         QMessageBox.information(self, "Смена инструмента", "Замените инструмент, затем нажмите кнопку продолжить")
+#         logger("Нажата кнопка замены инструмента")
 
 
 
-    @Slot()
-    def return_to_zero_xyz(self):
-        self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
+#     @Slot()
+#     def return_to_zero_xyz(self):
+#         self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
 
 # Сервисная вкладка
 class ServiceTab(QWidget):
@@ -2106,7 +2107,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         
         # Вкладка процесса электроэрозии
-        self.erosion_tab = ErosionProcessTab(self)
+        self.erosion_tab = ErosionProcessTab(self, q)
         central_widget.addTab(self.erosion_tab, "Процесс электроэрозии")
         
         # Вкладка сервисного управления
