@@ -5,10 +5,7 @@ PointXYZ = Tuple[float, float, float]
 
 
 class XYZTrajectoryService:
-    """
-    Отвечает ТОЛЬКО за хранение и управление XYZ-траекторией.
-    Не знает ничего про Qt, controller и UI.
-    """
+    """ Отвечает за хранение и управление XYZ-траекторией. """
 
     def __init__(self) -> None:
         self._points: List[PointXYZ] = []
