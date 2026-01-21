@@ -28,6 +28,12 @@ from mpl_toolkits.mplot3d import proj3d
 from .log import Log
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.widgets.axis_control_widget import AxisControlWidget
+from src.erosionWorker.errosionWorker import ErosionWorker, ErosionController, GCodeProcessor
+from src.services.xyz_trajectory_service import XYZTrajectoryService
+from src.services.joint_trajectory_service import JointTrajectoryService
+from src.presenters.xyz_control_presenter import XYZControlPresenter
+from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.erosion_worker.errosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.LogText.LogTextBoxErrosion import QueueMessageSource, LogTextBoxErrosion
 from src.VideoStream.VideoStreamThread import VideoStreamThread
@@ -949,8 +955,15 @@ class ServiceTab(QWidget):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.trajectory_points_xyz = []
-        self.trajectory_points_joints = []
+        self.xyz_presenter = XYZControlPresenter(controller)
+        self.trajectory_service = XYZTrajectoryService()
+        self.trajectory_points_joints = JointTrajectoryService()
+        self.xyz_trajectory_executor = XYZTrajectoryExecutor(
+        controller=self.controller,
+        trajectory_service=self.trajectory_service,)
+        self.joint_trajectory_executor = JointTrajectoryExecutor(
+        controller=self.controller,
+        trajectory_service=self.trajectory_points_joints,)
         self.continuous_move_timer = QTimer()
         self.continuous_move_timer.timeout.connect(self.continuous_move)
         self.continuous_move_data = None
@@ -1675,7 +1688,7 @@ class ServiceTab(QWidget):
         }
         positions[axis] = value
         
-        self.controller.set_coord_pos(positions['X'], positions['Y'], positions['Z'])
+        self.xyz_presenter.set_position(positions['X'], positions['Y'], positions['Z'])
 
     @Slot(str, float)
     def move_xyz(self, axis, step):
@@ -1802,9 +1815,15 @@ class ServiceTab(QWidget):
     # Методы траекторий XYZ
     @Slot()
     def add_initial_xyz_point(self):
-        point = (self.controller.current_x, self.controller.current_y, self.controller.current_z)
-        self.trajectory_points_xyz = [point]
-        self.xyz_listbox.addItem(f"1: X: {point[0]:.2f}, Y: {point[1]:.2f}, Z: {point[2]:.2f}")
+        x = self.controller.current_x
+        y = self.controller.current_y
+        z = self.controller.current_z
+
+        self.trajectory_service.set_initial_point(x, y, z)
+
+        self.xyz_listbox.clear()
+        self.xyz_listbox.addItem(f"1: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+
         self.update_xyz_trajectory_plot()
 
     @Slot()
@@ -1814,10 +1833,11 @@ class ServiceTab(QWidget):
         z = self.new_z.value()
         
         if self.check_point_availability(x, y, z):
-            point = (x, y, z)
-            self.trajectory_points_xyz.append(point)
-            index = len(self.trajectory_points_xyz)
-            self.xyz_listbox.addItem(f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+            self.trajectory_service.add_point(x, y, z)
+            index = len(self.trajectory_service.get_points())
+            self.xyz_listbox.addItem(
+                f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+            )
             self.update_xyz_trajectory_plot()
         else:
             logger("The point cannot be moved.", queue=q)
@@ -1827,63 +1847,78 @@ class ServiceTab(QWidget):
         current_row = self.xyz_listbox.currentRow()
         if current_row >= 0:
             self.xyz_listbox.takeItem(current_row)
-            self.trajectory_points_xyz.pop(current_row)
-            
+            self.trajectory_service.remove_point(current_row)
+
             self.xyz_listbox.clear()
-            for i, point in enumerate(self.trajectory_points_xyz):
-                x, y, z = point
-                self.xyz_listbox.addItem(f"{i+1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
-            
+            for i, (x, y, z) in enumerate(
+                self.trajectory_service.get_points()
+            ):
+                self.xyz_listbox.addItem(
+                    f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+                )
+
             self.update_xyz_trajectory_plot()
 
     @Slot()
     def clear_xyz_trajectory(self):
+        self.trajectory_service.clear()
         self.xyz_listbox.clear()
-        self.trajectory_points_xyz = []
         self.update_xyz_trajectory_plot()
+
 
     @Slot()
     def return_to_zero_xyz(self):
-        self.controller.set_coord_pos(self.controller.X0, self.controller.Y0, self.controller.Z0)
+        self.xyz_presenter.return_to_zero()
 
     @Slot()
     def execute_xyz_trajectory(self):
-        if not self.trajectory_points_xyz:
+        if not self.trajectory_service.get_points():
             QMessageBox.critical(self, "Ошибка", "Траектория не задана")
             return
-        
-        logger('Execution traectory XYZ...', queue=q)
-        for i, point in enumerate(self.trajectory_points_xyz):
-            x, y, z = point
-            self.controller.set_coord_pos(x, y, z)
-            time.sleep(1)  # Задержка для демонстрации
+    
+        logger('Execution trajectory XYZ...', queue=q)
+        self.xyz_trajectory_executor.execute()
 
     @Slot()
     def update_xyz_trajectory_plot(self):
         self.xyz_traj_ax.clear()
-        
-        if self.trajectory_points_xyz:
-            points = np.array(self.trajectory_points_xyz)
-            self.xyz_traj_ax.plot(points[:, 0], points[:, 1], points[:, 2], 'b-', linewidth=2, alpha=0.7)
-            self.xyz_traj_ax.scatter(points[:, 0], points[:, 1], points[:, 2], c='red', s=30)
-            
+
+        points_list = self.trajectory_service.get_points()
+        if points_list:
+            points = np.array(points_list)
+
+            self.xyz_traj_ax.plot(
+                points[:, 0], points[:, 1], points[:, 2],
+                'b-', linewidth=2, alpha=0.7
+            )
+            self.xyz_traj_ax.scatter(
+                points[:, 0], points[:, 1], points[:, 2],
+                c='red', s=30
+            )
+
             for i, (x, y, z) in enumerate(points):
-                self.xyz_traj_ax.text(x, y, z, str(i+1), color='red', fontsize=8)
-            
+                self.xyz_traj_ax.text(x, y, z, str(i + 1), color='red', fontsize=8)
+
             if len(points) > 1:
                 for i in range(len(points) - 1):
                     x1, y1, z1 = points[i]
                     x2, y2, z2 = points[i + 1]
-                    
-                    arrow = Arrow3DData([x1, x2], [y1, y2], [z1, z2], 
-                                   mutation_scale=20, lw=1, arrowstyle="-|>", color="green", alpha=0.7)
+
+                    arrow = Arrow3DData(
+                        [x1, x2], [y1, y2], [z1, z2],
+                        mutation_scale=20,
+                        lw=1,
+                        arrowstyle="-|>",
+                        color="green",
+                        alpha=0.7
+                    )
                     self.xyz_traj_ax.add_artist(arrow)
-        
+
         self.xyz_traj_ax.set_xlabel('X (мм)')
         self.xyz_traj_ax.set_ylabel('Y (мм)')
         self.xyz_traj_ax.set_zlabel('Z (мм)')
         self.xyz_traj_ax.set_title('Траектория движения XYZ')
-        
+
         self.xyz_traj_canvas.draw()
 
     # Методы траекторий суставов
@@ -1892,8 +1927,8 @@ class ServiceTab(QWidget):
         joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
         
         if self.check_joints_availability(joints):
-            self.trajectory_points_joints.append(joints)
-            index = len(self.trajectory_points_joints)
+            self.trajectory_points_joints.add_point(joints)
+            index = len(self.trajectory_points_joints.get_points())
             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
             self.update_joints_trajectory_plot()
         else:
@@ -1905,13 +1940,13 @@ class ServiceTab(QWidget):
         current_row = self.joints_listbox.currentRow()
         if current_row >= 0:
             self.joints_listbox.takeItem(current_row)
-            self.trajectory_points_joints.pop(current_row)
+            self.joint_trajectory_service.remove_point(current_row)
             self.update_joints_trajectory_plot()
 
     @Slot()
     def clear_joints_trajectory(self):
         self.joints_listbox.clear()
-        self.trajectory_points_joints = []
+        self.trajectory_points_joints.clear()
         self.update_joints_trajectory_plot()
 
     @Slot()
@@ -1920,14 +1955,11 @@ class ServiceTab(QWidget):
 
     @Slot()
     def execute_joints_trajectory(self):
-        if not self.trajectory_points_joints:
+        if not self.trajectory_points_joints.get_points():
             QMessageBox.critical(self, "Ошибка", "Траектория не задана")
             return
-        
-        logger('Execution traectory joints...', queue=q)
-        for joints in self.trajectory_points_joints:
-            self.controller.set_joint_pos(joints)
-            time.sleep(1)
+
+        self.joint_trajectory_executor.execute()
 
     @Slot()
     def update_joints_trajectory_plot(self):
