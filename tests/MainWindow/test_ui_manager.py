@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from src.qt_interface import UIManager
+from src.ui.ui_manager import UIManager
 
 @pytest.fixture
 def ui_manager():

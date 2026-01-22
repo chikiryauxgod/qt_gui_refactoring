@@ -1,18 +1,13 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from src.qt_interface import HardwareController
-
-class MockElectroerosion:
-    def __init__(self):
-        self.robot = MagicMock()
-        self.erosion = MagicMock()
-        self.set_coord_pos = MagicMock()
+from src.services.hardware_controller import HardwareController
 
 class MockRobot:
     def __init__(self):
         self.current_x = 0
         self.current_y = 0
         self.current_z = 0
+        self.set_coord_pos = MagicMock()
         self.set_joint_pos = MagicMock()
         self.set_speed = MagicMock()
         self.emergency_stop = MagicMock()
@@ -23,18 +18,31 @@ class MockPico:
         self.pump_in = MagicMock()
         self.pump_out = MagicMock()
 
+class MockElectroerosion:
+    def __init__(self):
+        self.set_coord_pos = MagicMock()
+
 @pytest.fixture
 def hardware_controller():
-    with patch('src.qt_interface.Electroerosion', return_value=MockElectroerosion()) as mock_erode:
+    with patch('src.electoerosion.Electroerosion', return_value=MockElectroerosion()) as mock_erode:
         hc = HardwareController()
+        hc.robot = MockRobot()
+        hc.pico = MockPico()
+        hc.erode = mock_erode.return_value
         yield hc
 
 def test_hardware_set_coord_pos(hardware_controller):
+    hardware_controller.erode = MagicMock()
+    hardware_controller.robot = MagicMock()
+    
     hardware_controller.set_coord_pos(1.0, 2.0, 3.0)
-    hardware_controller.erode.set_coord_pos.assert_called_with(1.0, 2.0, 3.0)
+
+    hardware_controller.erode.set_coord_pos.assert_called_once_with(1.0, 2.0, 3.0)
+
     assert hardware_controller.robot.current_x == 1.0
     assert hardware_controller.robot.current_y == 2.0
     assert hardware_controller.robot.current_z == 3.0
+
 
 def test_hardware_set_joint_pos(hardware_controller):
     joints = [10, 20, 30, 40, 50, 60]
