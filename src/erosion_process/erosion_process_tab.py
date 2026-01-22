@@ -402,13 +402,13 @@ class ErosionProcessTab(QWidget):
         axes_layout = QHBoxLayout()
 
         self.x_control = AxisControlWidget("X")
-        self.x_control.set_current_value(self.controller.current_x)
+        self.x_control.set_current_value(self.controller.state.current_x)
 
         self.y_control = AxisControlWidget("Y")
-        self.y_control.set_current_value(self.controller.current_y)
+        self.y_control.set_current_value(self.controller.state.current_y)
 
         self.z_control = AxisControlWidget("Z")
-        self.z_control.set_current_value(self.controller.current_z)
+        self.z_control.set_current_value(self.controller.state.current_z)
 
         reset_btn = QPushButton("Вернуться в нулевое положение")
         reset_btn.clicked.connect(self.return_to_zero_xyz)
