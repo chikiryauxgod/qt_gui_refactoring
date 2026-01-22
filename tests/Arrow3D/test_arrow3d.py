@@ -1,5 +1,5 @@
 import pytest
-from src.qt_interface import Arrow3D, Arrow3DData
+from src.arrow3D.arrow3D import Arrow3D, Arrow3DData
 
 def stub_project(xs, ys, zs, matrix):
     return xs, ys, zs

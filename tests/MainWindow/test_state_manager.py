@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-from src.qt_interface import StateManager
+from src.domain.state_manager import StateManager
 
 @pytest.fixture
 def state_manager():

@@ -1,0 +1,1114 @@
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QPushButton, 
+    QDoubleSpinBox, QListWidget, QTabWidget, QTextEdit, QGridLayout, QSplitter, QMessageBox)
+from PySide6.QtCore import Qt, QTimer, Slot
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from ikpy.chain import Chain
+from src.presenters.xyz_control_presenter import XYZControlPresenter
+from src.presenters.joint_control_presenter import JointControlPresenter
+from src.services.xyz_trajectory_service import XYZTrajectoryService
+from src.services.joint_trajectory_service import JointTrajectoryService
+from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
+from src.application.joint_trajectory_executor import JointTrajectoryExecutor
+from src.domain.xyz_availability_service import XYZAvailabilityService
+from src.domain.joint_availability_service import JointAvailabilityService
+from src.log import Log
+import queue
+import os
+import numpy as np
+from src.arrow3D import Arrow3DData
+from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
+from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
+from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
+from src.log import Log, logger, q
+
+
+try:
+    from ikpy.chain import Chain
+    from ikpy.link import OriginLink, URDFLink
+    IKPY_AVAILABLE = True
+except ImportError:
+    IKPY_AVAILABLE = False
+    Log()("Библиотека ikpy не установлена. Установите: pip install ikpy")
+
+
+# Сервисная вкладка
+class ServiceTab(QWidget):
+    def __init__(self, controller):
+        super().__init__()
+        self.controller = controller
+        self.xyz_presenter = XYZControlPresenter(controller)
+        self.trajectory_service = XYZTrajectoryService()
+        self.trajectory_points_joints = JointTrajectoryService()
+        
+        self.xyz_trajectory_executor = XYZTrajectoryExecutor(
+            controller=self.controller,
+            trajectory_service=self.trajectory_service,)
+        self.joint_presenter = JointControlPresenter(self.controller)
+        self.joint_trajectory_executor = JointTrajectoryExecutor(
+            joint_presenter=self.joint_presenter,
+            trajectory_service=self.trajectory_points_joints,)
+        self.xyz_availability_service = XYZAvailabilityService()
+        self.joint_availability_service = JointAvailabilityService()    
+        
+        self.continuous_move_timer = QTimer()
+        self.continuous_move_timer.timeout.connect(self.continuous_move)
+        self.continuous_move_data = None
+        self.robot_chain = self.create_robot_chain()
+
+        
+        self.create_widgets()
+    
+    def create_robot_chain(self):
+            """Создание кинематической модели робота из URDF файла"""
+            if not IKPY_AVAILABLE:
+                logger("The ikpy library is unavailable. The kinematics will not be displayed.", queue=q)
+                return None
+            
+            try:
+                # Загрузка модели из URDF файла
+                urdf_path = "robot_6_axis.urdf"  # Убедитесь что файл в правильной директории
+                if os.path.exists(urdf_path):
+                    # Маска активных звеньев (обычно [False, True, True, True, True, True, True, False] для 6-осевого робота)
+                    # Первое и последнее обычно OriginLink и ToolLink
+                    active_links_mask = [False, True, True, True, True, True, True, False]
+                    robot_chain = Chain.from_urdf_file(urdf_path, active_links_mask=active_links_mask)
+                    logger("The kinematic model of the robot has been successfully uploaded from URDF", queue=q)
+                    return robot_chain
+                else:
+                    logger(f"URDF file not found: {urdf_path}", file=open('log.txt', "a"))
+                    
+            except Exception as e:
+                logger(f"Error load URDF: {e}", queue=q)
+
+    def create_widgets(self):
+        layout = QVBoxLayout()
+        
+        tab_widget = QTabWidget()
+        
+        # Вкладки
+        xyz_tab = self.create_xyz_tab()
+        tab_widget.addTab(xyz_tab, "Управление по осям XYZ")
+        
+        joints_tab = self.create_joints_tab()
+        tab_widget.addTab(joints_tab, "Управление по суставам")
+        
+        control_tab = self.create_erosion_controls_tab()
+        tab_widget.addTab(control_tab, "Управление эрозией и водой")
+        
+        xyz_traj_tab = self.create_xyz_trajectory_tab()
+        tab_widget.addTab(xyz_traj_tab, "Траектория по XYZ")
+        
+        joints_traj_tab = self.create_joints_trajectory_tab()
+        tab_widget.addTab(joints_traj_tab, "Траектория по суставам")
+
+        robot_param_tab = self.robot_settings_tab()
+        tab_widget.addTab(robot_param_tab, "Параметры робота")
+
+        layout.addWidget(tab_widget)
+
+        # Аварийная кнопка
+        emergency_btn = QPushButton("АВАРИЙНАЯ ОСТАНОВКА")
+        emergency_btn.clicked.connect(self.controller.emergency_stop)
+        emergency_btn.setStyleSheet("""
+            QPushButton {
+                background-color: red; 
+                color: white; 
+                font-weight: bold; 
+                font-size: 14pt;
+                padding: 10px;
+            }
+        """)
+        #layout.addWidget(emergency_btn)       
+        self.setLayout(layout)
+    
+    def create_xyz_tab(self):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        
+        # Левая панель - управление
+        control_frame = QGroupBox("Управление осями XYZ")
+        control_layout = QVBoxLayout()
+        
+        axes = ['X', 'Y', 'Z']
+        self.xyz_controls = {}
+        
+        for axis in axes:
+            group = QGroupBox(f"Ось {axis}")
+            group_layout = QVBoxLayout()
+            
+            # Текущее положение
+            value_layout = QHBoxLayout()
+            value_layout.addWidget(QLabel("Текущее положение (мм):"))
+            
+            current_value = getattr(self.controller.state, f'current_{axis.lower()}', 0)
+            value_display = QLabel(f"{current_value:.2f}")
+            value_display.setStyleSheet("font-weight: bold; font-size: 12pt;")
+            value_layout.addWidget(value_display)
+            value_layout.addStretch()
+            
+            group_layout.addLayout(value_layout)
+            
+            # Ручной ввод
+            input_layout = QHBoxLayout()
+            input_layout.addWidget(QLabel("Задать положение:"))
+            
+            manual_input = QDoubleSpinBox()
+            manual_input.setRange(-1000, 1000)
+            manual_input.setValue(current_value)
+            manual_input.setSuffix(" мм")
+            input_layout.addWidget(manual_input)
+            
+            set_btn = QPushButton("Установить XYZ")
+            manual_input.editingFinished.connect(lambda a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
+            set_btn.clicked.connect(lambda checked, a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
+            input_layout.addWidget(set_btn)
+            
+            group_layout.addLayout(input_layout)
+            
+            # Кнопки с шагами
+            steps_layout = QVBoxLayout()
+            
+            step_sizes = [0.1, 1.0, 10.0]
+            for step in step_sizes:
+                step_layout = QHBoxLayout()
+                step_layout.addWidget(QLabel(f"Шаг {step} мм:"))
+                
+                minus_btn = QPushButton(f"-{step}")
+                minus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, -s))
+                step_layout.addWidget(minus_btn)
+                
+                plus_btn = QPushButton(f"+{step}")
+                plus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, s))
+                step_layout.addWidget(plus_btn)
+                
+                step_layout.addStretch()
+                steps_layout.addLayout(step_layout)
+            
+            group_layout.addLayout(steps_layout)
+            group.setLayout(group_layout)
+            control_layout.addWidget(group)
+            
+            self.xyz_controls[axis] = {
+                'display': value_display,
+                'input': manual_input
+            }
+        
+        # ★ Добавляем кнопку "Вернуться в нулевое положение"
+        reset_btn = QPushButton("Вернуться в нулевое положение")
+        reset_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ff6b6b;
+                color: white;
+                font-weight: bold;
+                border: none;
+                border-radius: 4px;
+                padding: 8px;
+            }
+            QPushButton:hover {
+                background-color: #ff5252;
+            }
+            QPushButton:pressed {
+                background-color: #e53935;
+            }
+        """)
+        reset_btn.clicked.connect(self.return_to_zero_xyz)
+        control_layout.addWidget(reset_btn)
+        
+        control_frame.setLayout(control_layout)
+        layout.addWidget(control_frame)
+        
+        # Правая панель - визуализация
+        vis_frame = QGroupBox("Визуализация положения робота")
+        vis_layout = QVBoxLayout()
+        
+        self.xyz_fig = Figure(figsize=(6, 5), dpi=100)
+        self.xyz_ax = self.xyz_fig.add_subplot(111, projection='3d')
+        
+        self.xyz_ax.set_xlabel('X (мм)')
+        self.xyz_ax.set_ylabel('Y (мм)')
+        self.xyz_ax.set_zlabel('Z (мм)')
+        self.xyz_ax.set_title('Текущее положение робота')
+        
+        self.xyz_canvas = FigureCanvas(self.xyz_fig)
+        vis_layout.addWidget(self.xyz_canvas)
+        
+        self.xyz_kinematics_plotter = XYZKinematicsPlotter(
+            ax=self.xyz_ax,
+            canvas=self.xyz_canvas,
+            robot_chain=self.robot_chain,
+            ikpy_available=IKPY_AVAILABLE,)
+        
+        update_btn = QPushButton("Обновить визуализацию")
+        update_btn.clicked.connect(self.update_xyz_plot)
+        vis_layout.addWidget(update_btn)
+        
+        vis_frame.setLayout(vis_layout)
+        layout.addWidget(vis_frame)
+        
+        widget.setLayout(layout)
+        self.update_xyz_plot()
+        
+        return widget
+
+    def create_joints_tab(self):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+        
+        # Используем splitter для разделения управления и визуализации
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # Левая панель - управление суставами (компактная)
+        control_frame = QGroupBox("Управление суставами")
+        control_layout = QVBoxLayout()
+        control_layout.setContentsMargins(5, 5, 5, 5)
+        control_layout.setSpacing(5)
+        
+        # Создаем сетку для компактного расположения суставов 2×3
+        joints_grid = QGridLayout()
+        joints_grid.setHorizontalSpacing(5)
+        joints_grid.setVerticalSpacing(5)
+        joints_grid.setContentsMargins(2, 2, 2, 2)
+        
+        joints = ['J0', 'J1', 'J2', 'J3', 'J4', 'J5']
+        self.joints_controls = {}
+        
+        for i, joint in enumerate(joints):
+            # Создаем компактную группу для каждого сустава
+            group = QGroupBox(f"Сустав {joint}")
+            group.setMaximumWidth(280)  # Ограничиваем ширину
+            group.setMaximumHeight(350)
+            group_layout = QVBoxLayout()
+            group_layout.setContentsMargins(5, 8, 5, 5)
+            group_layout.setSpacing(3)
+            
+            # Верхняя строка: текущее значение и ручной ввод
+            top_layout = QHBoxLayout()
+            
+            # Текущий угол
+            current_value = self.controller.state.current_joints[i] if i < len(self.controller.state.current_joints) else 0
+            value_layout = QVBoxLayout()
+            value_display = QLabel(f"{current_value:.1f}°")
+            value_display.setStyleSheet("font-weight: bold; font-size: 11px; background-color: #f0f0f0; padding: 2px; border: 1px solid #ccc;")
+            value_display.setAlignment(Qt.AlignCenter)
+            value_display.setFixedHeight(20)
+            value_layout.addWidget(value_display)
+            top_layout.addLayout(value_layout)
+            
+            # Ручной ввод
+            input_layout = QVBoxLayout()
+            manual_input = QDoubleSpinBox()
+            manual_input.setRange(-180, 180)
+            manual_input.setValue(current_value)
+            manual_input.setSuffix("°")
+            manual_input.setFixedHeight(22)
+            manual_input.setStyleSheet("font-size: 10px;")
+            manual_input.setButtonSymbols(QDoubleSpinBox.NoButtons)  # Убираем кнопки для экономии места
+            input_layout.addWidget(manual_input)
+            top_layout.addLayout(input_layout)
+            group_layout.addLayout(top_layout)
+            second_layout = QHBoxLayout()
+
+            # Кнопка установки
+            set_btn = QPushButton("Установить")
+            set_btn.setFixedSize(150, 42)
+            set_btn.setStyleSheet("font-size: 10px;")
+            manual_input.editingFinished.connect(lambda j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
+            set_btn.clicked.connect(lambda checked, j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
+            second_layout.addWidget(set_btn)
+            
+            group_layout.addLayout(second_layout)
+            
+            # Вертикальное расположение шагов с кнопками в столбик
+            steps_layout = QVBoxLayout()
+            steps_layout.setSpacing(2)
+            
+            # steps_label = QLabel("Шаг:")
+            # steps_label.setStyleSheet("font-size: 9px;")
+            # steps_layout.addWidget(steps_label)
+            
+            step_sizes = [0.1, 1.0, 5.0]
+            
+            for step in step_sizes:
+                # Горизонтальная строка для каждого шага
+                step_row_layout = QHBoxLayout()
+                step_row_layout.setSpacing(2)
+                
+                # Метка с размером шага
+                step_label = QLabel(f"{step}°")
+                step_label.setAlignment(Qt.AlignLeft)
+                step_label.setStyleSheet("font-size: 15px; color: #666;")
+                step_label.setFixedWidth(25)
+                step_row_layout.addWidget(step_label)
+                
+                # Кнопка минус
+                minus_btn = QPushButton("−")
+                minus_btn.setFixedSize(60, 40)
+                minus_btn.setStyleSheet("""
+                    QPushButton {
+                        font-size: 12px;
+                        font-weight: bold;
+                        background-color: #ff6b6b;
+                        color: white;
+                        border: 1px solid #ccc;
+                        border-radius: 2px;
+                    }
+                    QPushButton:hover {
+                        background-color: #ff5252;
+                    }
+                """)
+                minus_btn.setToolTip(f"Уменьшить на {step}°")
+                minus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, -s))
+                step_row_layout.addWidget(minus_btn)
+                
+                # Кнопка плюс
+                plus_btn = QPushButton("+")
+                plus_btn.setFixedSize(60, 40)
+                plus_btn.setStyleSheet("""
+                    QPushButton {
+                        font-size: 12px;
+                        font-weight: bold;
+                        background-color: #51cf66;
+                        color: white;
+                        border: 1px solid #ccc;
+                        border-radius: 2px;
+                    }
+                    QPushButton:hover {
+                        background-color: #40c057;
+                    }
+                """)
+                plus_btn.setToolTip(f"Увеличить на {step}°")
+                plus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, s))
+                step_row_layout.addWidget(plus_btn)
+                
+                step_row_layout.addStretch()
+                steps_layout.addLayout(step_row_layout)
+            
+            group_layout.addLayout(steps_layout)
+            
+            group.setLayout(group_layout)
+            
+            # Располагаем в сетке 2×3
+            row = i // 3
+            col = i % 3
+            joints_grid.addWidget(group, row, col)
+            
+            self.joints_controls[joint] = {
+                'display': value_display,
+                'input': manual_input
+            }
+        
+        # Добавляем кнопки общего управления
+        common_controls_layout = QHBoxLayout()
+        
+        home_btn = QPushButton("Вернуться в нулевое положение")
+        # home_btn.setFixedSize(440, 50)
+        home_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ff6b6b;
+                    color: white;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #ff5252;
+                }
+                QPushButton:pressed {
+                    background-color: #e53935;
+                }
+            """)
+        home_btn.clicked.connect(self.return_to_zero_joints)
+        # common_controls_layout.addWidget(home_btn)
+        
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(home_btn)
+
+        common_controls_layout.addStretch()
+        
+        control_layout.addLayout(joints_grid)
+        control_layout.addLayout(common_controls_layout)
+        control_layout.addLayout(button_layout)
+        control_frame.setLayout(control_layout)
+        splitter.addWidget(control_frame)
+        
+        # Правая панель - визуализация
+        vis_frame = QGroupBox("Визуализация положения робота")
+        vis_layout = QVBoxLayout()
+        vis_layout.setContentsMargins(5, 5, 5, 5)
+        vis_layout.setSpacing(5)
+        
+        self.joints_fig = Figure(figsize=(5, 4), dpi=80)  # Уменьшаем размер фигуры
+        self.joints_ax = self.joints_fig.add_subplot(111, projection='3d')
+        
+        self.joints_ax.set_xlabel('X (мм)')
+        self.joints_ax.set_ylabel('Y (мм)')
+        self.joints_ax.set_zlabel('Z (мм)')
+        self.joints_ax.set_title('Текущее положение робота')
+        
+        self.joints_canvas = FigureCanvas(self.joints_fig)
+        self.joints_canvas.setMinimumSize(400, 350)  # Фиксируем минимальный размер
+        vis_layout.addWidget(self.joints_canvas)
+        
+        self.joints_trajectory_plotter = JointsTrajectoryPlotter(
+            self.joints_ax, self.joints_canvas)
+        
+        update_btn = QPushButton("Обновить визуализацию")
+        update_btn.clicked.connect(self.update_joints_plot)
+        vis_layout.addWidget(update_btn)
+        
+        vis_frame.setLayout(vis_layout)
+        splitter.addWidget(vis_frame)
+        
+        # Устанавливаем пропорции splitter
+        splitter.setSizes([600, 400])
+        
+        layout.addWidget(splitter)
+        widget.setLayout(layout)
+        self.update_joints_plot()
+        
+        return widget
+    
+    def create_erosion_controls_tab(self):
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        erosion_group = QGroupBox("Управление эрозией")
+        erosion_layout = QHBoxLayout()
+        
+        erosion_on_btn = QPushButton("Включить эрозию")
+        erosion_on_btn.clicked.connect(lambda: self.controller.set_erosion(True))
+        erosion_layout.addWidget(erosion_on_btn)
+        
+        erosion_off_btn = QPushButton("Выключить эрозию")
+        erosion_off_btn.clicked.connect(lambda: self.controller.set_erosion(False))
+        erosion_layout.addWidget(erosion_off_btn)
+        
+        erosion_group.setLayout(erosion_layout)
+        layout.addWidget(erosion_group)
+        
+        water_group = QGroupBox("Управление водой")
+        # Создаем основную вертикальную компоновку для группы управления водой
+        water_main_layout = QVBoxLayout()
+
+        # Первая горизонтальная компоновка для кнопок циркуляции воды
+        water_layout = QHBoxLayout()
+        water_in_btn = QPushButton("Включение циркуляции воды")
+        water_in_btn.clicked.connect(lambda: self.controller.set_water(True))
+        water_layout.addWidget(water_in_btn)
+
+        water_out_btn = QPushButton("Отключение циркуляции воды")
+        water_out_btn.clicked.connect(lambda: self.controller.set_water(False))
+        water_layout.addWidget(water_out_btn)
+
+        # Вторая горизонтальная компоновка для кнопок управления помпами
+        water_pump_layout = QHBoxLayout()
+        water_pump_one = QPushButton("Включить/выключить накачивание воды")
+        water_pump_one.clicked.connect(lambda: self.controller.pump_control_one())  # Убедитесь, что здесь правильный метод контроллера
+        water_pump_layout.addWidget(water_pump_one)
+
+        water_pump_two = QPushButton("Включить/выключить откачивание воды")
+        water_pump_two.clicked.connect(lambda: self.controller.pump_control_two())  # Убедитесь, что здесь правильный метод контроллера
+        water_pump_layout.addWidget(water_pump_two)
+
+        # Добавляем обе горизонтальные компоновки в вертикальную
+        water_main_layout.addLayout(water_layout)
+        water_main_layout.addLayout(water_pump_layout)
+
+        water_group.setLayout(water_main_layout)
+        layout.addWidget(water_group)
+        
+        status_group = QGroupBox("Статус системы")
+        status_layout = QVBoxLayout()
+        
+        self.status_text = QTextEdit()
+        self.status_text.setReadOnly(True)
+        status_layout.addWidget(self.status_text)
+        
+        status_group.setLayout(status_layout)
+        layout.addWidget(status_group)
+        
+        update_btn = QPushButton("Обновить статус")
+        update_btn.clicked.connect(self.update_status)
+        layout.addWidget(update_btn)
+        
+        layout.addStretch()
+        widget.setLayout(layout)
+        self.update_status()
+        
+        return widget
+    
+    def create_xyz_trajectory_tab(self):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        
+        control_frame = QGroupBox("Управление траекторией XYZ")
+        control_layout = QVBoxLayout()
+        
+        point_group = QGroupBox("Добавить точку")
+        point_layout = QGridLayout()
+        
+        point_layout.addWidget(QLabel("X (мм):"), 0, 0)
+        self.new_x = QDoubleSpinBox()
+        self.new_x.setRange(-1000, 1000)
+        self.new_x.setValue(self.controller.state.current_x)
+        point_layout.addWidget(self.new_x, 0, 1)
+        
+        point_layout.addWidget(QLabel("Y (мм):"), 1, 0)
+        self.new_y = QDoubleSpinBox()
+        self.new_y.setRange(-1000, 1000)
+        self.new_y.setValue(self.controller.state.current_y)
+        point_layout.addWidget(self.new_y, 1, 1)
+        
+        point_layout.addWidget(QLabel("Z (мм):"), 2, 0)
+        self.new_z = QDoubleSpinBox()
+        self.new_z.setRange(-1000, 1000)
+        self.new_z.setValue(self.controller.state.current_z)
+        point_layout.addWidget(self.new_z, 2, 1)
+
+        # self.new_x.editingFinished.connect(self.add_xyz_point)
+        # self.new_y.editingFinished.connect(self.add_xyz_point)
+        # self.new_z.editingFinished.connect(self.add_xyz_point)
+        
+        add_btn = QPushButton("Добавить точку")
+        add_btn.clicked.connect(self.add_xyz_point)
+        point_layout.addWidget(add_btn, 3, 0, 1, 2)
+        
+        point_group.setLayout(point_layout)
+        control_layout.addWidget(point_group)
+        
+        traj_control_layout = QHBoxLayout()
+        
+        remove_btn = QPushButton("Удалить точку")
+        remove_btn.clicked.connect(self.remove_xyz_point)
+        traj_control_layout.addWidget(remove_btn)
+        
+        clear_btn = QPushButton("Очистить все")
+        clear_btn.clicked.connect(self.clear_xyz_trajectory)
+        traj_control_layout.addWidget(clear_btn)
+        
+        home_btn = QPushButton("Вернуться в ноль")
+        home_btn.clicked.connect(self.return_to_zero_xyz)
+        traj_control_layout.addWidget(home_btn)
+        
+        control_layout.addLayout(traj_control_layout)
+        
+        list_group = QGroupBox("Точки траектории")
+        list_layout = QVBoxLayout()
+        
+        self.xyz_listbox = QListWidget()
+        list_layout.addWidget(self.xyz_listbox)
+        
+        execute_btn = QPushButton("Выполнить траекторию")
+        execute_btn.clicked.connect(self.execute_xyz_trajectory)
+        list_layout.addWidget(execute_btn)
+        
+        list_group.setLayout(list_layout)
+        control_layout.addWidget(list_group)
+        
+        control_frame.setLayout(control_layout)
+        layout.addWidget(control_frame)
+        
+        vis_frame = QGroupBox("Визуализация траектории")
+        vis_layout = QVBoxLayout()
+        
+        self.xyz_traj_fig = Figure(figsize=(6, 5), dpi=100)
+        self.xyz_traj_ax = self.xyz_traj_fig.add_subplot(111, projection='3d')
+        
+        self.xyz_traj_ax.set_xlabel('X (мм)')
+        self.xyz_traj_ax.set_ylabel('Y (мм)')
+        self.xyz_traj_ax.set_zlabel('Z (мм)')
+        self.xyz_traj_ax.set_title('Траектория движения XYZ')
+        
+        self.xyz_traj_canvas = FigureCanvas(self.xyz_traj_fig)
+        vis_layout.addWidget(self.xyz_traj_canvas)
+        
+        self.xyz_trajectory_plotter = XYZTrajectoryPlotter(
+            ax=self.xyz_traj_ax,
+            canvas=self.xyz_traj_canvas,)
+        
+        vis_frame.setLayout(vis_layout)
+        layout.addWidget(vis_frame)
+        
+        widget.setLayout(layout)
+        self.add_initial_xyz_point()
+        
+        return widget
+    
+    def create_joints_trajectory_tab(self):
+        widget = QWidget()
+        main_layout = QHBoxLayout(widget)
+
+        control_frame = QGroupBox("Управление траекторией суставов")
+        control_layout = QVBoxLayout(control_frame)
+
+        joints_group = QGroupBox("Добавить позицию суставов")
+        joints_layout = QGridLayout(joints_group)
+
+        joints = ['J0', 'J1', 'J2', 'J3', 'J4', 'J5']
+        self.new_joints = {}
+
+        for i, joint in enumerate(joints):
+            joints_layout.addWidget(QLabel(f"{joint} (°):"), i, 0)
+            spinbox = QDoubleSpinBox()
+            spinbox.setRange(-180, 180)
+            current_value = self.controller.state.current_joints[i] if i < len(self.controller.state.current_joints) else 0
+            spinbox.setValue(current_value)
+            spinbox.setSuffix(" °")
+            joints_layout.addWidget(spinbox, i, 1)
+            self.new_joints[joint] = spinbox
+
+        add_btn = QPushButton("Добавить позицию")
+        add_btn.clicked.connect(self.add_joints_point)
+        joints_layout.addWidget(add_btn, 6, 0, 1, 2)
+
+        joints_group.setLayout(joints_layout)
+        control_layout.addWidget(joints_group)
+        
+        traj_control_layout = QHBoxLayout()
+
+        remove_btn = QPushButton("Удалить позицию")
+        remove_btn.clicked.connect(self.remove_joints_point)
+        traj_control_layout.addWidget(remove_btn)
+
+        clear_btn = QPushButton("Очистить все")
+        clear_btn.clicked.connect(self.clear_joints_trajectory)
+        traj_control_layout.addWidget(clear_btn)
+
+        home_btn = QPushButton("Вернуться в ноль")
+        home_btn.clicked.connect(self.return_to_zero_joints)
+        traj_control_layout.addWidget(home_btn)
+
+        control_layout.addLayout(traj_control_layout)
+
+        list_group = QGroupBox("Позиции траектории")
+        list_layout = QVBoxLayout(list_group)
+
+        self.joints_listbox = QListWidget()
+        list_layout.addWidget(self.joints_listbox)
+
+        execute_btn = QPushButton("Выполнить траекторию")
+        execute_btn.clicked.connect(self.execute_joints_trajectory)
+        list_layout.addWidget(execute_btn)
+
+        list_group.setLayout(list_layout)
+        control_layout.addWidget(list_group)
+        control_frame.setLayout(control_layout)
+        main_layout.addWidget(control_frame)
+        
+        vis_frame = QGroupBox("Визуализация траектории")
+        vis_layout = QVBoxLayout(vis_frame)
+
+        self.joints_traj_fig = Figure(figsize=(6, 5), dpi=100)
+        self.joints_traj_ax = self.joints_traj_fig.add_subplot(111, projection='3d') 
+
+        self.joints_traj_ax.set_xlabel('X (мм)')
+        self.joints_traj_ax.set_ylabel('Y (мм)')
+        self.joints_traj_ax.set_zlabel('Z (мм)')
+        self.joints_traj_ax.set_title('Траектория движения суставов')
+
+        self.joints_traj_canvas = FigureCanvas(self.joints_traj_fig)
+        vis_layout.addWidget(self.joints_traj_canvas)
+
+        vis_frame.setLayout(vis_layout)
+        main_layout.addWidget(vis_frame)
+
+        widget.setLayout(main_layout)
+        return widget
+
+
+    def robot_settings_tab(self):
+        widget = QWidget()
+        main_layout = QHBoxLayout()
+        
+        # Создаем GroupBox для группы настроек
+        settings_group = QGroupBox("Настройки скорости робота")
+        group_layout = QVBoxLayout()
+        
+        # → Секция 1: Текущее значение скорости
+        current_speed_layout = QHBoxLayout()
+        current_speed_layout.addWidget(QLabel("Текущая скорость:"))
+        self.current_speed_label = QLabel("10.0 %")  # Начальное значение
+        current_speed_layout.addWidget(self.current_speed_label)
+
+        group_layout.addLayout(current_speed_layout)
+        
+        # → Секция 2: Задание новой скорости
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(QLabel("Задать скорость:"))
+        
+        self.speed_input = QDoubleSpinBox()
+        self.speed_input.setRange(-1000, 1000)
+        self.speed_input.setValue(10)  # Текущее значение
+        self.speed_input.setSuffix(" %")
+        input_layout.addWidget(self.speed_input)
+        
+        set_speed_btn = QPushButton("Задать")
+        # ★ ПРАВИЛЬНОЕ подключение сигнала - разделяем операции
+        set_speed_btn.clicked.connect(self.update_speed_display)
+        
+        input_layout.addWidget(set_speed_btn)
+        
+        group_layout.addLayout(input_layout)
+        group_layout.addStretch(1)
+        
+        settings_group.setLayout(group_layout)
+        main_layout.addWidget(settings_group)
+        
+        widget.setLayout(main_layout)
+        return widget
+
+    def update_speed_display(self):
+        """Обновляет отображение текущей скорости"""
+        new_speed = self.speed_input.value()
+        
+        # ★ Обновляем метку с новым значением
+        self.current_speed_label.setText(f"{new_speed:.1f} %")
+        
+        # ★ Вызываем метод контроллера (если нужно)
+        self.controller.set_speed_w(new_speed)
+        
+        # ★ Принудительное обновление интерфейса при необходимости
+        self.current_speed_label.repaint()  # :cite[5]
+
+    # Методы управления осями XYZ
+    @Slot(str, float)
+    def set_xyz_position(self, axis, value):
+        if axis in self.xyz_controls:
+            self.xyz_controls[axis]['display'].setText(f"{value:.2f}")
+            self.xyz_controls[axis]['input'].setValue(value)
+        
+        positions = {
+            'X': self.controller.state.current_x,
+            'Y': self.controller.state.current_y, 
+            'Z': self.controller.state.current_z
+        }
+        positions[axis] = value
+        
+        self.xyz_presenter.set_position(positions['X'], positions['Y'], positions['Z'])
+
+    @Slot(str, float)
+    def move_xyz(self, axis, step):
+        current = getattr(self.controller.state, f'current_{axis.lower()}')
+        new_value = current + step
+        self.set_xyz_position(axis, new_value)
+
+    @Slot()
+    def update_xyz_plot(self):
+        """Обновление графика XYZ"""
+        self.xyz_kinematics_plotter.plot(
+            x=self.controller.state.current_x,
+            y=self.controller.state.current_y,
+            z=self.controller.state.current_z,
+        )
+
+
+    # Методы управления суставами
+    @Slot(str, float)
+    def set_joint_position(self, joint, value):
+        if joint in self.joints_controls:
+            self.joints_controls[joint]['display'].setText(f"{value:.2f}")
+            self.joints_controls[joint]['input'].setValue(value)
+        
+        joints = self.controller.state.current_joints.copy()
+        joint_index = int(joint[1])
+        if joint_index < len(joints):
+            joints[joint_index] = value
+            self.controller.set_joint_pos(joints)
+
+    @Slot(str, float)
+    def move_joint(self, joint, step):
+        joint_index = int(joint[1])
+        if joint_index < len(self.controller.state.current_joints):
+            current = self.controller.state.current_joints[joint_index]
+            new_value = current + step
+            self.set_joint_position(joint, new_value)
+
+    @Slot()
+    def update_joints_plot(self):
+            """Обновление графика с кинематической цепочкой для суставов"""
+            self.joints_ax.clear()
+            
+            # Получаем текущие углы суставов
+            joints_degrees = self.controller.state.current_joints
+            
+            # Отображаем кинематическую цепочку, если доступна
+            if self.robot_chain and IKPY_AVAILABLE and len(joints_degrees) >= 6:
+                try:
+                    # Преобразуем углы из градусов в радианы
+                    # Добавляем начальный и конечный углы (обычно 0 для OriginLink и ToolLink)
+                    joints_radians = [0] + [np.radians(angle) for angle in joints_degrees[:6]] + [0]
+                    
+                    # Отображаем кинематическую цепочку
+                    self.robot_chain.plot(joints_radians, self.joints_ax)
+                    
+                except Exception as e:
+                    logger(f"Ошибка отображения кинематики суставов: {e}")
+                    # Резервный вариант
+                    self.joints_ax.scatter([0], [0], [0], c='b', marker='o', s=100, label='База')
+            else:
+                # Резервный вариант без кинематики
+                self.joints_ax.scatter([0], [0], [0], c='b', marker='o', s=100, label='База')
+            
+            # Настраиваем график
+            self.joints_ax.set_xlabel('X (м)')
+            self.joints_ax.set_ylabel('Y (м)')
+            self.joints_ax.set_zlabel('Z (м)')
+            self.joints_ax.set_title('Кинематическая цепочка робота')
+            self.joints_ax.legend()
+            
+            # Устанавливаем разумные пределы для 6-осевого робота
+            self.joints_ax.set_xlim([-1, 1])
+            self.joints_ax.set_ylim([-1, 1])
+            self.joints_ax.set_zlim([0, 1.5])
+            
+            self.joints_canvas.draw()
+
+    # Методы траекторий XYZ
+    @Slot()
+    def add_initial_xyz_point(self):
+        x = self.controller.state.current_x
+        y = self.controller.state.current_y
+        z = self.controller.state.current_z
+
+        self.trajectory_service.set_initial_point(x, y, z)
+
+        self.xyz_listbox.clear()
+        self.xyz_listbox.addItem(f"1: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}")
+
+        self.xyz_trajectory_plotter.plot(
+            self.trajectory_service.get_points())
+
+
+    @Slot()
+    def add_xyz_point(self):
+        x = self.new_x.value()
+        y = self.new_y.value()
+        z = self.new_z.value()
+        
+        if self.xyz_availability_service.is_available(x, y, z):
+            self.trajectory_service.add_point(x, y, z)
+            index = len(self.trajectory_service.get_points())
+            self.xyz_listbox.addItem(
+                f"{index}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+            )
+            self.xyz_trajectory_plotter.plot(
+                self.trajectory_service.get_points())
+            
+        else:
+            logger("The point cannot be moved.", queue=q)
+
+    @Slot()
+    def remove_xyz_point(self):
+        current_row = self.xyz_listbox.currentRow()
+        if current_row >= 0:
+            self.xyz_listbox.takeItem(current_row)
+            self.trajectory_service.remove_point(current_row)
+
+            self.xyz_listbox.clear()
+            for i, (x, y, z) in enumerate(
+                self.trajectory_service.get_points()
+            ):
+                self.xyz_listbox.addItem(
+                    f"{i + 1}: X: {x:.2f}, Y: {y:.2f}, Z: {z:.2f}"
+                )
+
+            self.xyz_trajectory_plotter.plot(
+                self.trajectory_service.get_points())
+
+    @Slot()
+    def clear_xyz_trajectory(self):
+        self.trajectory_service.clear()
+        self.xyz_listbox.clear()
+        self.xyz_trajectory_plotter.plot(
+            self.trajectory_service.get_points())
+
+
+    @Slot()
+    def return_to_zero_xyz(self):
+        self.xyz_presenter.return_to_zero()
+
+    @Slot()
+    def execute_xyz_trajectory(self):
+        if not self.trajectory_service.get_points():
+            QMessageBox.critical(self, "Ошибка", "Траектория не задана")
+            return
+    
+        logger('Execution trajectory XYZ...', queue=q)
+        self.xyz_trajectory_executor.execute()
+
+    @Slot()
+    def update_xyz_trajectory_plot(self):
+        self.xyz_traj_ax.clear()
+
+        points_list = self.trajectory_service.get_points()
+        if points_list:
+            points = np.array(points_list)
+
+            self.xyz_traj_ax.plot(
+                points[:, 0], points[:, 1], points[:, 2],
+                'b-', linewidth=2, alpha=0.7
+            )
+            self.xyz_traj_ax.scatter(
+                points[:, 0], points[:, 1], points[:, 2],
+                c='red', s=30
+            )
+
+            for i, (x, y, z) in enumerate(points):
+                self.xyz_traj_ax.text(x, y, z, str(i + 1), color='red', fontsize=8)
+
+            if len(points) > 1:
+                for i in range(len(points) - 1):
+                    x1, y1, z1 = points[i]
+                    x2, y2, z2 = points[i + 1]
+
+                    arrow = Arrow3DData(
+                        [x1, x2], [y1, y2], [z1, z2],
+                        mutation_scale=20,
+                        lw=1,
+                        arrowstyle="-|>",
+                        color="green",
+                        alpha=0.7
+                    )
+                    self.xyz_traj_ax.add_artist(arrow)
+
+        self.xyz_traj_ax.set_xlabel('X (мм)')
+        self.xyz_traj_ax.set_ylabel('Y (мм)')
+        self.xyz_traj_ax.set_zlabel('Z (мм)')
+        self.xyz_traj_ax.set_title('Траектория движения XYZ')
+
+        self.xyz_traj_canvas.draw()
+
+    # Методы траекторий суставов
+    @Slot()
+    def add_joints_point(self):
+        joints = [self.new_joints[f'J{i}'].value() for i in range(6)]
+        
+        if self.joint_availability_service.is_available(joints):
+            self.trajectory_points_joints.add_point(joints)
+            index = len(self.trajectory_points_joints.get_points())
+            self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
+            self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
+        else:
+            # QMessageBox.critical(self, "Ошибка", "Позиция недоступна для перемещения")
+            logger("The position cannot be moved.", queue=q)
+
+    @Slot()
+    def remove_joints_point(self):
+        current_row = self.joints_listbox.currentRow()
+        if current_row >= 0:
+            self.joints_listbox.takeItem(current_row)
+            self.joint_trajectory_service.remove_point(current_row)
+            self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
+    @Slot()
+    def clear_joints_trajectory(self):
+        self.joints_listbox.clear()
+        self.trajectory_points_joints.clear()
+        self.joints_trajectory_plotter.plot(
+                self.trajectory_points_joints.get_points())
+
+    @Slot()
+    def return_to_zero_joints(self):
+        self.controller.set_joint_pos([0, 0, 0, 0, 0, 0])
+
+    @Slot()
+    def execute_joints_trajectory(self):
+        if not self.trajectory_points_joints.get_points():
+            QMessageBox.critical(self, "Ошибка", "Траектория не задана")
+            return
+
+        self.joint_trajectory_executor.execute()
+
+    @Slot()
+    def update_joints_trajectory_plot(self):
+            """Обновление визуализации траектории с кинематической цепочкой"""
+            self.joints_traj_ax.clear()
+            
+            if self.trajectory_points_joints and self.robot_chain and IKPY_AVAILABLE:
+                try:
+                    # Собираем все позиции инструмента через прямую кинематику
+                    tool_positions = []
+                    
+                    for joints_degrees in self.trajectory_points_joints:
+                        if len(joints_degrees) >= 6:
+                            # Преобразуем в радианы и добавляем начальный/конечный углы
+                            joints_radians = [0] + [np.radians(angle) for angle in joints_degrees[:6]] + [0]
+                            
+                            # Вычисляем прямую кинематику для получения позиции инструмента
+                            transformation_matrix = self.robot_chain.forward_kinematics(joints_radians)
+                            tool_position = transformation_matrix[:3, 3]  # Позиция в метрах
+                            tool_positions.append(tool_position * 1000)  # Переводим в мм для согласованности
+                    
+                    if tool_positions:
+                        points = np.array(tool_positions)
+                        
+                        # Рисуем траекторию
+                        self.joints_traj_ax.plot(points[:, 0], points[:, 1], points[:, 2], 
+                                            'b-', linewidth=2, alpha=0.7, label='Траектория')
+                        self.joints_traj_ax.scatter(points[:, 0], points[:, 1], points[:, 2], 
+                                                c='red', s=30, label='Позиции')
+                        
+                        # Отображаем кинематическую цепочку для последней позиции
+                        last_joints = self.trajectory_points_joints[-1]
+                        if len(last_joints) >= 6:
+                            joints_radians = [0] + [np.radians(angle) for angle in last_joints[:6]] + [0]
+                            self.robot_chain.plot(joints_radians, self.joints_traj_ax)
+                            
+                except Exception as e:
+                    logger(f"Ошибка визуализации траектории суставов: {e}")
+
+            else:
+                logger(f"Ошибка визуализации траектории суставов: {e}")
+            
+            self.joints_traj_ax.set_xlabel('X (мм)')
+            self.joints_traj_ax.set_ylabel('Y (мм)')
+            self.joints_traj_ax.set_zlabel('Z (мм)')
+            self.joints_traj_ax.set_title('Траектория движения суставов с кинематикой')
+            self.joints_traj_ax.legend()
+            
+            self.joints_traj_canvas.draw()
+
+    @Slot()
+    def update_status(self):
+        status = "Текущий статус системы:\n"
+        status += f"- Позиция X: {self.controller.state.current_x:.2f} мм\n"
+        status += f"- Позиция Y: {self.controller.state.current_y:.2f} мм\n"
+        status += f"- Позиция Z: {self.controller.state.current_z:.2f} мм\n"
+        status += f"- Углы суставов: {', '.join([f'{j:.1f}°' for j in self.controller.state.current_joints])}\n"
+        status += "- Эрозия: выключена\n"
+        status += "- Вода: отключена\n"
+        
+        self.status_text.setPlainText(status)
+
+    # Методы непрерывного движения
+    def start_continuous_move(self, move_type, target, step):
+        self.continuous_move_data = {
+            'type': move_type,
+            'target': target,
+            'step': step
+        }
+        self.continuous_move_timer.start(50)
+
+    def stop_continuous_move(self):
+        self.continuous_move_timer.stop()
+        self.continuous_move_data = None
+
+    @Slot()
+    def continuous_move(self):
+        if not self.continuous_move_data:
+            return
+        
+        move_type = self.continuous_move_data['type']
+        target = self.continuous_move_data['target']
+        step = self.continuous_move_data['step']
+        
+        if move_type == 'xyz':
+            self.move_xyz(target, step * 0.3)
+        elif move_type == 'joint':
+            self.move_joint(target, step * 0.3)
