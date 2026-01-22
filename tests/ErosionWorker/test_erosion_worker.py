@@ -1,4 +1,4 @@
-from src.qt_interface import (
+from src.erosion_worker.erosion_worker import (
     ErosionController,
     GCodeProcessor,
     ErosionWorker
