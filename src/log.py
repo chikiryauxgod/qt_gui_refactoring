@@ -1,4 +1,5 @@
 import sys
+import queue
 
 class Log:
     def __call__(self, message, queue=None, file=None):
@@ -8,3 +9,6 @@ class Log:
         print(f"LOG: {message}", file=file)
         if queue is not None:
             queue.put(message)
+
+logger = Log()
+q = queue.Queue()

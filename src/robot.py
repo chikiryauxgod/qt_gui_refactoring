@@ -1,14 +1,20 @@
+from src.domain.constants import X0, Y0, Z0
+
 class Robot:
-    def __init__(self, *args, **kwargs):
-        self.current_x = 0.0
-        self.current_y = 0.0
-        self.current_z = 0.0
+    def __init__(self):
+        self.current_x = X0
+        self.current_y = Y0
+        self.current_z = Z0
+        self.speed = 0
+        self.joints = [0] * 6
+
+    def set_joint_pos(self, joints):
+        self.joints = joints
+        print(f"[ROBOT - stub] set_joint_pos {joints}")
+
+    def set_speed(self, v):
+        self.speed = v
+        print(f"[ROBOT - stub] set_speed {v}")
 
     def emergency_stop(self):
-        print("[ROBOT] Emergency stop")
-
-    def start_erosion_process(self, *args, **kwargs):
-        print("[ROBOT] start_erosion_process called")
-
-    def stop_erosion_process(self):
-        print("[ROBOT] stop_erosion_process called")
+        print("[ROBOT - stub] EMERGENCY STOP")
