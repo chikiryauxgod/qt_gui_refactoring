@@ -1,0 +1,41 @@
+commit 9d5c552b8d62a30f6ec8f5ebfd5524192fd603a9
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Thu Jan 22 02:50:03 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Thu Jan 22 02:50:03 2026 +0500
+
+    refactor: class MainWindow
+
+
+FILES:
+
+FILE: src/application/app_state.py
+LANG: py
+
+deleted file mode 100644
+index e69de29..0000000
+
+
+FILE: src/erosion_process/erosion_process_tab.py
+LANG: py
+
+index d2194c2..ad34557 100644
+--- a/src/erosion_process/erosion_process_tab.py
++++ b/src/erosion_process/erosion_process_tab.py
+@@ -402,13 +402,13 @@ class ErosionProcessTab(QWidget):
+         axes_layout = QHBoxLayout()
+ 
+         self.x_control = AxisControlWidget("X")
+-        self.x_control.set_current_value(self.controller.current_x)
++        self.x_control.set_current_value(self.controller.state.current_x)
+ 
+         self.y_control = AxisControlWidget("Y")
+-        self.y_control.set_current_value(self.controller.current_y)
++        self.y_control.set_current_value(self.controller.state.current_y)
+ 
+         self.z_control = AxisControlWidget("Z")
+-        self.z_control.set_current_value(self.controller.current_z)
++        self.z_control.set_current_value(self.controller.state.current_z)
+ 
+         reset_btn = QPushButton("Вернуться в нулевое положение")
+         reset_btn.clicked.connect(self.return_to_zero_xyz)

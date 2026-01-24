@@ -149,3 +149,28 @@ index d02796c..aee6206 100644
 +        
 +#     def change_position(self, delta):
 +#         current_value = float(self.value_label.text().split()[0])
++#         new_value = current_value + delta
++#         self.value_label.setText(f"{new_value:.1f} мм")
++#         self.position_changed.emit(self.axis, new_value)
+ # Рабочий поток для эрозии
+ class ErosionWorker(QThread):
+     progress_updated = Signal(float)
+@@ -435,9 +436,15 @@ class ErosionProcessTab(QWidget):
+         
+         axes_widget = QWidget()
+         axes_layout = QHBoxLayout()
+-        self.x_control = AxisControlWidget('X', self.controller.current_x)
+-        self.y_control = AxisControlWidget('Y', self.controller.current_y)
+-        self.z_control = AxisControlWidget('Z', self.controller.current_z)
++        
++        self.x_control = AxisControlWidget('X')
++        self.x_control.set_current_value(self.controller.current_x)
++
++        self.y_control = AxisControlWidget('Y')
++        self.y_control.set_current_value(self.controller.current_y)
++        
++        self.z_control = AxisControlWidget('Z')
++        self.z_control.set_current_value(self.controller.current_z)
+         
+                 # Кнопка возврата в нулевое положение
+         reset_btn = QPushButton("Вернуться в нулевое положение")

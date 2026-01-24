@@ -2,7 +2,7 @@ import json
 from statistics import mean
 from pathlib import Path
 
-RUN_ID = "gemma_2_9_b"
+RUN_ID = "olmo-3_7b"
 
 RESULTS = Path("results")
 OUT = Path("aggregated")
@@ -10,13 +10,17 @@ OUT.mkdir(exist_ok=True)
 
 
 def aggregate_commit(commit: str) -> dict:
-    data = json.loads((RESULTS / f"{commit}.json").read_text())
+    data = json.loads((RESULTS / f"{commit}.json").read_text(encoding="utf-8"))
 
     scores = [
-        r["solid_score"]
+        r["result"]["solid_score"]
         for r in data
-        if isinstance(r, dict) and "solid_score" in r
+        if isinstance(r, dict)
+        and "result" in r
+        and isinstance(r["result"], dict)
+        and "solid_score" in r["result"]
     ]
+
 
     return {
         "commit": commit,

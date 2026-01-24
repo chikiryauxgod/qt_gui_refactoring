@@ -1,0 +1,11 @@
+commit 1560936a0234d41276fdc20cd2f28ea3ee280b82
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Thu Jan 22 01:32:40 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Thu Jan 22 01:32:40 2026 +0500
+
+    refactor: extract ApplicationState from MainWindow
+
+diff --git a/src/application/app_state.py b/src/application/app_state.py
+new file mode 100644
+index 0000000..e69de29

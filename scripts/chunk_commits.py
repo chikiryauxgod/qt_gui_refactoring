@@ -1,6 +1,6 @@
 from pathlib import Path
 
-MAX_CHARS = 6000  
+MAX_CHARS = 20000  
 
 def chunk_commit(text: str) -> list[str]:
     chunks = []
@@ -21,13 +21,13 @@ def chunk_commit(text: str) -> list[str]:
 
 def main():
     for norm_file in Path("commits").glob("*.norm"):
-        chunks = chunk_commit(norm_file.read_text())
+        chunks = chunk_commit(norm_file.read_text(encoding="utf-8"))
 
         out_dir = norm_file.with_suffix("")
         out_dir.mkdir(exist_ok=True)
 
         for i, chunk in enumerate(chunks):
-            (out_dir / f"chunk_{i}.txt").write_text(chunk)
+            (out_dir / f"chunk_{i}.txt").write_text(chunk, encoding="utf-8")
 
 
 if __name__ == "__main__":

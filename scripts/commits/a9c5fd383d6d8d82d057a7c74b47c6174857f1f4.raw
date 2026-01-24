@@ -1,0 +1,487 @@
+commit a9c5fd383d6d8d82d057a7c74b47c6174857f1f4
+Author:     Matvey <matveykroychelove4ek@gmail.com>
+AuthorDate: Thu Jan 22 01:06:54 2026 +0500
+Commit:     Matvey <matveykroychelove4ek@gmail.com>
+CommitDate: Thu Jan 22 01:06:54 2026 +0500
+
+    1st module
+
+diff --git a/scripts/aggregate_commit.py b/scripts/aggregate_commit.py
+index a411ad3..9ffb3cb 100644
+--- a/scripts/aggregate_commit.py
++++ b/scripts/aggregate_commit.py
+@@ -2,7 +2,7 @@ import json
+ from statistics import mean
+ from pathlib import Path
+ 
+-RUN_ID = "qwen_0_5b"
++RUN_ID = "gemma_2_9_b"
+ 
+ RESULTS = Path("results")
+ OUT = Path("aggregated")
+diff --git a/scripts/aggregated/0e4e047ebf2f778d687568313a9b2de17ee58e08.qwen_7_b.json b/scripts/aggregated/0e4e047ebf2f778d687568313a9b2de17ee58e08.qwen_7_b.json
+new file mode 100644
+index 0000000..2b9491e
+--- /dev/null
++++ b/scripts/aggregated/0e4e047ebf2f778d687568313a9b2de17ee58e08.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "0e4e047ebf2f778d687568313a9b2de17ee58e08",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/0e968927ff1e20b388a28dae8b96f31e3def0877.qwen_7_b.json b/scripts/aggregated/0e968927ff1e20b388a28dae8b96f31e3def0877.qwen_7_b.json
+new file mode 100644
+index 0000000..0ee240a
+--- /dev/null
++++ b/scripts/aggregated/0e968927ff1e20b388a28dae8b96f31e3def0877.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "0e968927ff1e20b388a28dae8b96f31e3def0877",
++  "solid_qwen_7_b": null
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/0f36aa38ffbb857a530120ba3813a8d99da88b83.qwen_7_b.json b/scripts/aggregated/0f36aa38ffbb857a530120ba3813a8d99da88b83.qwen_7_b.json
+new file mode 100644
+index 0000000..8235227
+--- /dev/null
++++ b/scripts/aggregated/0f36aa38ffbb857a530120ba3813a8d99da88b83.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "0f36aa38ffbb857a530120ba3813a8d99da88b83",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/1397505346cf659693a536f41f9f5db476314047.qwen_7_b.json b/scripts/aggregated/1397505346cf659693a536f41f9f5db476314047.qwen_7_b.json
+new file mode 100644
+index 0000000..31b02f0
+--- /dev/null
++++ b/scripts/aggregated/1397505346cf659693a536f41f9f5db476314047.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "1397505346cf659693a536f41f9f5db476314047",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/1c2bfd7976df804657a34fe3d7db490bbff0d384.qwen_7_b.json b/scripts/aggregated/1c2bfd7976df804657a34fe3d7db490bbff0d384.qwen_7_b.json
+new file mode 100644
+index 0000000..14c348e
+--- /dev/null
++++ b/scripts/aggregated/1c2bfd7976df804657a34fe3d7db490bbff0d384.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "1c2bfd7976df804657a34fe3d7db490bbff0d384",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.qwen_7_b.json b/scripts/aggregated/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.qwen_7_b.json
+new file mode 100644
+index 0000000..5214407
+--- /dev/null
++++ b/scripts/aggregated/2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "2b9c8554dbc15aac9515fb3589a8aa43fb10ae5e",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/36b4638877d4182f8344757ca6e85b5ea46bc83d.qwen_7_b.json b/scripts/aggregated/36b4638877d4182f8344757ca6e85b5ea46bc83d.qwen_7_b.json
+new file mode 100644
+index 0000000..cd99329
+--- /dev/null
++++ b/scripts/aggregated/36b4638877d4182f8344757ca6e85b5ea46bc83d.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "36b4638877d4182f8344757ca6e85b5ea46bc83d",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/3c702c20ff81214b2653094f56fe9ba1bee29d3c.qwen_7_b.json b/scripts/aggregated/3c702c20ff81214b2653094f56fe9ba1bee29d3c.qwen_7_b.json
+new file mode 100644
+index 0000000..c00b3e3
+--- /dev/null
++++ b/scripts/aggregated/3c702c20ff81214b2653094f56fe9ba1bee29d3c.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "3c702c20ff81214b2653094f56fe9ba1bee29d3c",
++  "solid_qwen_7_b": 2
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/3cf10b93bb59ec5c2cd9a57c020825ba41f2c12f.qwen_7_b.json b/scripts/aggregated/3cf10b93bb59ec5c2cd9a57c020825ba41f2c12f.qwen_7_b.json
+new file mode 100644
+index 0000000..bbcc5b9
+--- /dev/null
++++ b/scripts/aggregated/3cf10b93bb59ec5c2cd9a57c020825ba41f2c12f.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "3cf10b93bb59ec5c2cd9a57c020825ba41f2c12f",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/3d206021919c592341b6373a7abe34a375f9c917.qwen_7_b.json b/scripts/aggregated/3d206021919c592341b6373a7abe34a375f9c917.qwen_7_b.json
+new file mode 100644
+index 0000000..e9029fa
+--- /dev/null
++++ b/scripts/aggregated/3d206021919c592341b6373a7abe34a375f9c917.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "3d206021919c592341b6373a7abe34a375f9c917",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/3e61e64c0ce465133bbc7f88bb82fa78d73f9520.qwen_7_b.json b/scripts/aggregated/3e61e64c0ce465133bbc7f88bb82fa78d73f9520.qwen_7_b.json
+new file mode 100644
+index 0000000..c3f1a81
+--- /dev/null
++++ b/scripts/aggregated/3e61e64c0ce465133bbc7f88bb82fa78d73f9520.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "3e61e64c0ce465133bbc7f88bb82fa78d73f9520",
++  "solid_qwen_7_b": 6.5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/43f197295b5f9ac1d19b75dc809245b41f197e8e.qwen_7_b.json b/scripts/aggregated/43f197295b5f9ac1d19b75dc809245b41f197e8e.qwen_7_b.json
+new file mode 100644
+index 0000000..4c1e14b
+--- /dev/null
++++ b/scripts/aggregated/43f197295b5f9ac1d19b75dc809245b41f197e8e.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "43f197295b5f9ac1d19b75dc809245b41f197e8e",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/4ba3a7b9365ec7c9d4e83c15e5a14a63039423be.qwen_7_b.json b/scripts/aggregated/4ba3a7b9365ec7c9d4e83c15e5a14a63039423be.qwen_7_b.json
+new file mode 100644
+index 0000000..36bdee2
+--- /dev/null
++++ b/scripts/aggregated/4ba3a7b9365ec7c9d4e83c15e5a14a63039423be.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "4ba3a7b9365ec7c9d4e83c15e5a14a63039423be",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/50426e0bfed09f81ec5051123c21ae83a8cbc44b.qwen_7_b.json b/scripts/aggregated/50426e0bfed09f81ec5051123c21ae83a8cbc44b.qwen_7_b.json
+new file mode 100644
+index 0000000..a5ce24e
+--- /dev/null
++++ b/scripts/aggregated/50426e0bfed09f81ec5051123c21ae83a8cbc44b.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "50426e0bfed09f81ec5051123c21ae83a8cbc44b",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/54ef76b364ff38d1832a2779a9dd9f38483a5971.qwen_7_b.json b/scripts/aggregated/54ef76b364ff38d1832a2779a9dd9f38483a5971.qwen_7_b.json
+new file mode 100644
+index 0000000..6822fad
+--- /dev/null
++++ b/scripts/aggregated/54ef76b364ff38d1832a2779a9dd9f38483a5971.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "54ef76b364ff38d1832a2779a9dd9f38483a5971",
++  "solid_qwen_7_b": 7.5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/5bc47e2f492c6c805c3fc0a826fc9f39fbc6b97d.qwen_7_b.json b/scripts/aggregated/5bc47e2f492c6c805c3fc0a826fc9f39fbc6b97d.qwen_7_b.json
+new file mode 100644
+index 0000000..7892fd1
+--- /dev/null
++++ b/scripts/aggregated/5bc47e2f492c6c805c3fc0a826fc9f39fbc6b97d.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "5bc47e2f492c6c805c3fc0a826fc9f39fbc6b97d",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/5bca93c1dd81f970cd667293c3a5ca9280834099.qwen_7_b.json b/scripts/aggregated/5bca93c1dd81f970cd667293c3a5ca9280834099.qwen_7_b.json
+new file mode 100644
+index 0000000..3479af6
+--- /dev/null
++++ b/scripts/aggregated/5bca93c1dd81f970cd667293c3a5ca9280834099.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "5bca93c1dd81f970cd667293c3a5ca9280834099",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/6103792dadd67980cd76a28b8fd7fd8f06802b74.qwen_7_b.json b/scripts/aggregated/6103792dadd67980cd76a28b8fd7fd8f06802b74.qwen_7_b.json
+new file mode 100644
+index 0000000..95a5d13
+--- /dev/null
++++ b/scripts/aggregated/6103792dadd67980cd76a28b8fd7fd8f06802b74.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "6103792dadd67980cd76a28b8fd7fd8f06802b74",
++  "solid_qwen_7_b": null
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/6494dca6b9712b4e5ea9220dd6a01c486b3d150c.qwen_7_b.json b/scripts/aggregated/6494dca6b9712b4e5ea9220dd6a01c486b3d150c.qwen_7_b.json
+new file mode 100644
+index 0000000..9e17eac
+--- /dev/null
++++ b/scripts/aggregated/6494dca6b9712b4e5ea9220dd6a01c486b3d150c.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "6494dca6b9712b4e5ea9220dd6a01c486b3d150c",
++  "solid_qwen_7_b": 6.67
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/794f80a9f91730cd86ba11811d943ac44baef10c.qwen_7_b.json b/scripts/aggregated/794f80a9f91730cd86ba11811d943ac44baef10c.qwen_7_b.json
+new file mode 100644
+index 0000000..7103146
+--- /dev/null
++++ b/scripts/aggregated/794f80a9f91730cd86ba11811d943ac44baef10c.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "794f80a9f91730cd86ba11811d943ac44baef10c",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/799f5f6ecba8053eab774bb7187c6caa12867f76.qwen_7_b.json b/scripts/aggregated/799f5f6ecba8053eab774bb7187c6caa12867f76.qwen_7_b.json
+new file mode 100644
+index 0000000..a0a7edd
+--- /dev/null
++++ b/scripts/aggregated/799f5f6ecba8053eab774bb7187c6caa12867f76.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "799f5f6ecba8053eab774bb7187c6caa12867f76",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/82b04729ef5a3ffdc201a40afa6d5dc7afc3d3e8.qwen_7_b.json b/scripts/aggregated/82b04729ef5a3ffdc201a40afa6d5dc7afc3d3e8.qwen_7_b.json
+new file mode 100644
+index 0000000..c1c9518
+--- /dev/null
++++ b/scripts/aggregated/82b04729ef5a3ffdc201a40afa6d5dc7afc3d3e8.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "82b04729ef5a3ffdc201a40afa6d5dc7afc3d3e8",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/84f323f2c0e05863d5daaef2e9d7fba1479282c4.qwen_7_b.json b/scripts/aggregated/84f323f2c0e05863d5daaef2e9d7fba1479282c4.qwen_7_b.json
+new file mode 100644
+index 0000000..7eff685
+--- /dev/null
++++ b/scripts/aggregated/84f323f2c0e05863d5daaef2e9d7fba1479282c4.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "84f323f2c0e05863d5daaef2e9d7fba1479282c4",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/954d781fe3b74410305b6f2cc6e83d6723b4fdac.qwen_7_b.json b/scripts/aggregated/954d781fe3b74410305b6f2cc6e83d6723b4fdac.qwen_7_b.json
+new file mode 100644
+index 0000000..1685403
+--- /dev/null
++++ b/scripts/aggregated/954d781fe3b74410305b6f2cc6e83d6723b4fdac.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "954d781fe3b74410305b6f2cc6e83d6723b4fdac",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/97c4ee23fd9d1dccb4fff2ef990d7334e1018ba1.qwen_7_b.json b/scripts/aggregated/97c4ee23fd9d1dccb4fff2ef990d7334e1018ba1.qwen_7_b.json
+new file mode 100644
+index 0000000..4888108
+--- /dev/null
++++ b/scripts/aggregated/97c4ee23fd9d1dccb4fff2ef990d7334e1018ba1.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "97c4ee23fd9d1dccb4fff2ef990d7334e1018ba1",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/9a7d27b271304fae17e35b12f536a010a8e7fd3b.qwen_7_b.json b/scripts/aggregated/9a7d27b271304fae17e35b12f536a010a8e7fd3b.qwen_7_b.json
+new file mode 100644
+index 0000000..ea2f49b
+--- /dev/null
++++ b/scripts/aggregated/9a7d27b271304fae17e35b12f536a010a8e7fd3b.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "9a7d27b271304fae17e35b12f536a010a8e7fd3b",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/a01131a97c2b49bd222ab88191a69d942319bb22.qwen_7_b.json b/scripts/aggregated/a01131a97c2b49bd222ab88191a69d942319bb22.qwen_7_b.json
+new file mode 100644
+index 0000000..801ab4f
+--- /dev/null
++++ b/scripts/aggregated/a01131a97c2b49bd222ab88191a69d942319bb22.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "a01131a97c2b49bd222ab88191a69d942319bb22",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/ac5a71e9bd64a1cea323ab60566cf58d54aeb0bd.qwen_7_b.json b/scripts/aggregated/ac5a71e9bd64a1cea323ab60566cf58d54aeb0bd.qwen_7_b.json
+new file mode 100644
+index 0000000..2b0a82f
+--- /dev/null
++++ b/scripts/aggregated/ac5a71e9bd64a1cea323ab60566cf58d54aeb0bd.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "ac5a71e9bd64a1cea323ab60566cf58d54aeb0bd",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/b3c2fc2147510cc2b6019f52857da2842c7b35a2.qwen_7_b.json b/scripts/aggregated/b3c2fc2147510cc2b6019f52857da2842c7b35a2.qwen_7_b.json
+new file mode 100644
+index 0000000..4e4b129
+--- /dev/null
++++ b/scripts/aggregated/b3c2fc2147510cc2b6019f52857da2842c7b35a2.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "b3c2fc2147510cc2b6019f52857da2842c7b35a2",
++  "solid_qwen_7_b": 8
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/b73cf1adb90632417ffbfa0c1edf7730b53fc796.qwen_7_b.json b/scripts/aggregated/b73cf1adb90632417ffbfa0c1edf7730b53fc796.qwen_7_b.json
+new file mode 100644
+index 0000000..6d37255
+--- /dev/null
++++ b/scripts/aggregated/b73cf1adb90632417ffbfa0c1edf7730b53fc796.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "b73cf1adb90632417ffbfa0c1edf7730b53fc796",
++  "solid_qwen_7_b": 8
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/be3381f685af34eb908c7f7a1cb77d4dc0a637b9.qwen_7_b.json b/scripts/aggregated/be3381f685af34eb908c7f7a1cb77d4dc0a637b9.qwen_7_b.json
+new file mode 100644
+index 0000000..be10690
+--- /dev/null
++++ b/scripts/aggregated/be3381f685af34eb908c7f7a1cb77d4dc0a637b9.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "be3381f685af34eb908c7f7a1cb77d4dc0a637b9",
++  "solid_qwen_7_b": 8
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/c6b703c772c0468954d2c6cebb1ece5bb77b9b0a.qwen_7_b.json b/scripts/aggregated/c6b703c772c0468954d2c6cebb1ece5bb77b9b0a.qwen_7_b.json
+new file mode 100644
+index 0000000..52129fc
+--- /dev/null
++++ b/scripts/aggregated/c6b703c772c0468954d2c6cebb1ece5bb77b9b0a.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "c6b703c772c0468954d2c6cebb1ece5bb77b9b0a",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/cd54cf87ed3055c9a74ab95706cd756897c94f70.qwen_7_b.json b/scripts/aggregated/cd54cf87ed3055c9a74ab95706cd756897c94f70.qwen_7_b.json
+new file mode 100644
+index 0000000..4997f7e
+--- /dev/null
++++ b/scripts/aggregated/cd54cf87ed3055c9a74ab95706cd756897c94f70.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "cd54cf87ed3055c9a74ab95706cd756897c94f70",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11.qwen_7_b.json b/scripts/aggregated/cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11.qwen_7_b.json
+new file mode 100644
+index 0000000..3ff9880
+--- /dev/null
++++ b/scripts/aggregated/cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "cf9b9778f8f8fb8c55060a0184eeffcda0c0ff11",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/d15e9dbb1a5dd4b7932f6ae78aa1edd57bb5b5cc.qwen_7_b.json b/scripts/aggregated/d15e9dbb1a5dd4b7932f6ae78aa1edd57bb5b5cc.qwen_7_b.json
+new file mode 100644
+index 0000000..22f3bd1
+--- /dev/null
++++ b/scripts/aggregated/d15e9dbb1a5dd4b7932f6ae78aa1edd57bb5b5cc.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "d15e9dbb1a5dd4b7932f6ae78aa1edd57bb5b5cc",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/e0d126f3ca2a701f24d6c5a9025b2f6a9760129f.qwen_7_b.json b/scripts/aggregated/e0d126f3ca2a701f24d6c5a9025b2f6a9760129f.qwen_7_b.json
+new file mode 100644
+index 0000000..220f6ba
+--- /dev/null
++++ b/scripts/aggregated/e0d126f3ca2a701f24d6c5a9025b2f6a9760129f.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "e0d126f3ca2a701f24d6c5a9025b2f6a9760129f",
++  "solid_qwen_7_b": null
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/e22037477c49aefedf1289859ff1e115d56af5fb.qwen_7_b.json b/scripts/aggregated/e22037477c49aefedf1289859ff1e115d56af5fb.qwen_7_b.json
+new file mode 100644
+index 0000000..3b92b83
+--- /dev/null
++++ b/scripts/aggregated/e22037477c49aefedf1289859ff1e115d56af5fb.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "e22037477c49aefedf1289859ff1e115d56af5fb",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/e4c25312b3dcb6a869829751584d547b445776f6.qwen_7_b.json b/scripts/aggregated/e4c25312b3dcb6a869829751584d547b445776f6.qwen_7_b.json
+new file mode 100644
+index 0000000..1efeb15
+--- /dev/null
++++ b/scripts/aggregated/e4c25312b3dcb6a869829751584d547b445776f6.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "e4c25312b3dcb6a869829751584d547b445776f6",
++  "solid_qwen_7_b": 5
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/e6e9dd02f41cf5372f9a88627165476084246d66.qwen_7_b.json b/scripts/aggregated/e6e9dd02f41cf5372f9a88627165476084246d66.qwen_7_b.json
+new file mode 100644
+index 0000000..ad17780
+--- /dev/null
++++ b/scripts/aggregated/e6e9dd02f41cf5372f9a88627165476084246d66.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "e6e9dd02f41cf5372f9a88627165476084246d66",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/eb79f5c56bde79ce86d09d520e326c4ba63b17f2.qwen_7_b.json b/scripts/aggregated/eb79f5c56bde79ce86d09d520e326c4ba63b17f2.qwen_7_b.json
+new file mode 100644
+index 0000000..5f255ab
+--- /dev/null
++++ b/scripts/aggregated/eb79f5c56bde79ce86d09d520e326c4ba63b17f2.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "eb79f5c56bde79ce86d09d520e326c4ba63b17f2",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/aggregated/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.qwen_7_b.json b/scripts/aggregated/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.qwen_7_b.json
+new file mode 100644
+index 0000000..010997c
+--- /dev/null
++++ b/scripts/aggregated/f6e04f4d82dbb8d1230dfc01f28feb128c11389f.qwen_7_b.json
+@@ -0,0 +1,4 @@
++{
++  "commit": "f6e04f4d82dbb8d1230dfc01f28feb128c11389f",
++  "solid_qwen_7_b": 7
++}
+\ No newline at end of file
+diff --git a/scripts/ollama_client.py b/scripts/ollama_client.py
+index 72dcaec..7071bd9 100644
+--- a/scripts/ollama_client.py
++++ b/scripts/ollama_client.py
+@@ -3,8 +3,8 @@ import json
+ import time
+ 
+ OLLAMA_URL = "http://localhost:11434/api/generate"
+-RUN_ID = "qwen_7_b"
+-MODEL = "qwen2.5:7b"
++RUN_ID = "gemma_2_9_b"
++MODEL = "gemma2:9b"
+ 
+ SYSTEM_PROMPT = """
+ Ты — software architect.

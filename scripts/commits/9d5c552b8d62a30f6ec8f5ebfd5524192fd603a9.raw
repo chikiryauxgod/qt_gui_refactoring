@@ -1,0 +1,875 @@
+commit 9d5c552b8d62a30f6ec8f5ebfd5524192fd603a9
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Thu Jan 22 02:50:03 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Thu Jan 22 02:50:03 2026 +0500
+
+    refactor: class MainWindow
+
+diff --git a/src/application/app_state.py b/src/application/app_state.py
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/src/erosion_process/erosion_process_tab.py b/src/erosion_process/erosion_process_tab.py
+index d2194c2..ad34557 100644
+--- a/src/erosion_process/erosion_process_tab.py
++++ b/src/erosion_process/erosion_process_tab.py
+@@ -402,13 +402,13 @@ class ErosionProcessTab(QWidget):
+         axes_layout = QHBoxLayout()
+ 
+         self.x_control = AxisControlWidget("X")
+-        self.x_control.set_current_value(self.controller.current_x)
++        self.x_control.set_current_value(self.controller.state.current_x)
+ 
+         self.y_control = AxisControlWidget("Y")
+-        self.y_control.set_current_value(self.controller.current_y)
++        self.y_control.set_current_value(self.controller.state.current_y)
+ 
+         self.z_control = AxisControlWidget("Z")
+-        self.z_control.set_current_value(self.controller.current_z)
++        self.z_control.set_current_value(self.controller.state.current_z)
+ 
+         reset_btn = QPushButton("Вернуться в нулевое положение")
+         reset_btn.clicked.connect(self.return_to_zero_xyz)
+diff --git a/src/qt_interface.py b/src/qt_interface.py
+index cefb403..abaa227 100644
+--- a/src/qt_interface.py
++++ b/src/qt_interface.py
+@@ -47,7 +47,6 @@ from src.erosion_process.erosion_process_tab import ErosionProcessTab
+ 
+ 
+ 
+-
+ #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
+ #+ Выводить содержимое очереди в textbox процесса эрозии
+ #- Сделать независимое управление помпами в UI
+@@ -1068,7 +1067,7 @@ class ServiceTab(QWidget):
+             value_layout = QHBoxLayout()
+             value_layout.addWidget(QLabel("Текущее положение (мм):"))
+             
+-            current_value = getattr(self.controller, f'current_{axis.lower()}', 0)
++            current_value = getattr(self.controller.state, f'current_{axis.lower()}', 0)
+             value_display = QLabel(f"{current_value:.2f}")
+             value_display.setStyleSheet("font-weight: bold; font-size: 12pt;")
+             value_layout.addWidget(value_display)
+@@ -1215,7 +1214,7 @@ class ServiceTab(QWidget):
+             top_layout = QHBoxLayout()
+             
+             # Текущий угол
+-            current_value = self.controller.current_joints[i] if i < len(self.controller.current_joints) else 0
++            current_value = self.controller.state.current_joints[i] if i < len(self.controller.state.current_joints) else 0
+             value_layout = QVBoxLayout()
+             value_display = QLabel(f"{current_value:.1f}°")
+             value_display.setStyleSheet("font-weight: bold; font-size: 11px; background-color: #f0f0f0; padding: 2px; border: 1px solid #ccc;")
+@@ -1481,19 +1480,19 @@ class ServiceTab(QWidget):
+         point_layout.addWidget(QLabel("X (мм):"), 0, 0)
+         self.new_x = QDoubleSpinBox()
+         self.new_x.setRange(-1000, 1000)
+-        self.new_x.setValue(self.controller.current_x)
++        self.new_x.setValue(self.controller.state.current_x)
+         point_layout.addWidget(self.new_x, 0, 1)
+         
+         point_layout.addWidget(QLabel("Y (мм):"), 1, 0)
+         self.new_y = QDoubleSpinBox()
+         self.new_y.setRange(-1000, 1000)
+-        self.new_y.setValue(self.controller.current_y)
++        self.new_y.setValue(self.controller.state.current_y)
+         point_layout.addWidget(self.new_y, 1, 1)
+         
+         point_layout.addWidget(QLabel("Z (мм):"), 2, 0)
+         self.new_z = QDoubleSpinBox()
+         self.new_z.setRange(-1000, 1000)
+-        self.new_z.setValue(self.controller.current_z)
++        self.new_z.setValue(self.controller.state.current_z)
+         point_layout.addWidget(self.new_z, 2, 1)
+ 
+         # self.new_x.editingFinished.connect(self.add_xyz_point)
+@@ -1582,7 +1581,7 @@ class ServiceTab(QWidget):
+             joints_layout.addWidget(QLabel(f"{joint} (°):"), i, 0)
+             spinbox = QDoubleSpinBox()
+             spinbox.setRange(-180, 180)
+-            current_value = self.controller.current_joints[i] if i < len(self.controller.current_joints) else 0
++            current_value = self.controller.state.current_joints[i] if i < len(self.controller.state.current_joints) else 0
+             spinbox.setValue(current_value)
+             spinbox.setSuffix(" °")
+             joints_layout.addWidget(spinbox, i, 1)
+@@ -1709,9 +1708,9 @@ class ServiceTab(QWidget):
+             self.xyz_controls[axis]['input'].setValue(value)
+         
+         positions = {
+-            'X': self.controller.current_x,
+-            'Y': self.controller.current_y, 
+-            'Z': self.controller.current_z
++            'X': self.controller.state.current_x,
++            'Y': self.controller.state.current_y, 
++            'Z': self.controller.state.current_z
+         }
+         positions[axis] = value
+         
+@@ -1719,7 +1718,7 @@ class ServiceTab(QWidget):
+ 
+     @Slot(str, float)
+     def move_xyz(self, axis, step):
+-        current = getattr(self.controller, f'current_{axis.lower()}')
++        current = getattr(self.controller.state, f'current_{axis.lower()}')
+         new_value = current + step
+         self.set_xyz_position(axis, new_value)
+ 
+@@ -1727,9 +1726,9 @@ class ServiceTab(QWidget):
+     def update_xyz_plot(self):
+         """Обновление графика XYZ"""
+         self.xyz_kinematics_plotter.plot(
+-            x=self.controller.current_x,
+-            y=self.controller.current_y,
+-            z=self.controller.current_z,
++            x=self.controller.state.current_x,
++            y=self.controller.state.current_y,
++            z=self.controller.state.current_z,
+         )
+ 
+ 
+@@ -1740,7 +1739,7 @@ class ServiceTab(QWidget):
+             self.joints_controls[joint]['display'].setText(f"{value:.2f}")
+             self.joints_controls[joint]['input'].setValue(value)
+         
+-        joints = self.controller.current_joints.copy()
++        joints = self.controller.state.current_joints.copy()
+         joint_index = int(joint[1])
+         if joint_index < len(joints):
+             joints[joint_index] = value
+@@ -1749,8 +1748,8 @@ class ServiceTab(QWidget):
+     @Slot(str, float)
+     def move_joint(self, joint, step):
+         joint_index = int(joint[1])
+-        if joint_index < len(self.controller.current_joints):
+-            current = self.controller.current_joints[joint_index]
++        if joint_index < len(self.controller.state.current_joints):
++            current = self.controller.state.current_joints[joint_index]
+             new_value = current + step
+             self.set_joint_position(joint, new_value)
+ 
+@@ -1760,7 +1759,7 @@ class ServiceTab(QWidget):
+             self.joints_ax.clear()
+             
+             # Получаем текущие углы суставов
+-            joints_degrees = self.controller.current_joints
++            joints_degrees = self.controller.state.current_joints
+             
+             # Отображаем кинематическую цепочку, если доступна
+             if self.robot_chain and IKPY_AVAILABLE and len(joints_degrees) >= 6:
+@@ -1797,9 +1796,9 @@ class ServiceTab(QWidget):
+     # Методы траекторий XYZ
+     @Slot()
+     def add_initial_xyz_point(self):
+-        x = self.controller.current_x
+-        y = self.controller.current_y
+-        z = self.controller.current_z
++        x = self.controller.state.current_x
++        y = self.controller.state.current_y
++        z = self.controller.state.current_z
+ 
+         self.trajectory_service.set_initial_point(x, y, z)
+ 
+@@ -2003,10 +2002,10 @@ class ServiceTab(QWidget):
+     @Slot()
+     def update_status(self):
+         status = "Текущий статус системы:\n"
+-        status += f"- Позиция X: {self.controller.current_x:.2f} мм\n"
+-        status += f"- Позиция Y: {self.controller.current_y:.2f} мм\n"
+-        status += f"- Позиция Z: {self.controller.current_z:.2f} мм\n"
+-        status += f"- Углы суставов: {', '.join([f'{j:.1f}°' for j in self.controller.current_joints])}\n"
++        status += f"- Позиция X: {self.controller.state.current_x:.2f} мм\n"
++        status += f"- Позиция Y: {self.controller.state.current_y:.2f} мм\n"
++        status += f"- Позиция Z: {self.controller.state.current_z:.2f} мм\n"
++        status += f"- Углы суставов: {', '.join([f'{j:.1f}°' for j in self.controller.state.current_joints])}\n"
+         status += "- Эрозия: выключена\n"
+         status += "- Вода: отключена\n"
+         
+@@ -2039,61 +2038,185 @@ class ServiceTab(QWidget):
+         elif move_type == 'joint':
+             self.move_joint(target, step * 0.3)
+ # Главное окно приложения
+-class MainWindow(QMainWindow):
+-    def __init__(self):
+-        super().__init__()
+-        self.X0 = X0
+-        self.Y0 = Y0
+-        self.Z0 = Z0
+-        
+-        # Централизованное хранение текущих координат
+-        self.current_x = X0
+-        self.current_y = Y0
+-        self.current_z = Z0
+-        self.current_joints = [0, 0, 0, 0, 0, 0]
+-
++class IHardwareController:
++    def set_coord_pos(self, x, y, z): pass
++    def set_joint_pos(self, joints): pass
++    def set_erosion(self, state): pass
++    def set_water(self, state): pass
++    def pump_control_one(self): pass
++    def pump_control_two(self): pass
++    def set_speed(self, v): pass
++    def emergency_stop(self): pass
++
++# Hardware controller implementation
++class HardwareController(IHardwareController):
++    def __init__(self, erode=None):
++        self.erode = erode or Electroerosion()
++        self.robot = self.erode.robot if self.erode.robot else Robot()
++        self.pico = self.erode.erosion if self.erode.erosion else Pico()
+         self.state_pump_one = False
+         self.state_pump_two = False
+-        
+-        # Флаг для предотвращения рекурсивных обновлений
+-        self.updating_coordinates = False
+-        
+-        # Инициализация контроллеров оборудования
+-        try:
+-            self.erode = Electroerosion()#, X, Y, Z, XS, YS, ZS)
+-            self.robot_controller = self.erode.robot
+-            self.pico_controller = self.erode.erosion
+-        except Exception as e:
+-            logger(f'Couldnt connect to the hardware: {str(e)}', queue=q, file=sys.stderr)
+-            self.robot_controller = None
+-            self.pico_controller = None
+-        
+-        self.video_thread = None
++
++    def set_coord_pos(self, x, y, z):
++        self.erode.set_coord_pos(x, y, z)
++        self.robot.current_x = x
++        self.robot.current_y = y
++        self.robot.current_z = z
++
++    def set_joint_pos(self, joints):
++        self.robot.set_joint_pos(joints)
++
++    def set_erosion(self, state):
++        self.pico.erosion(1 if state else 0)
++
++    def set_water(self, state):
++        self.pico.pump_in(1 if state else 0)
++        self.pico.pump_out(1 if state else 0)
++
++    def pump_control_one(self):
++        self.state_pump_one = not self.state_pump_one
++        self.pico.pump_in(1 if self.state_pump_one else 0)
++
++    def pump_control_two(self):
++        self.state_pump_two = not self.state_pump_two
++        self.pico.pump_out(1 if self.state_pump_two else 0)
++
++    def set_speed(self, v):
++        self.robot.set_speed(v)
++
++    def emergency_stop(self):
++        self.robot.emergency_stop()
++
++# State management (SRP)
++class StateManager:
++    def __init__(self, x0, y0, z0, robot):
++        self.current_x = x0
++        self.current_y = y0
++        self.current_z = z0
++        self.current_joints = [0] * 6
++        self.updating = False
++        self.robot = robot
++
++    def sync_from_robot(self):
++        self.current_x = self.robot.current_x
++        self.current_y = self.robot.current_y
++        self.current_z = self.robot.current_z
++
++# Video management (SRP)
++class VideoManager:
++    def __init__(self, video_label=None):
++        self.video_thread = VideoStreamThread()
++        self.video_label = video_label
++
++    def start(self):
++        self.video_thread.new_frame.connect(self.update_frame)
++        self.video_thread.start()
++
++    def stop(self):
++        self.video_thread.stop()
++
++    @Slot(QImage)
++    def update_frame(self, image):
++        if self.video_label:
++            pixmap = QPixmap.fromImage(image)
++            scaled = pixmap.scaled(self.video_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
++            self.video_label.setPixmap(scaled)
++
++# Process management (SRP)
++class ProcessManager:
++    def __init__(self, hardware_controller, erosion_tab, state_manager):
++        self.hardware = hardware_controller
++        self.erosion_tab = erosion_tab
++        self.state = state_manager
+         self.erosion_worker = None
+-        self.update_textbox = None
+-        
++
++    def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
++        erosion_controller = ErosionController(Electroerosion, filename, logger=logger, speed=10, mode=mode)
++        gcode_processor = GCodeProcessor(gcode_points, erosion_time)
++        self.erosion_worker = ErosionWorker(erosion_controller, gcode_processor)
++        self.erosion_worker.progress_updated.connect(lambda p: self.erosion_tab.progress_bar.setValue(int(p)))
++        self.erosion_worker.time_updated.connect(lambda t: self.erosion_tab.time_label.setText(f"Осталось: {t}"))
++        self.erosion_worker.finished.connect(self.erosion_finished)
++        self.erosion_worker.paused.connect(self.erosion_paused)
++        self.erosion_worker.resumed.connect(self.erosion_resumed)
++        self.erosion_worker.start()
++        self.erosion_tab.set_erosion_worker(self.erosion_worker)
++        self.erosion_tab.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++        logger("Процесс запущен", queue=q)
++
++    def stop_erosion_process(self):
++        if self.erosion_worker and self.erosion_worker.isRunning():
++            self.erosion_worker.stop()
++            self.erosion_worker.wait(2000) or self.erosion_worker.terminate()
++        self.erosion_tab.set_stopped_ui_state()
++        self.erosion_tab.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
++
++    def erosion_finished(self):
++        self.erosion_tab.update_process_status("ПРОЦЕСС ЗАВЕРШЕН", "#3498db")
++
++    def erosion_paused(self):
++        self.erosion_tab.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
++
++    def erosion_resumed(self):
++        self.erosion_tab.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
++
++# UI synchronization (SRP)
++class UIManager:
++    def __init__(self, erosion_tab, service_tab, state_manager):
++        self.erosion_tab = erosion_tab
++        self.service_tab = service_tab
++        self.state = state_manager
++
++    def sync_coordinates_to_tabs(self):
++        for axis in ['X', 'Y', 'Z']:
++            if axis in self.service_tab.xyz_controls:
++                control = self.service_tab.xyz_controls[axis]
++                value = getattr(self.state, f'current_{axis.lower()}')
++                control['display'].setText(f"{value:.2f}")
++                control['input'].setValue(value)
++        if hasattr(self.service_tab, 'update_xyz_plot'):
++            self.service_tab.update_xyz_plot()
++        self.erosion_tab.x_control.value_label.setText(f"{self.state.current_x:.1f} мм")
++        self.erosion_tab.y_control.value_label.setText(f"{self.state.current_y:.1f} мм")
++        self.erosion_tab.z_control.value_label.setText(f"{self.state.current_z:.1f} мм")
++
++    def sync_joints_to_tabs(self):
++        for i, joint in enumerate(['J0', 'J1', 'J2', 'J3', 'J4', 'J5']):
++            if joint in self.service_tab.joints_controls and i < len(self.state.current_joints):
++                control = self.service_tab.joints_controls[joint]
++                value = self.state.current_joints[i]
++                control['display'].setText(f"{value:.2f}")
++                control['input'].setValue(value)
++        if hasattr(self.service_tab, 'update_joints_plot'):
++            self.service_tab.update_joints_plot()
++
++# Main window (thin client, SRP: UI only)
++class MainWindow(QMainWindow):
++    def __init__(self):
++        super().__init__()
++        self.hardware = HardwareController()
++        self.state = StateManager(X0, Y0, Z0, self.hardware.robot)
++        self.video_manager = VideoManager()
++        self.process_manager = None
++        self.ui_manager = None
+         self.create_widgets()
+-        self.setup_video()
+-        
++        self.video_manager.start()
++
+     def create_widgets(self):
+         self.setWindowTitle("Управление электроэрозионной установкой")
+         self.setGeometry(100, 100, 1000, 700)
+-        #self.setFixedSize(1920, 1000) #Фиксированное окно
+         self.setMinimumSize(1340, 720)
+         self.setMaximumSize(1920, 1000)
+-        # Центральный виджет с вкладками
++
+         central_widget = QTabWidget()
+         self.setCentralWidget(central_widget)
+-        
+-        # Вкладка процесса электроэрозии
++
+         self.erosion_tab = ErosionProcessTab(self, q)
+         central_widget.addTab(self.erosion_tab, "Процесс электроэрозии")
+-        
+-        # Вкладка сервисного управления
++
+         self.service_tab = ServiceTab(self)
+         central_widget.addTab(self.service_tab, "Сервисное управление")
+-        
+-        # Настройка стиля
++
+         self.setStyleSheet("""
+             QMainWindow {
+                 background-color: #f0f0f0;
+@@ -2111,411 +2234,89 @@ class MainWindow(QMainWindow):
+                 padding: 0 5px 0 5px;
+             }
+         """)
+-    
+-    def setup_video(self):
+-        """Запуск видеопотока"""
+-        self.video_thread = VideoStreamThread()
+-        self.video_thread.new_frame.connect(self.update_video_frame)
+-        self.video_thread.start()
+-    
+-    @Slot(QImage)
+-    def update_video_frame(self, image):
+-        """Обновление видеокадра"""
+-        if hasattr(self, 'erosion_tab') and hasattr(self.erosion_tab, 'video_label'):
+-            pixmap = QPixmap.fromImage(image)
+-            scaled_pixmap = pixmap.scaled(
+-                self.erosion_tab.video_label.size(),
+-                Qt.KeepAspectRatio,
+-                Qt.SmoothTransformation
+-            )
+-            self.erosion_tab.video_label.setPixmap(scaled_pixmap)
+-    @Slot(int)
+-    def set_speed_w(self, v):
+-        if self.robot_controller:
+-            self.robot_controller.set_speed(v)
+-        else:
+-            logger("set speed", v)
++
++        self.video_manager.video_label = self.erosion_tab.video_label
++        self.process_manager = ProcessManager(self.hardware, self.erosion_tab, self.state)
++        self.ui_manager = UIManager(self.erosion_tab, self.service_tab, self.state)
+ 
+     @Slot(float, float, float)
+     def set_coord_pos(self, x, y, z):
+-        """Установка позиции с синхронизацией между вкладками"""
+-        if self.updating_coordinates:
++        if self.state.updating:
+             return
+-            
+-        self.updating_coordinates = True
+-        
++        self.state.updating = True
+         try:
+-            # Обновляем центральные координаты
+-            self.current_x = x
+-            self.current_y = y
+-            self.current_z = z
+-            
+-            # Отправляем команду роботу (если подключен)
+-            if self.robot_controller:
+-                logger(f"Set position: X={x:.2f}, Y={y:.2f}, Z={z:.2f}", queue=q, file=sys.stderr)
+-                self.erode.set_coord_pos(x, y, z)
+-            else:
+-                logger(f"Set position: X={x:.2f}, Y={y:.2f}, Z={z:.2f}", queue=q, file=sys.stderr)
+-                # if hasattr(self, 'erosion_tab'):
+-                #     self.erosion_tab.status_text("X={x:.2f}, Y={y:.2f}, Z={z:.2f}")
+-            
+-            # Синхронизируем вкладки
+-            self.sync_coordinates_to_tabs()
+-            
++            self.hardware.set_coord_pos(x, y, z)
++            self.state.sync_from_robot()
++            self.ui_manager.sync_coordinates_to_tabs()
+         except Exception as e:
+-            # QMessageBox.critical(self, "Ошибка", f"Не удалось установить позицию: {str(e)}")
+-            logger(f"Couldn't set position:", queue=q)
++            logger(f"Couldn't set position: {str(e)}", queue=q)
+         finally:
+-            self.updating_coordinates = False
+-    
++            self.state.updating = False
++
+     @Slot(list)
+     def set_joint_pos(self, joints):
+-        """Установка позиции по суставам с синхронизацией"""
+-        if self.updating_coordinates:
++        if self.state.updating:
+             return
+-            
+-        self.updating_coordinates = True
+-        
++        self.state.updating = True
+         try:
+-            # Обновляем центральные углы
+-            self.current_joints = joints[:6]  # Берем только первые 6 суставов
+-            
+-            # Отправляем команду роботу (если подключен)
+-            if self.robot_controller:
+-                self.robot_controller.set_joint_pos(joints)
+-            else:
+-
+-                logger(f"Set joints: {joints}", queue=q)
+-            
+-            # Синхронизируем вкладки
+-            self.sync_joints_to_tabs()
+-            
++            self.hardware.set_joint_pos(joints)
++            self.state.current_joints = joints[:6]
++            self.ui_manager.sync_joints_to_tabs()
+         except Exception as e:
+-            # QMessageBox.critical(self, "Ошибка", f"Не удалось установить углы: {str(e)}")
+-            logger(f"Couldn't set corners: {str(e)}")
++            logger(f"Couldn't set joints: {str(e)}", queue=q)
+         finally:
+-            self.updating_coordinates = False
+-    
+-    def sync_coordinates_to_tabs(self):
+-        
+-        """Синхронизация координат со всеми вкладками"""
+-        # Синхронизация с сервисной вкладкой
+-        if hasattr(self, 'service_tab') and self.service_tab:
+-            # Обновляем отображение в сервисной вкладке
+-            for axis in ['X', 'Y', 'Z']:
+-                if (hasattr(self.service_tab, 'xyz_controls') and 
+-                    axis in self.service_tab.xyz_controls):
+-
+-                    control = self.service_tab.xyz_controls[axis]
+-                    value = getattr(self, f'current_{axis.lower()}')
+-                    control['display'].setText(f"{value:.2f}")
+-                    control['input'].setValue(value)
+-            
+-            # Обновляем графики
+-            if hasattr(self.service_tab, 'update_xyz_plot'):
+-                self.service_tab.update_xyz_plot()
+-        
+-        # Синхронизация с вкладкой процесса
+-        if (hasattr(self, 'erosion_tab') and 
+-            hasattr(self.erosion_tab, 'x_control') and
+-            hasattr(self.erosion_tab, 'y_control') and 
+-            hasattr(self.erosion_tab, 'z_control')):
+-            
+-            self.erosion_tab.x_control.value_label.setText(f"{self.current_x:.1f} мм")
+-            self.erosion_tab.y_control.value_label.setText(f"{self.current_y:.1f} мм")
+-            self.erosion_tab.z_control.value_label.setText(f"{self.current_z:.1f} мм")
+-
+-
+-
+-        # if (hasattr(self, 'erosion_tab') and
+-        #     hasattr(self.erosion_tab, 'status_text')):
++            self.state.updating = False
+ 
+-        #     self.erosion_tab.status_text.append(f"X={self.current_x:.2f}, Y={self.current_y:.2f}, Z={self.current_z:.2f}")
+-        #     # self.erosion_tab.status_text.clear()
+-        #     # self.erosion_tab.status_text.append(q.get())
+-        #     scrollbar = self.erosion_tab.status_text.verticalScrollBar()
+-        #     scrollbar.setValue(scrollbar.maximum())
+-    
+-    def sync_joints_to_tabs(self):
+-        """Синхронизация углов суставов со вкладками"""
+-        if hasattr(self, 'service_tab') and self.service_tab:
+-            for i, joint in enumerate(['J0', 'J1', 'J2', 'J3', 'J4', 'J5']):
+-                if (hasattr(self.service_tab, 'joints_controls') and 
+-                    joint in self.service_tab.joints_controls and
+-                    i < len(self.current_joints)):
+-                    
+-                    control = self.service_tab.joints_controls[joint]
+-                    value = self.current_joints[i]
+-                    control['display'].setText(f"{value:.2f}")
+-                    control['input'].setValue(value)
+-            
+-            # Обновляем график суставов
+-            if hasattr(self.service_tab, 'update_joints_plot'):
+-                self.service_tab.update_joints_plot()
+-    
+     @Slot(bool)
+     def set_erosion(self, state):
+-        """Включение/выключение эрозии"""
+-        try:
+-            if self.pico_controller:
+-                if state:
+-                    self.pico_controller.erosion(1)
+-                else:
+-                    self.pico_controller.erosion(0)
+-            else:
+-                status = "ВКЛЮЧЕНА" if state else "ВЫКЛЮЧЕНА"
+-                logger(f"Эрозия {status} (эмуляция)")
+-                
+-                # Обновляем статус в сервисной вкладке
+-                if hasattr(self, 'service_tab'):
+-                    self.service_tab.update_status()
+-                    
+-        except Exception as e:
+-            # QMessageBox.critical(self, "Ошибка", f"Не удалось управлять эрозией: {str(e)}")
+-            logger(f"Erosion control failed: {str(e)}", queue=q)
+-    
++        self.hardware.set_erosion(state)
++        if hasattr(self.service_tab, 'update_status'):
++            self.service_tab.update_status()
++
+     @Slot(bool)
+     def set_water(self, state):
+-        """Включение/выключение воды"""
+-        try:
+-            if self.pico_controller:
+-                if state:
+-                    self.pico_controller.pump_in(1)
+-                    self.pico_controller.pump_out(1)
+-                else:
+-                    self.pico_controller.pump_in(0)
+-                    self.pico_controller.pump_out(0)
+-            else:
+-                status = "ВКЛЮЧЕНА" if state else "ВЫКЛЮЧЕНА"
+-                logger(f"Вода {status} (эмуляция)")
+-                
+-                # Обновляем статус в сервисной вкладке
+-                if hasattr(self, 'service_tab'):
+-                    self.service_tab.update_status()
+-                    
+-        except Exception as e:
+-            QMessageBox.critical(self, "Ошибка", f"Не удалось управлять водой: {str(e)}")
+-            logger(f"Water control failed: {str(e)}", queue=q)
+-    
++        self.hardware.set_water(state)
++        if hasattr(self.service_tab, 'update_status'):
++            self.service_tab.update_status()
++
+     def pump_control_one(self):
+-        try:
+-            if self.pico_controller:
+-                if not self.state_pump_one:
+-                    self.pico_controller.pump_in(1)
+-                    self.state_pump_one = True
+-                    logger("+")
+-                else:
+-                    self.pico_controller.pump_in(0)
+-                    self.state_pump_one = False
+-                    logger("-")
+-            else:
+-                if not self.state_pump_one:
+-                    self.state_pump_one = True
+-                else:
+-                    self.state_pump_one = False
+-                status = "ВКЛЮЧЕНА" if self.state_pump_one else "ВЫКЛЮЧЕНА"
+-                logger(f"Помпа 1 {status} (эмуляция)")
+-                
+-                # Обновляем статус в сервисной вкладке
+-                if hasattr(self, 'service_tab'):
+-                    self.service_tab.update_status()
+-                    
+-        except Exception as e:
+-            QMessageBox.critical(self, "Ошибка", f"Не удалось управлять водой: {str(e)}")
+-            logger(f"Water control failed: {str(e)}", queue=q)
++        self.hardware.pump_control_one()
++        if hasattr(self.service_tab, 'update_status'):
++            self.service_tab.update_status()
+ 
+     def pump_control_two(self):
+-        try:
+-            if self.pico_controller:
+-                if not self.state_pump_two:
+-                    self.pico_controller.pump_out(1)
+-                    self.state_pump_two = True
+-                else:
+-                    self.pico_controller.pump_out(0)
+-                    self.state_pump_two = False
+-            else:
+-                if not self.state_pump_two:
+-                    self.state_pump_two = True
+-                else:
+-                    self.state_pump_two = False
+-                status = "ВКЛЮЧЕНА" if self.state_pump_two else "ВЫКЛЮЧЕНА"
+-                logger(f"Помпа 2 {status} (эмуляция)")
+-                
+-                # Обновляем статус в сервисной вкладке
+-                if hasattr(self, 'service_tab'):
+-                    self.service_tab.update_status()
+-                    
+-        except Exception as e:
+-            QMessageBox.critical(self, "Ошибка", f"Не удалось управлять водой: {str(e)}")
+-            logger(f"Water control failed: {str(e)}", queue=q)
+-    
+-
+-    @Slot(list, float, float, float, float, float,)
+-    def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
+-
+-        
+-        logger(f"DEBUG: start_erosion_process called", queue=q)
+-
+-        """Запуск процесса электроэрозии"""
+-        try:
++        self.hardware.pump_control_two()
++        if hasattr(self.service_tab, 'update_status'):
++            self.service_tab.update_status()
+ 
+-            logger(f"Start erosion process with param: ", queue=q)
+-            logger(f"- Points G-code: {len(gcode_points)} mm", queue=q)
+-            logger(f"- Diametr electrode: {electrode_diameter} mm", queue=q)
+-            logger(f"- Length electrode: {electrode_length} mm", queue=q)
+-            logger(f"- Time erosion: {erosion_time} s", queue=q)
+-            logger(f"- Time up: {erosion_up_time} s", queue=q)
+-            logger(f"- Deep: {erosion_depth} mm", queue=q)
+-            logger(f"- Mode: {mode}", queue=q)
++    @Slot(int)
++    def set_speed_w(self, v):
++        self.hardware.set_speed(v)
+ 
+-            
+-            self.erosion_worker = ErosionWorker(self.erode, gcode_points, erosion_time, 
+-                                            electrode_diameter, electrode_length, 
+-                                            erosion_time, erosion_up_time, 
+-                                            erosion_depth, filename)
+-            
+-            self.erosion_worker.progress_updated.connect(self.update_erosion_progress)
+-            self.erosion_worker.time_updated.connect(self.update_erosion_time)
+-            self.erosion_worker.finished.connect(self.erosion_finished)
+-            self.erosion_worker.paused.connect(self.erosion_paused)
+-            self.erosion_worker.resumed.connect(self.erosion_resumed)
+-            
+-            self.erosion_worker.start()
+-            
+-            # Передаем рабочий поток во вкладку процесса
+-            self.erosion_tab.set_erosion_worker(self.erosion_worker)
+-            
+-            # Обновляем статус во вкладке процесса
+-            if hasattr(self, 'erosion_tab'):
+-                self.erosion_tab.status_text.clear()
+-                self.erosion_tab.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+-                # self.erosion_tab.status_text.append(f"[{time.strftime('%H:%M:%S')}] Процесс запущен")
+-                logger("Процесс запущен", queue=q)
+-                # self.erosion_tab.status_text.append(f"- Всего точек: {len(gcode_points)}")
+-                # self.erosion_tab.status_text.append(f"- Общее время: {erosion_time} с")
+-                # self.erosion_tab.status_text.append(f"- Диаметр электрода: {electrode_diameter} мм")
+-                # self.erosion_tab.status_text.append("="*50)
+-                
+-        
+-            
+-        except Exception as e:
+-            # QMessageBox.critical(self, "Ошибка", f"Не удалось запустить процесс: {str(e)}")
+-            logger(f"Failed to start process: {str(e)}", queue=q)
+-    @Slot()
+-    def erosion_paused(self):
+-        """Обработчик паузы процесса"""
+-        if hasattr(self, 'erosion_tab'):
+-            self.erosion_tab.update_process_status("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
+-            # self.erosion_tab.status_text.append(f"[{time.strftime('%H:%M:%S')}] Процесс приостановлен")
+-            logger("Процесс приостановлен", queue=q)
++    @Slot(list, float, float, float, float, float, str, str)
++    def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
++        self.process_manager.start_erosion_process(gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode)
+ 
+-    @Slot()
+-    def erosion_resumed(self):
+-        """Обработчик возобновления процесса"""
+-        if hasattr(self, 'erosion_tab'):
+-            self.erosion_tab.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+-            # self.erosion_tab.status_text.append(f"[{time.strftime('%H:%M:%S')}] Процесс возобновлен")
+-            logger("Процесс возобновлен", queue=q)
+-            
+-    @Slot(float)
+-    def update_erosion_progress(self, progress):
+-        """Обновление прогресса эрозии"""
+-        if hasattr(self, 'erosion_tab'):
+-            self.erosion_tab.progress_bar.setValue(int(progress))
+-    
+-    @Slot(str)
+-    def update_erosion_time(self, time_remaining):
+-        """Обновление оставшегося времени"""
+-        if hasattr(self, 'erosion_tab'):
+-            self.erosion_tab.time_label.setText(f"Осталось: {time_remaining}")
+-    
+-    @Slot()
+-    def erosion_finished(self):
+-        """Завершение процесса эрозии"""
+-        if hasattr(self, 'erosion_tab'):
+-            self.erosion_tab.update_process_status("ПРОЦЕСС ЗАВЕРШЕН", "#3498db")
+-            self.erosion_tab.start_btn.setEnabled(True)
+-            self.erosion_tab.pause_btn.setEnabled(False)
+-            self.erosion_tab.pause_btn.setText("⏸ Пауза")
+-            self.erosion_tab.progress_bar.setValue(100)
+-            self.erosion_tab.time_label.setText("Завершено")
+-            # self.erosion_tab.status_text.append(f"[{time.strftime('%H:%M:%S')}] Процесс завершен")
+-            logger('Process finished', queue=q)
+-    
+     @Slot()
+     def stop_erosion_process(self):
+-        """Остановка процесса электроэрозии"""
+-        try:
+-            if self.erosion_worker and self.erosion_worker.isRunning():
+-                self.erosion_worker.stop()
+-                if not self.erosion_worker.wait(2000):  # Ждем до 2 секунд
+-                    self.erosion_worker.terminate()
+-                    self.erosion_worker.wait()
+-            
+-            # Обновляем UI
+-            if hasattr(self, 'erosion_tab'):
+-                self.erosion_tab.start_btn.setEnabled(True)
+-                self.erosion_tab.pause_btn.setEnabled(False)
+-                self.erosion_tab.pause_btn.setText("⏸ Пауза")
+-                self.erosion_tab.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
+-                self.erosion_tab.progress_bar.setValue(0)
+-                self.erosion_tab.time_label.setText("Остановлено")
+-                self.erosion_tab.is_process_paused = False
+-                self.erosion_tab.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
+-            logger("Stop proccess electroerosion")
+-        except Exception as e:
+-            logger(f"Couldn't stop the process: {str(e)}", queue=q)
+-            
++        self.process_manager.stop_erosion_process()
++
+     @Slot()
+     def emergency_stop(self):
+-        """Аварийная остановка"""
+-        if hasattr(self, 'service_tab'):
++        self.hardware.emergency_stop()
++        if hasattr(self.service_tab, 'stop_continuous_move'):
+             self.service_tab.stop_continuous_move()
+-            
+-    @Slot()
++
+     def safe_finish(self):
+-        """Безопасное завершение"""
+-        try:
+-            # Останавливаем процесс эрозии
+-            self.stop_erosion_process()
+-            
+-            # Выключаем системы
+-            self.set_erosion(False)
+-            self.set_water(False)
+-            
+-            # Возвращаем в исходное положение
+-            self.set_coord_pos(self.X0, self.Y0, self.Z0)
+-            
+-            # Останавливаем видео поток
+-            if self.video_thread:
+-                self.video_thread.stop()
+-            
+-        except Exception as e:
+-            logger(f"Ошибка при безопасном завершении: {e}")
+-    
++        self.process_manager.stop_erosion_process()
++        self.hardware.set_erosion(False)
++        self.hardware.set_water(False)
++        self.set_coord_pos(X0, Y0, Z0)
++        self.video_manager.stop()
++
+     def closeEvent(self, event):
+-        """Обработка закрытия окна"""
+-        # reply = QMessageBox.question(
+-        #     self,
+-        #     "Подтверждение",
+-        #     "Вы уверены, что хотите закрыть приложение?",
+-        #     QMessageBox.Yes | QMessageBox.No,
+-        #     QMessageBox.No
+-        # )
+-        
+         self.safe_finish()
+- 
+-    def update_process_status(self, status, color="#ecf0f1"):
+-        """Обновление статуса процесса"""
+-        self.process_status_label.setText(status)
+-        self.process_status_label.setStyleSheet(f"""
+-            font-weight: bold; 
+-            font-size: 12pt; 
+-            padding: 10px;
+-            border-radius: 5px;
+-            background-color: {color};
+-        """)
+-
++        super().closeEvent(event)
+ """ class LogTextBoxErrosion(QThread):
+ 
+     new_message = Signal(str)

@@ -406,7 +406,7 @@ index c5ef03a..d2194c2 100644
          self.gcode_ax.clear()
          if self.gcode_points:
 diff --git a/src/erosion_worker/errosion_worker.py b/src/erosion_worker/erosion_worker.py
-similarity index 95%
+similarity index 96%
 rename from src/erosion_worker/errosion_worker.py
 rename to src/erosion_worker/erosion_worker.py
 index 185431c..dcb670b 100644

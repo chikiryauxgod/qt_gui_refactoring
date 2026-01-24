@@ -20,7 +20,7 @@ rename to src/erosion_worker/__init__.py
 FILE: src/erosion_worker/errosion_worker.py
 LANG: py
 
-similarity index 97%
+similarity index 98%
 rename from src/erosionWorker/errosionWorker.py
 rename to src/erosion_worker/errosion_worker.py
 index 077ae2e..185431c 100644
