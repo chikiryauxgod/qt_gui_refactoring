@@ -3,7 +3,7 @@ import json
 import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "olmo-3:7b"
+MODEL = "rnj-1:8b"
 
 SYSTEM_PROMPT = """
 Ты — software architect.

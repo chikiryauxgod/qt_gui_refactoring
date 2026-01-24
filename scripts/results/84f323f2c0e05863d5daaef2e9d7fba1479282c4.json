@@ -1,0 +1,9 @@
+[
+  {
+    "chunk": "chunk_0.txt",
+    "result": {
+      "solid_score": 2,
+      "reason": "The code does not clearly adhere to SOLID principles. The `AxisControlWidget` class has a tight coupling with the UI components and state management, which violates the Single Responsibility Principle. The class is responsible for both UI rendering and state management, which should be separated. Additionally, the class has a high degree of coupling with the Qt framework, which can make it difficult to test and maintain."
+    }
+  }
+]

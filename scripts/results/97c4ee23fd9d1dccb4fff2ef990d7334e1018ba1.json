@@ -1,0 +1,9 @@
+[
+  {
+    "chunk": "chunk_0.txt",
+    "result": {
+      "solid_score": 8,
+      "reason": "The changes introduce a new class `XYZTrajectoryExecutor` that follows the Single Responsibility Principle by encapsulating the logic for executing a trajectory. The class is well-structured and adheres to the Open/Closed Principle by being open for extension (e.g., adding more methods or parameters) without modifying existing code. The class also follows the Liskov Substitution Principle as it can be used as a drop-in replacement for any trajectory execution logic. The Interface Segregation Principle is not directly applicable here since there is no interface, but the class is designed to be used as a standalone component. The Dependency Inversion Principle is followed by depending on abstractions (like `trajectory_service`) rather than concrete implementations."
+    }
+  }
+]

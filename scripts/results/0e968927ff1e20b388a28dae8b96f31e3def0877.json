@@ -1,0 +1,9 @@
+[
+  {
+    "chunk": "chunk_0.txt",
+    "result": {
+      "solid_score": 6,
+      "reason": "The code shows some adherence to the Single Responsibility Principle (SRP) by separating concerns into different classes and methods. However, there are areas where the Open/Closed Principle (OCP) could be improved, such as making the JointTrajectoryService more extensible for different types of trajectory services. The Liskov Substitution Principle (LSP) is not violated, but there is room for improvement in ensuring that subclasses can be used interchangeably with their base classes. The Interface Segregation Principle (ISP) is not directly applicable here as there are no explicit interfaces, but the code could benefit from more focused interfaces. The Dependency Inversion Principle (DIP) is partially followed, but the code could be more decoupled from specific implementations."
+    }
+  }
+]
