@@ -1,0 +1,40 @@
+commit 459311002555ee1a07cdf8e4e2a351278c1f44b9
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Fri Jan 23 04:02:00 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Fri Jan 23 04:02:00 2026 +0500
+
+    refactor: new paths
+
+diff --git a/tests/Arrow3D/test_arrow3d.py b/tests/Arrow3D/test_arrow3d.py
+index e3f1c57..67c0f91 100644
+--- a/tests/Arrow3D/test_arrow3d.py
++++ b/tests/Arrow3D/test_arrow3d.py
+@@ -1,5 +1,5 @@
+ import pytest
+-from src.qt_interface import Arrow3D, Arrow3DData
++from src.arrow3D.arrow3D import Arrow3D, Arrow3DData
+ 
+ def stub_project(xs, ys, zs, matrix):
+     return xs, ys, zs
+diff --git a/tests/Arrow3D/test_data.py b/tests/Arrow3D/test_data.py
+index f20ec42..f6a75e4 100644
+--- a/tests/Arrow3D/test_data.py
++++ b/tests/Arrow3D/test_data.py
+@@ -1,5 +1,5 @@
+ import pytest
+-from src.qt_interface import Arrow3DData
++from src.arrow3D.arrow3D import Arrow3D, Arrow3DData
+ 
+ def test_arrow3d_data_as_tuple():
+     data = Arrow3DData(
+diff --git a/tests/ErosionWorker/test_erosion_worker.py b/tests/ErosionWorker/test_erosion_worker.py
+index a6a0ab0..f6991ef 100644
+--- a/tests/ErosionWorker/test_erosion_worker.py
++++ b/tests/ErosionWorker/test_erosion_worker.py
+@@ -1,4 +1,4 @@
+-from src.qt_interface import (
++from src.erosion_worker.erosion_worker import (
+     ErosionController,
+     GCodeProcessor,
+     ErosionWorker

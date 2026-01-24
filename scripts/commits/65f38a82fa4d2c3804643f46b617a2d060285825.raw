@@ -1,0 +1,399 @@
+commit 65f38a82fa4d2c3804643f46b617a2d060285825
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Fri Jan 23 04:02:29 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Fri Jan 23 04:02:29 2026 +0500
+
+    feat: new tests
+
+diff --git a/tests/MainWindow/test_hardware_controller.py b/tests/MainWindow/test_hardware_controller.py
+index 85e0b55..294f76e 100644
+--- a/tests/MainWindow/test_hardware_controller.py
++++ b/tests/MainWindow/test_hardware_controller.py
+@@ -1,18 +1,13 @@
+ import pytest
+ from unittest.mock import MagicMock, patch
+-from src.qt_interface import HardwareController
+-
+-class MockElectroerosion:
+-    def __init__(self):
+-        self.robot = MagicMock()
+-        self.erosion = MagicMock()
+-        self.set_coord_pos = MagicMock()
++from src.services.hardware_controller import HardwareController
+ 
+ class MockRobot:
+     def __init__(self):
+         self.current_x = 0
+         self.current_y = 0
+         self.current_z = 0
++        self.set_coord_pos = MagicMock()
+         self.set_joint_pos = MagicMock()
+         self.set_speed = MagicMock()
+         self.emergency_stop = MagicMock()
+@@ -23,19 +18,32 @@ class MockPico:
+         self.pump_in = MagicMock()
+         self.pump_out = MagicMock()
+ 
++class MockElectroerosion:
++    def __init__(self):
++        self.set_coord_pos = MagicMock()
++
+ @pytest.fixture
+ def hardware_controller():
+-    with patch('src.qt_interface.Electroerosion', return_value=MockElectroerosion()) as mock_erode:
++    with patch('src.electoerosion.Electroerosion', return_value=MockElectroerosion()) as mock_erode:
+         hc = HardwareController()
++        hc.robot = MockRobot()
++        hc.pico = MockPico()
++        hc.erode = mock_erode.return_value
+         yield hc
+ 
+ def test_hardware_set_coord_pos(hardware_controller):
++    hardware_controller.erode = MagicMock()
++    hardware_controller.robot = MagicMock()
++    
+     hardware_controller.set_coord_pos(1.0, 2.0, 3.0)
+-    hardware_controller.erode.set_coord_pos.assert_called_with(1.0, 2.0, 3.0)
++
++    hardware_controller.erode.set_coord_pos.assert_called_once_with(1.0, 2.0, 3.0)
++
+     assert hardware_controller.robot.current_x == 1.0
+     assert hardware_controller.robot.current_y == 2.0
+     assert hardware_controller.robot.current_z == 3.0
+ 
++
+ def test_hardware_set_joint_pos(hardware_controller):
+     joints = [10, 20, 30, 40, 50, 60]
+     hardware_controller.set_joint_pos(joints)
+@@ -63,4 +71,4 @@ def test_hardware_set_speed(hardware_controller):
+ 
+ def test_hardware_emergency_stop(hardware_controller):
+     hardware_controller.emergency_stop()
+-    hardware_controller.robot.emergency_stop.assert_called()
+\ No newline at end of file
++    hardware_controller.robot.emergency_stop.assert_called()
+diff --git a/tests/MainWindow/test_main_window.py b/tests/MainWindow/test_main_window.py
+index 7be1c7f..8ec6da5 100644
+--- a/tests/MainWindow/test_main_window.py
++++ b/tests/MainWindow/test_main_window.py
+@@ -1,98 +1,69 @@
+ import pytest
+-from unittest.mock import MagicMock, patch
+-from PySide6.QtCore import QThread, Signal
+-from src.qt_interface import MainWindow
+-
+-X0, Y0, Z0 = 0.0, 0.0, 0.0
++from unittest.mock import MagicMock
++from PySide6.QtCore import Qt
+ 
+ @pytest.fixture
+-def mocked_dependencies():
+-    with patch("src.qt_interface.HardwareController") as MockHardware, \
+-         patch("src.qt_interface.StateManager") as MockState, \
+-         patch("src.qt_interface.VideoManager") as MockVideo, \
+-         patch("src.qt_interface.ProcessManager") as MockProcess, \
+-         patch("src.qt_interface.UIManager") as MockUI:
+-
+-        mock_hardware = MockHardware.return_value
+-        mock_hardware.set_coord_pos = MagicMock()
+-        mock_hardware.set_joint_pos = MagicMock()
+-        mock_hardware.set_erosion = MagicMock()
+-        mock_hardware.set_water = MagicMock()
+-        mock_hardware.pump_control_one = MagicMock()
+-        mock_hardware.pump_control_two = MagicMock()
+-        mock_hardware.emergency_stop = MagicMock()
+-        mock_hardware.set_speed = MagicMock()
+-        
+-        mock_state = MockState.return_value
+-        mock_state.updating = False
+-        mock_state.current_x = X0
+-        mock_state.current_y = Y0
+-        mock_state.current_z = Z0
+-        mock_state.current_joints = [0] * 6
+-        mock_state.sync_from_robot = MagicMock()
+-        
+-        mock_video = MockVideo.return_value
+-        mock_video.start = MagicMock()
+-        mock_video.stop = MagicMock()
+-        mock_video.video_label = None
+-        
+-        mock_process = MockProcess.return_value
+-        mock_process.start_erosion_process = MagicMock()
+-        mock_process.stop_erosion_process = MagicMock()
+-        
+-        mock_ui = MockUI.return_value
+-        mock_ui.sync_coordinates_to_tabs = MagicMock()
+-        mock_ui.sync_joints_to_tabs = MagicMock()
+-        
+-        yield {
+-            "HardwareController": mock_hardware,
+-            "StateManager": mock_state,
+-            "VideoManager": mock_video,
+-            "ProcessManager": mock_process,
+-            "UIManager": mock_ui
+-        }
+-
+-def test_mainwindow_creation(qtbot, mocked_dependencies):
+-    """Тест создания MainWindow и вызова основных методов"""
++def mainwindow_mocked(qtbot):
++    from src.ui.main_window import MainWindow
++
++    hardware_mock = MagicMock()
++    state_mock = MagicMock()
++    state_mock.current_x = 1.0
++    state_mock.current_y = 2.0
++    state_mock.current_z = 3.0
++    state_mock.current_joints = [10, 20, 30, 40, 50, 60]
++    state_mock.updating = False
++
++    process_manager_mock = MagicMock()
++    ui_manager_mock = MagicMock()
++
+     window = MainWindow()
+-    qtbot.addWidget(window) 
+-    assert hasattr(window, "hardware")
+-    assert hasattr(window, "state")
+-    assert hasattr(window, "video_manager")
+-    assert hasattr(window, "process_manager")
+-    assert hasattr(window, "ui_manager")
+-    assert hasattr(window, "erosion_tab")
+-    assert hasattr(window, "service_tab")
+-
+-    window.set_coord_pos(10, 20, 30)
+-    window.hardware.set_coord_pos.assert_called_once_with(10, 20, 30)
+-    window.state.sync_from_robot.assert_called_once()
+-    
+-    window.set_joint_pos([1, 2, 3, 4, 5, 6])
+-    window.hardware.set_joint_pos.assert_called_once_with([1, 2, 3, 4, 5, 6])
++    qtbot.addWidget(window)
++
++    window.hardware = hardware_mock
++    window.state = state_mock
++    window.process_manager = process_manager_mock
++    window.ui_manager = ui_manager_mock
++
++    if hasattr(window, 'erosion_tab'):
++        window.erosion_tab.video_label = MagicMock()
++    if hasattr(window, 'service_tab'):
++        window.service_tab.update_status = MagicMock()
++        window.service_tab.stop_continuous_move = MagicMock()
++
++    return window, hardware_mock, state_mock
++
++
++def test_mainwindow_methods(mainwindow_mocked, qtbot):
++    window, hardware, state = mainwindow_mocked
++
++    window.set_coord_pos(10.0, 20.0, 30.0)
++    hardware.set_coord_pos.assert_called_once_with(10.0, 20.0, 30.0)
++    state.sync_from_robot.assert_called_once()
++    window.ui_manager.sync_coordinates_to_tabs.assert_called_once()
++
++    joints = [1, 2, 3, 4, 5, 6]
++    window.set_joint_pos(joints)
++    hardware.set_joint_pos.assert_called_once_with(joints)
++    assert state.current_joints == joints[:6]
++    window.ui_manager.sync_joints_to_tabs.assert_called_once()
+ 
+     window.set_erosion(True)
+-    window.hardware.set_erosion.assert_called_once_with(True)
+-    
++    hardware.set_erosion.assert_called_once_with(True)
++    window.service_tab.update_status.assert_called()
++
+     window.set_water(True)
+-    window.hardware.set_water.assert_called_once_with(True)
++    hardware.set_water.assert_called_once_with(True)
++    window.service_tab.update_status.assert_called()
+ 
+     window.pump_control_one()
+-    window.hardware.pump_control_one.assert_called_once()
+-    
++    hardware.pump_control_one.assert_called_once()
++    window.service_tab.update_status.assert_called()
++
+     window.pump_control_two()
+-    window.hardware.pump_control_two.assert_called_once()
++    hardware.pump_control_two.assert_called_once()
++    window.service_tab.update_status.assert_called()
+ 
+     window.emergency_stop()
+-    window.hardware.emergency_stop.assert_called_once()
+-
+-    window.safe_finish()
+-    window.process_manager.stop_erosion_process.assert_called()
+-    window.hardware.set_erosion.assert_called()
+-    window.hardware.set_water.assert_called()
+-
+-    window.start_erosion_process([], 1, 1, 1, 1, 1, "file.gcode", "test")
+-    window.process_manager.start_erosion_process.assert_called_once()
+-    
+-    window.stop_erosion_process()
+-    window.process_manager.stop_erosion_process.assert_called()
++    hardware.emergency_stop.assert_called_once()
++    window.service_tab.stop_continuous_move.assert_called_once()
+\ No newline at end of file
+diff --git a/tests/MainWindow/test_process_manager.py b/tests/MainWindow/test_process_manager.py
+index 7d91df9..9181fd8 100644
+--- a/tests/MainWindow/test_process_manager.py
++++ b/tests/MainWindow/test_process_manager.py
+@@ -1,16 +1,11 @@
+ import pytest
+ from unittest.mock import MagicMock, patch
+-from PySide6.QtCore import QThread, Signal
+-from src.qt_interface import ProcessManager
+-
+-class MockErosionWorker(QThread):
+-    progress_updated = Signal(float)
+-    time_updated = Signal(str)
+-    finished = Signal()
+-    paused = Signal()
+-    resumed = Signal()
+-    def __init__(self, *args):
+-        super().__init__()
++from src.application.process_manager import ProcessManager
++
++from unittest.mock import MagicMock
++
++class MockErosionWorker:
++    def __init__(self, *args, **kwargs):
+         self.start = MagicMock()
+         self.stop = MagicMock()
+         self.pause = MagicMock()
+@@ -19,6 +14,12 @@ class MockErosionWorker(QThread):
+         self.isRunning = MagicMock(return_value=True)
+         self.terminate = MagicMock()
+ 
++        self.progress_updated = MagicMock()
++        self.time_updated = MagicMock()
++        self.finished = MagicMock()
++        self.paused = MagicMock()
++        self.resumed = MagicMock()
++
+ @pytest.fixture
+ def process_manager():
+     mock_hardware = MagicMock()
+@@ -27,27 +28,39 @@ def process_manager():
+     pm = ProcessManager(mock_hardware, mock_erosion_tab, mock_state)
+     yield pm
+ 
+-@patch('src.qt_interface.ErosionController')
+-@patch('src.qt_interface.GCodeProcessor')
+-@patch('src.qt_interface.ErosionWorker', return_value=MockErosionWorker())
+-def test_process_manager_start_erosion(mock_worker_class, mock_gcode, mock_controller, process_manager):
++@patch('src.application.process_manager.ErosionWorker')
++@patch('src.erosion_worker.erosion_worker.GCodeProcessor')
++@patch('src.erosion_worker.erosion_worker.ErosionController')
++def test_process_manager_start_erosion(mock_controller, mock_gcode, mock_worker_class, process_manager):
++
++    mock_worker_instance = MockErosionWorker()
++    mock_worker_class.return_value = mock_worker_instance
++
+     process_manager.start_erosion_process([], 1, 2, 3, 4, 5, 'file', 'mode')
+-    mock_worker_class.return_value.start.assert_called()
+-    process_manager.erosion_tab.set_erosion_worker.assert_called()
++
++    mock_worker_instance.start.assert_called()
++
++    process_manager.erosion_tab.set_erosion_worker.assert_called_with(mock_worker_instance)
++
+     process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+ 
+ def test_process_manager_stop_erosion(process_manager):
+-    process_manager.erosion_worker = MockErosionWorker()
++    mock_worker_instance = MockErosionWorker()
++    process_manager.erosion_worker = mock_worker_instance
++
+     process_manager.stop_erosion_process()
+-    process_manager.erosion_worker.stop.assert_called()
+-    process_manager.erosion_worker.wait.assert_called_with(2000)
++
++    mock_worker_instance.stop.assert_called()
++    mock_worker_instance.wait.assert_called_with(2000)
+     process_manager.erosion_tab.set_stopped_ui_state.assert_called()
+     process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
+ 
+ def test_process_manager_signals(process_manager):
+     process_manager.erosion_finished()
+     process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ЗАВЕРШЕН", "#3498db")
++
+     process_manager.erosion_paused()
+     process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС НА ПАУЗЕ", "#f39c12")
++
+     process_manager.erosion_resumed()
+-    process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+\ No newline at end of file
++    process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+diff --git a/tests/MainWindow/test_state_manager.py b/tests/MainWindow/test_state_manager.py
+index 439dad7..9de13f9 100644
+--- a/tests/MainWindow/test_state_manager.py
++++ b/tests/MainWindow/test_state_manager.py
+@@ -1,6 +1,6 @@
+ import pytest
+ from unittest.mock import MagicMock
+-from src.qt_interface import StateManager
++from src.domain.state_manager import StateManager
+ 
+ @pytest.fixture
+ def state_manager():
+diff --git a/tests/MainWindow/test_ui_manager.py b/tests/MainWindow/test_ui_manager.py
+index bc974bf..4a071d8 100644
+--- a/tests/MainWindow/test_ui_manager.py
++++ b/tests/MainWindow/test_ui_manager.py
+@@ -1,6 +1,6 @@
+ import pytest
+ from unittest.mock import MagicMock
+-from src.qt_interface import UIManager
++from src.ui.ui_manager import UIManager
+ 
+ @pytest.fixture
+ def ui_manager():
+diff --git a/tests/MainWindow/test_video_manager.py b/tests/MainWindow/test_video_manager.py
+index 168cc9a..25fee3d 100644
+--- a/tests/MainWindow/test_video_manager.py
++++ b/tests/MainWindow/test_video_manager.py
+@@ -1,38 +1,29 @@
+ import pytest
+ from unittest.mock import MagicMock, patch
+-from src.qt_interface import VideoManager
++from src.ui.video_manager import VideoManager
+ 
+-# Мок для сигнала
+ class MockSignal:
+     def __init__(self):
+         self.connect = MagicMock()
+ 
+-# Мок потока
+ class MockVideoStreamThread:
+     def __init__(self):
+         self.start = MagicMock()
+         self.stop = MagicMock()
+         self.new_frame = MockSignal()
+ 
+-# Фикстура VideoManager с патчем
+ @pytest.fixture
+ def video_manager():
+-    with patch('src.qt_interface.VideoStreamThread', return_value=MockVideoStreamThread()):
++    with patch('src.ui.video_manager.VideoStreamThread', return_value=MockVideoStreamThread()):
+         vm = VideoManager()
+         yield vm
+ 
+-# Тест запуска видео
+ def test_video_manager_start(video_manager):
+     video_manager.start()
+-
+-    # Проверяем, что поток создан
+     assert video_manager.video_thread is not None
+-    # Проверяем, что connect сигнала вызван
+-    assert video_manager.video_thread.new_frame.connect.called
+-    # Проверяем, что поток стартанул
+-    assert video_manager.video_thread.start.called
++    video_manager.video_thread.new_frame.connect.assert_called_with(video_manager.update_frame)
++    video_manager.video_thread.start.assert_called()
+ 
+-# Тест остановки видео
+ def test_video_manager_stop(video_manager):
+     video_manager.stop()
+-    assert video_manager.video_thread.stop.called
++    video_manager.video_thread.stop.assert_called()

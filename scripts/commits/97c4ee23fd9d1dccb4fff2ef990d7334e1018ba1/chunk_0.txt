@@ -190,3 +190,75 @@ index 5a8b13e..97eaa74 100644
 +
 +        logger('Execution trajectory XYZ...', queue=q)
 +        self.xyz_trajectory_executor.execute()
+ 
+     @Slot()
+     def update_xyz_trajectory_plot(self):
+@@ -1914,7 +1916,7 @@ class ServiceTab(QWidget):
+         
+         if self.check_joints_availability(joints):
+             self.trajectory_points_joints.add_point(joints)
+-            index = len(self.trajectory_points_joints)
++            index = len(self.trajectory_points_joints.get_points())
+             self.joints_listbox.addItem(f"{index}: J0: {joints[0]:.2f}, J1: {joints[1]:.2f}, J2: {joints[2]:.2f}")
+             self.update_joints_trajectory_plot()
+         else:
+
+
+FILE: tests/ServiceTab/presenters/test_xyz_control_presenter.py
+LANG: py
+
+similarity index 83%
+rename from tests/presenters/test_xyz_control_presenter.py
+rename to tests/ServiceTab/presenters/test_xyz_control_presenter.py
+index cb6e8fd..a7d4d2f 100644
+--- a/tests/presenters/test_xyz_control_presenter.py
++++ b/tests/ServiceTab/presenters/test_xyz_control_presenter.py
+@@ -22,8 +22,13 @@ def test_set_position_calls_controller():
+ 
+ def test_return_to_zero_calls_controller():
+     controller = Mock()
++    controller.X0 = 0.0
++    controller.Y0 = 0.0
++    controller.Z0 = 0.0
++
+     presenter = XYZControlPresenter(controller)
+ 
+     presenter.return_to_zero()
+ 
+-    controller.return_to_zero_xyz.assert_called_once()
++    controller.set_coord_pos.assert_called_once_with(0.0, 0.0, 0.0)
++
+
+
+FILE: tests/ServiceTab/test_xyz_trajectory_executor.py
+LANG: py
+
+new file mode 100644
+index 0000000..58161fd
+--- /dev/null
++++ b/tests/ServiceTab/test_xyz_trajectory_executor.py
+@@ -0,0 +1,24 @@
++from unittest.mock import Mock
++
++from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
++
++
++def test_xyz_trajectory_execution_calls_controller_in_order():
++    controller = Mock()
++    trajectory_service = Mock()
++    trajectory_service.get_points.return_value = [
++        (1, 2, 3),
++        (4, 5, 6),
++    ]
++
++    executor = XYZTrajectoryExecutor(
++        controller=controller,
++        trajectory_service=trajectory_service,
++        delay_sec=0,
++    )
++
++    executor.execute()
++
++    controller.set_coord_pos.assert_any_call(1, 2, 3)
++    controller.set_coord_pos.assert_any_call(4, 5, 6)
++    assert controller.set_coord_pos.call_count == 2

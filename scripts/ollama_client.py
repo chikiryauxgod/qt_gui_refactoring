@@ -3,8 +3,7 @@ import json
 import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
-RUN_ID = "gemma_2_9_b"
-MODEL = "gemma2:9b"
+MODEL = "olmo-3:7b"
 
 SYSTEM_PROMPT = """
 Ты — software architect.
@@ -42,7 +41,6 @@ def analyze_chunk(chunk: str) -> dict:
     if not text:
         return {"error": "empty_response"}
 
-    # попытка вытащить JSON даже если модель напортачила
     start = text.find("{")
     end = text.rfind("}")
 

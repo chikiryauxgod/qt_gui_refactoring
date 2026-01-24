@@ -1,0 +1,122 @@
+commit ed94356c68df83f9f25700fc524c96e3d5d6c6cd
+Author:     faweddd <igormaluh010@mail.ru>
+AuthorDate: Fri Jan 23 03:59:15 2026 +0500
+Commit:     faweddd <igormaluh010@mail.ru>
+CommitDate: Fri Jan 23 03:59:15 2026 +0500
+
+    feat: update stubs
+
+diff --git a/src/electoerosion.py b/src/electoerosion.py
+index 413c298..3142b1e 100644
+--- a/src/electoerosion.py
++++ b/src/electoerosion.py
+@@ -1,14 +1,25 @@
++from src.robot import Robot
++from src.pico import Pico 
++
+ class Electroerosion:
+     def __init__(self, filename=None, speed=10, mode="test"):
+         self.filename = filename
+         self.speed = speed
+         self.mode = mode
+-        self.robot = None
+-        self.erosion = None
++
++        self.robot = Robot()
++        self.erosion = Pico()
++
+         print(f"[ELECTROEROSION - stub] filename={filename}, speed={speed}, mode={mode}")
+ 
++    def set_coord_pos(self, x, y, z):
++        print(f"[ELECTROEROSION - stub] set_coord_pos({x}, {y}, {z})")
++        self.robot.current_x = x
++        self.robot.current_y = y
++        self.robot.current_z = z
++
+     def start(self):
+         print("[ELECTROEROSION - stub] start() called")
+ 
+     def stop(self):
+-        print("[ELECTROEROSION - stub] stop() called")
+\ No newline at end of file
++        print("[ELECTROEROSION - stub] stop() called")
+diff --git a/src/log.py b/src/log.py
+index 3dc81bc..1c6e84c 100644
+--- a/src/log.py
++++ b/src/log.py
+@@ -1,4 +1,5 @@
+ import sys
++import queue
+ 
+ class Log:
+     def __call__(self, message, queue=None, file=None):
+@@ -7,4 +8,7 @@ class Log:
+             file = sys.stdout
+         print(f"LOG: {message}", file=file)
+         if queue is not None:
+-            queue.put(message)
+\ No newline at end of file
++            queue.put(message)
++
++logger = Log()
++q = queue.Queue()
+\ No newline at end of file
+diff --git a/src/pico.py b/src/pico.py
+index 4cec485..4e8a11f 100644
+--- a/src/pico.py
++++ b/src/pico.py
+@@ -1,9 +1,17 @@
+ class Pico:
+     def __init__(self, *args, **kwargs):
+-        pass
++        self.erosion_state = 0
++        self.pump_in_state = 0
++        self.pump_out_state = 0
++
++    def erosion(self, state: int):
++        self.erosion_state = state
++        print(f"[PICO] erosion = {state}")
+ 
+     def pump_in(self, state: int):
++        self.pump_in_state = state
+         print(f"[PICO] pump_in = {state}")
+ 
+     def pump_out(self, state: int):
++        self.pump_out_state = state
+         print(f"[PICO] pump_out = {state}")
+diff --git a/src/robot.py b/src/robot.py
+index 9fe3739..5c554b5 100644
+--- a/src/robot.py
++++ b/src/robot.py
+@@ -1,14 +1,20 @@
++from src.domain.constants import X0, Y0, Z0
++
+ class Robot:
+-    def __init__(self, *args, **kwargs):
+-        self.current_x = 0.0
+-        self.current_y = 0.0
+-        self.current_z = 0.0
++    def __init__(self):
++        self.current_x = X0
++        self.current_y = Y0
++        self.current_z = Z0
++        self.speed = 0
++        self.joints = [0] * 6
+ 
+-    def emergency_stop(self):
+-        print("[ROBOT] Emergency stop")
++    def set_joint_pos(self, joints):
++        self.joints = joints
++        print(f"[ROBOT - stub] set_joint_pos {joints}")
+ 
+-    def start_erosion_process(self, *args, **kwargs):
+-        print("[ROBOT] start_erosion_process called")
++    def set_speed(self, v):
++        self.speed = v
++        print(f"[ROBOT - stub] set_speed {v}")
+ 
+-    def stop_erosion_process(self):
+-        print("[ROBOT] stop_erosion_process called")
+\ No newline at end of file
++    def emergency_stop(self):
++        print("[ROBOT - stub] EMERGENCY STOP")

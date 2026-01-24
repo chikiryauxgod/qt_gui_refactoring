@@ -59,8 +59,8 @@ LANG: {detect_language(path)}
 
 def main():
     for raw_file in Path("commits").glob("*.raw"):
-        normalized = normalize_commit(raw_file.read_text())
-        raw_file.with_suffix(".norm").write_text(normalized)
+        normalized = normalize_commit(raw_file.read_text(encoding="utf-8"))
+        raw_file.with_suffix(".norm").write_text(normalized, encoding="utf-8")
 
 if __name__ == "__main__":
     main()

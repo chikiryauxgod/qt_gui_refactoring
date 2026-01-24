@@ -35,8 +35,6 @@ def main():
                     "chunk": chunk.name,
                     "error": str(e)
                 })
-
-            # сохраняем после каждого чанка, чтобы видеть прогресс
             out_file.write_text(
                 json.dumps(commit_results, ensure_ascii=False, indent=2),
                 encoding="utf-8"

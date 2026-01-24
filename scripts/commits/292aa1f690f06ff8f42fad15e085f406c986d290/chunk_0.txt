@@ -1,0 +1,74 @@
+commit 292aa1f690f06ff8f42fad15e085f406c986d290
+Author:     Matvey <matveykroychelove4ek@gmail.com>
+AuthorDate: Fri Jan 23 18:35:27 2026 +0500
+Commit:     Matvey <matveykroychelove4ek@gmail.com>
+CommitDate: Fri Jan 23 18:35:27 2026 +0500
+
+    upd analyze_all
+
+
+FILES:
+
+FILE: scripts/analyze_all.py
+LANG: py
+
+index 93d1cbd..4419843 100644
+--- a/scripts/analyze_all.py
++++ b/scripts/analyze_all.py
+@@ -2,26 +2,48 @@ from pathlib import Path
+ import json
+ from ollama_client import analyze_chunk
+ 
++COMMITS = Path("commits")
+ OUT = Path("results")
+ OUT.mkdir(exist_ok=True)
+ 
++
+ def main():
+-    for commit_dir in Path("commits").iterdir():
++    for commit_dir in COMMITS.iterdir():
+         if not commit_dir.is_dir():
+             continue
+ 
++        out_file = OUT / f"{commit_dir.name}.json"
+         commit_results = []
+ 
+-        for chunk in commit_dir.glob("chunk_*.txt"):
++        chunks = sorted(commit_dir.glob("chunk_*.txt"), key=lambda p: p.name)
++
++        print(f"\n== COMMIT {commit_dir.name} | chunks: {len(chunks)} ==")
++
++        for i, chunk in enumerate(chunks, start=1):
++            text = chunk.read_text(encoding="utf-8", errors="ignore")
++
++            print(f"[{commit_dir.name}] {i}/{len(chunks)} -> {chunk.name} ({len(text)} chars)")
++
+             try:
+-                result = analyze_chunk(chunk.read_text())
+-                commit_results.append(result)
++                result = analyze_chunk(text)
++                commit_results.append({
++                    "chunk": chunk.name,
++                    "result": result
++                })
+             except Exception as e:
+-                commit_results.append({"error": str(e)})
++                commit_results.append({
++                    "chunk": chunk.name,
++                    "error": str(e)
++                })
++
++            # сохраняем после каждого чанка, чтобы видеть прогресс
++            out_file.write_text(
++                json.dumps(commit_results, ensure_ascii=False, indent=2),
++                encoding="utf-8"
++            )
++
++        print(f"Saved: {out_file}")
+ 
+-        (OUT / f"{commit_dir.name}.json").write_text(
+-            json.dumps(commit_results, indent=2)
+-        )
+ 
+ if __name__ == "__main__":
+     main()

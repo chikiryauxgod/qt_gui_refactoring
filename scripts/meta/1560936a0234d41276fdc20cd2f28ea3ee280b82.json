@@ -1,0 +1,6 @@
+{
+  "commit": "1560936a0234d41276fdc20cd2f28ea3ee280b82",
+  "author": "faweddd",
+  "date": "Thu Jan 22 01:32:40 2026 +0500",
+  "message": "refactor: extract ApplicationState from MainWindow"
+}
