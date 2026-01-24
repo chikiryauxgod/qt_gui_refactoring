@@ -1,0 +1,9 @@
+[
+  {
+    "chunk": "chunk_0.txt",
+    "result": {
+      "solid_score": 8,
+      "reason": "The code adheres to the Single Responsibility Principle (SRP) by having the XYZTrajectoryService class focus solely on managing XYZ trajectory data. The class does not depend on external components like Qt or UI elements, which aligns with the Dependency Inversion Principle (DIP). However, there is room for improvement in terms of Open/Closed Principle (OCP) as the class could be extended with additional features (e.g., persistence) without modifying its core logic. The current implementation does not fully leverage the Liskov Substitution Principle (LSP) as there are no derived classes or interfaces involved. Overall, the code is well-structured but could be enhanced to better adhere to SOLID principles."
+    }
+  }
+]

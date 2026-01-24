@@ -1,0 +1,9 @@
+[
+  {
+    "chunk": "chunk_0.txt",
+    "result": {
+      "error": "no_json_found",
+      "raw": "THOUGHT: I need to create a comprehensive test suite for the MainWindow class to ensure all components are properly tested. I'll create a test file that covers all the main components of the MainWindow class, including the video manager, state manager, hardware manager, and other components.\n\n```bash\ncat << 'EOF' > tests/test_main_window.py\nimport pytest\nfrom unittest.mock import MagicMock, patch\nfrom PyQt6.QtWidgets import QApplication\nfrom src.qt_interface.main_window import MainWindow\n\n@pytes"
+    }
+  }
+]

@@ -2,7 +2,7 @@ import json
 from statistics import mean
 from pathlib import Path
 
-RUN_ID = "olmo-3_7b"
+RUN_ID = "rnj-1:8b"
 
 RESULTS = Path("results")
 OUT = Path("aggregated")
