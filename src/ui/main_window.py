@@ -9,10 +9,14 @@ from src.ui.ui_manager import UIManager
 from src.services.service_tab import ServiceTab
 from src.erosion_process.erosion_process_tab import ErosionProcessTab
 from src.domain.constants import X0, Y0, Z0
+from src.ui.theme.colors import LIGHT_PALETTE
+from src.ui.theme.style_builder import QtStyleBuilder
+
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, style_builder: QtStyleBuilder):
         super().__init__()
+        self._style_builder = style_builder
         self.hardware = HardwareController()
         self.state = StateManager(X0, Y0, Z0, self.hardware.robot)
         self.video_manager = VideoManager()
@@ -26,7 +30,7 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1000, 700)
         self.setMinimumSize(1340, 720)
         self.setMaximumSize(1920, 1000)
-
+        
         central_widget = QTabWidget()
         self.setCentralWidget(central_widget)
 
@@ -35,24 +39,8 @@ class MainWindow(QMainWindow):
 
         self.service_tab = ServiceTab(self)
         central_widget.addTab(self.service_tab, "Сервисное управление")
-
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #cccccc;
-                border-radius: 5px;
-                margin-top: 1ex;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
+        
+        self.setStyleSheet(self._style_builder.build())
 
         self.video_manager.video_label = self.erosion_tab.video_label
         self.process_manager = ProcessManager(self.hardware, self.erosion_tab, self.state)
