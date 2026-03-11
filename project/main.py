@@ -1,11 +1,6 @@
 import sys
-from pathlib import Path
 
-# добавляем корень проекта в sys.path
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT))
-
-from src.qt_interface import run
+from src.application.application_runner import run
 
 
 def main() -> None:
