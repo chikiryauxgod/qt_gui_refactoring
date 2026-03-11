@@ -5,6 +5,10 @@ from PySide6.QtCore import Qt
 @pytest.fixture
 def mainwindow_mocked(qtbot):
     from src.ui.main_window import MainWindow
+    from unittest.mock import MagicMock
+
+    style_builder_mock = MagicMock()
+    style_builder_mock.build.return_value = ""
 
     hardware_mock = MagicMock()
     state_mock = MagicMock()
@@ -17,7 +21,7 @@ def mainwindow_mocked(qtbot):
     process_manager_mock = MagicMock()
     ui_manager_mock = MagicMock()
 
-    window = MainWindow()
+    window = MainWindow(style_builder_mock)
     qtbot.addWidget(window)
 
     window.hardware = hardware_mock
@@ -27,6 +31,7 @@ def mainwindow_mocked(qtbot):
 
     if hasattr(window, 'erosion_tab'):
         window.erosion_tab.video_label = MagicMock()
+
     if hasattr(window, 'service_tab'):
         window.service_tab.update_status = MagicMock()
         window.service_tab.stop_continuous_move = MagicMock()

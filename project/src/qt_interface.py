@@ -2296,21 +2296,18 @@ class ErosionWorker(QThread):
 
 
 # Запуск приложения
-if __name__ == "__main__":
+def run() -> int:
     app = QApplication(sys.argv)
-    
-    # Установка стиля приложения
-    app.setStyle('Fusion')
-    
-    # Настройка глобального стиля
+
+    # Стиль приложения
+    app.setStyle("Fusion")
+
     app.setStyleSheet("""
         QPushButton {
             background-color: #4CAF50;
             border: none;
             color: white;
             padding: 8px 16px;
-            text-align: center;
-            text-decoration: none;
             font-size: 14px;
             margin: 4px 2px;
             border-radius: 4px;
@@ -2353,10 +2350,11 @@ if __name__ == "__main__":
             background-color: white;
         }
     """)
+
     palette = LIGHT_PALETTE
     style_builder = QtStyleBuilder(palette)
 
     window = MainWindow(style_builder)
     window.showMaximized()
-        
-    sys.exit(app.exec())
+
+    return app.exec()
