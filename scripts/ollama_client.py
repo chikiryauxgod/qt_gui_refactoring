@@ -1,6 +1,5 @@
 import requests
 import json
-import time
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "rnj-1:8b"
@@ -52,7 +51,7 @@ def analyze_chunk(chunk: str) -> dict:
 
     try:
         return json.loads(text[start:end + 1])
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         return {
             "error": "invalid_json",
             "raw": text[start:end + 1][:500]

@@ -1,5 +1,4 @@
 from src.erosion_process.erosion_process_tab import ErosionProcessPresenter
-import pytest
 
 
 def test_load_gcode_success(tmp_path, fake_view, fake_controller, q_ref):

@@ -1,4 +1,3 @@
-import pytest
 from src.arrow3D.arrow3D import Arrow3D, Arrow3DData
 
 def stub_project(xs, ys, zs, matrix):
