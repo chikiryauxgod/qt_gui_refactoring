@@ -49,7 +49,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          pytest -v
+          pytest -v -p no:qt
 
   deploy:
     runs-on: ubuntu-latest
