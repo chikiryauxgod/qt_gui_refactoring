@@ -1,6 +1,4 @@
 import pytest
-from unittest.mock import MagicMock
-from PySide6.QtCore import Qt
 
 @pytest.fixture
 def mainwindow_mocked(qtbot):

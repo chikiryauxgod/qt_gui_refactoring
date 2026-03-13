@@ -1,6 +1,5 @@
 from PySide6.QtCore import QThread, Signal
 import time
-import os
 
 class ErosionController:
     def __init__(self, erosion_cls, filename=None, logger=None, **params):

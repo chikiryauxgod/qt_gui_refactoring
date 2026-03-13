@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 from src.application.process_manager import ProcessManager
 
-from unittest.mock import MagicMock
 
 class MockErosionWorker:
     def __init__(self, *args, **kwargs):

@@ -13,24 +13,17 @@ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.domain.xyz_availability_service import XYZAvailabilityService
 from src.domain.joint_availability_service import JointAvailabilityService
-from src.log import Log
-import queue
+from src.log import logger, q
 import os
 import numpy as np
 from src.arrow3D import Arrow3DData
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
-from src.log import Log, logger, q
 
 
-try:
-    from ikpy.chain import Chain
-    from ikpy.link import OriginLink, URDFLink
-    IKPY_AVAILABLE = True
-except ImportError:
-    IKPY_AVAILABLE = False
-    Log()("Библиотека ikpy не установлена. Установите: pip install ikpy")
+IKPY_AVAILABLE = True
+
 
 
 # Сервисная вкладка
@@ -1062,9 +1055,6 @@ class ServiceTab(QWidget):
                             
                 except Exception as e:
                     logger(f"Ошибка визуализации траектории суставов: {e}")
-
-            else:
-                logger(f"Ошибка визуализации траектории суставов: {e}")
             
             self.joints_traj_ax.set_xlabel('X (мм)')
             self.joints_traj_ax.set_ylabel('Y (мм)')

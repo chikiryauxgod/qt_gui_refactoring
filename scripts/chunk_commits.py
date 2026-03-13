@@ -7,7 +7,7 @@ def chunk_commit(text: str) -> list[str]:
     current = []
 
     for line in text.splitlines():
-        if sum(len(l) for l in current) > MAX_CHARS:
+        if sum(len(lin) for lin in current) > MAX_CHARS:
             chunks.append("\n".join(current))
             current = []
 

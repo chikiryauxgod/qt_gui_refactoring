@@ -1,5 +1,4 @@
-import pytest
-from src.arrow3D.arrow3D import Arrow3D, Arrow3DData
+from src.arrow3D.arrow3D import Arrow3DData
 
 def test_arrow3d_data_as_tuple():
     data = Arrow3DData(
