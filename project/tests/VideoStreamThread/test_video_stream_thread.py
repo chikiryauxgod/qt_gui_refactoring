@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.VideoStream.VideoStreamThread import *
+from src.video_stream.video_stream_thread import *
 from PySide6.QtGui import QImage
 
 
