@@ -1,4 +1,4 @@
-from src.VideoStream.VideoStreamThread import VideoStreamThread
+from src.video_stream.video_stream_thread import VideoStreamThread
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage, QPixmap
 

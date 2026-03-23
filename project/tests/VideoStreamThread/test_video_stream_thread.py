@@ -1,7 +1,7 @@
 import numpy as np
 from PySide6.QtGui import QImage
 
-from src.VideoStream.VideoStreamThread import (
+from src.video_stream.video_stream_thread import (
     FrameSource,
     FrameConverter,
     VideoStreamThread,
