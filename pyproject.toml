@@ -1,3 +1,9 @@
 [tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
+
+pythonpath = ["project"]
+testpaths = ["project/tests"]
+
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "default::DeprecationWarning:src"
+]

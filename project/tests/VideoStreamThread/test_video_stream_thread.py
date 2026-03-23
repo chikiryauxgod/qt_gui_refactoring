@@ -4,6 +4,12 @@ import pytest
 from src.video_stream.video_stream_thread import *
 from PySide6.QtGui import QImage
 
+from src.VideoStream.VideoStreamThread import (
+    FrameSource,
+    FrameConverter,
+    VideoStreamThread,
+)
+
 
 class FakeSource(FrameSource):
     """1 кадр -> потом ret=False."""

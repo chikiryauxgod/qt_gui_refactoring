@@ -1,5 +1,4 @@
 import sys
-
 from src.application.application_runner import run
 
 

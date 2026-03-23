@@ -1,4 +1,3 @@
-import pytest
 
 
 def stub_project(xs, ys, zs, matrix):

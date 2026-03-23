@@ -9,7 +9,6 @@ from src.ui.ui_manager import UIManager
 from src.services.service_tab import ServiceTab
 from src.erosion_process.erosion_process_tab import ErosionProcessTab
 from src.domain.constants import X0, Y0, Z0
-from src.ui.theme.colors import LIGHT_PALETTE
 from src.ui.theme.style_builder import QtStyleBuilder
 
 
