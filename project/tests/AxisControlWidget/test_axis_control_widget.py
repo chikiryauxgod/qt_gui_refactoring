@@ -111,4 +111,4 @@ class TestAxisControlWidget:
         config = AxisControlConfig(step_sizes=[])
         
         with pytest.raises(ValueError):
-            widget = AxisControlWidget('X', config)
+            AxisControlWidget('X', config)

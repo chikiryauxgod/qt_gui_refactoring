@@ -1,8 +1,11 @@
 import numpy as np
-import pytest
-
-from src.video_stream.video_stream_thread import *
 from PySide6.QtGui import QImage
+
+from src.video_stream.video_stream_thread import (
+    FrameSource,
+    FrameConverter,
+    VideoStreamThread,
+)
 
 
 class FakeSource(FrameSource):

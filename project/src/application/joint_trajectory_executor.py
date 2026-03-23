@@ -1,5 +1,3 @@
-
-
 class JointTrajectoryExecutor:
     def __init__(
         self,

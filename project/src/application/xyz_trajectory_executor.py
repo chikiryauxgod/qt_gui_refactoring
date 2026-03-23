@@ -1,5 +1,3 @@
-
-
 class XYZTrajectoryExecutor:
     def __init__(self, controller, trajectory_service, delay_sec: float = 1.0):
         self._controller = controller
