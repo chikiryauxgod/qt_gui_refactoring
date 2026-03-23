@@ -13,24 +13,18 @@ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.domain.xyz_availability_service import XYZAvailabilityService
 from src.domain.joint_availability_service import JointAvailabilityService
-from src.log import Log
-import queue
-import os
-import numpy as np
 from src.arrow3D import Arrow3DData
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
-from src.log import Log, logger, q
+from src.log import logger, q
+
+import os
+import numpy as np
 
 
-try:
-    from ikpy.chain import Chain
-    from ikpy.link import OriginLink, URDFLink
-    IKPY_AVAILABLE = True
-except ImportError:
-    IKPY_AVAILABLE = False
-    Log()("Библиотека ikpy не установлена. Установите: pip install ikpy")
+IKPY_AVAILABLE = True
+
 
 
 # Сервисная вкладка
@@ -1032,39 +1026,38 @@ class ServiceTab(QWidget):
             
             if self.trajectory_points_joints and self.robot_chain and IKPY_AVAILABLE:
                 try:
-                    # Собираем все позиции инструмента через прямую кинематику
                     tool_positions = []
-                    
+
                     for joints_degrees in self.trajectory_points_joints:
                         if len(joints_degrees) >= 6:
-                            # Преобразуем в радианы и добавляем начальный/конечный углы
                             joints_radians = [0] + [np.radians(angle) for angle in joints_degrees[:6]] + [0]
-                            
-                            # Вычисляем прямую кинематику для получения позиции инструмента
+
                             transformation_matrix = self.robot_chain.forward_kinematics(joints_radians)
-                            tool_position = transformation_matrix[:3, 3]  # Позиция в метрах
-                            tool_positions.append(tool_position * 1000)  # Переводим в мм для согласованности
-                    
+                            tool_position = transformation_matrix[:3, 3]
+                            tool_positions.append(tool_position * 1000)
+
                     if tool_positions:
                         points = np.array(tool_positions)
-                        
-                        # Рисуем траекторию
-                        self.joints_traj_ax.plot(points[:, 0], points[:, 1], points[:, 2], 
-                                            'b-', linewidth=2, alpha=0.7, label='Траектория')
-                        self.joints_traj_ax.scatter(points[:, 0], points[:, 1], points[:, 2], 
-                                                c='red', s=30, label='Позиции')
-                        
-                        # Отображаем кинематическую цепочку для последней позиции
+
+                        self.joints_traj_ax.plot(
+                            points[:, 0], points[:, 1], points[:, 2],
+                            'b-', linewidth=2, alpha=0.7, label='Траектория'
+                        )
+                        self.joints_traj_ax.scatter(
+                            points[:, 0], points[:, 1], points[:, 2],
+                            c='red', s=30, label='Позиции'
+                        )
+
                         last_joints = self.trajectory_points_joints[-1]
                         if len(last_joints) >= 6:
                             joints_radians = [0] + [np.radians(angle) for angle in last_joints[:6]] + [0]
                             self.robot_chain.plot(joints_radians, self.joints_traj_ax)
-                            
-                except Exception as e:
-                    logger(f"Ошибка визуализации траектории суставов: {e}")
+
+                except Exception:
+                    logger.exception("Ошибка визуализации траектории суставов")
 
             else:
-                logger(f"Ошибка визуализации траектории суставов: {e}")
+                logger("Нет данных для визуализации траектории суставов")
             
             self.joints_traj_ax.set_xlabel('X (мм)')
             self.joints_traj_ax.set_ylabel('Y (мм)')

@@ -1,4 +1,3 @@
-from typing import Iterable, Tuple
 
 
 class XYZTrajectoryExecutor:

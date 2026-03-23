@@ -1,4 +1,3 @@
-import sys
 
 from src.application.application_factory import ApplicationFactory
 from src.application.style_configurator import StyleConfigurator

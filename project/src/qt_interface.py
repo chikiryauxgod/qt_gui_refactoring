@@ -1,8 +1,3 @@
-import sys
-from PySide6.QtWidgets import QApplication
-from src.ui.main_window import MainWindow
-from src.ui.theme.colors import LIGHT_PALETTE
-from src.ui.theme.style_builder import QtStyleBuilder
 
 #+ Передать в electroerosion очередь, она заполняется в port и robot, её нужно просто туда передать
 #+ Выводить содержимое очереди в textbox процесса эрозии
