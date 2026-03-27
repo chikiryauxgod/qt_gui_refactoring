@@ -53,7 +53,8 @@ class Pico(Serial):
     def __update_state(self, ask=True):
         if self.__work_w_port:
             try:
-                if ask: self.write(b'{}\r\n')
+                if ask:
+                    self.write(b'{}\r\n')
                 sleep(0.01)
                 out = self.read_all().decode('ascii').strip()
                 self.log(f'<< {out}', file=self.__oufile, queue=self.__queue)
@@ -99,8 +100,9 @@ class Pico(Serial):
         try:
             cmd = '{"erosion": %s}\r\n' % x
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(0.1);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(0.1)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -112,8 +114,9 @@ class Pico(Serial):
         try:
             cmd = '{"position": "%s"}\r\n' % x
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(0.1);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(0.1)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -124,8 +127,9 @@ class Pico(Serial):
         try:
             cmd = '{"pump": %s}\r\n' % x
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(0.1);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(0.1)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -136,8 +140,9 @@ class Pico(Serial):
         try:
             cmd = '{"pump_in": %s}\r\n' % x 
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(0.1);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(0.1)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -148,8 +153,9 @@ class Pico(Serial):
         try:
             cmd = '{"pump_out": %s}\r\n' % x
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(0.1);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(0.1)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -160,8 +166,9 @@ class Pico(Serial):
         try:
             cmd = '{"reset":1}\r\n'
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(2);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(2)
             self.read_all()
             self.state = Ok(cmd)
         except Exception as e:
@@ -172,8 +179,9 @@ class Pico(Serial):
         try:
             cmd = '{"test":1}\r\n'
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
-            sleep(2);
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
+            sleep(2)
             out = self.read_all()
             self.log(f'<< {out}', file=self.__oufile, queue=self.__queue)
             self.state = Ok(cmd)
@@ -185,8 +193,8 @@ class Pico(Serial):
         if self.__work_w_port: 
             out = self.__update_state()
             return out 
-        else:
-            self.log('<< emulated!', file=self.__oufile, queue=self.__queue)
+        self.log('<< emulated!', file=self.__oufile, queue=self.__queue)
+        return DEFAULTS
 
 if __name__ == '__main__':
     from queue import Queue

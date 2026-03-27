@@ -1,5 +1,3 @@
-import board
-
 from board import GP2 as PIN_PUMP_OUT
 from board import GP3 as PIN_PUMP_IN
 from board import GP4 as PIN_PUMP
@@ -147,9 +145,9 @@ class Board():
             s = 0
         else:
             s = 0
-            l = len(self.K)-1
-            for p in range(l, -1, -1):
-                s += self.K[l-p] * x ** p
+            degree = len(self.K) - 1
+            for power in range(degree, -1, -1):
+                s += self.K[degree - power] * x ** power
         return s
 
 
@@ -159,7 +157,7 @@ class Board():
                 f = self.__state_checks[k]
                 if not f(v): 
                     raise WrongStateError(f'k = {k}, v = {v}')
-            except KeyError as e:
+            except KeyError:
                 raise WrongStateError(f'state = {state}')
 
 
@@ -271,13 +269,13 @@ class Board():
         return self.__state
 
 
-board = Board(INS, OUTS, ANALOGUES)
+controller_board = Board(INS, OUTS, ANALOGUES)
 
 while True:
     try:
         state = loads(input('state = '))
-    except ValueError as e:
+    except ValueError:
         continue
-    state = board.update(state)
+    state = controller_board.update(state)
     print(dumps(state).replace(',',',\n'))
     

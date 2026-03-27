@@ -7,7 +7,7 @@ if __name__ == '__main__':
 	i = 0
 	for x,y in zip(s.mins[:5], s.maxs[:5]):
 		print(f"J{i}")
-		my_chain.forward_kinematics([]) for j_pos in np.linspace(x, y, 50)
+		for j_pos in np.linspace(x, y, 50):
+			my_chain.forward_kinematics([j_pos])
 		i += 1
-
 

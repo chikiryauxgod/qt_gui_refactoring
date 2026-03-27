@@ -1,13 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import threading
-import time
 import cv2
 from PIL import Image, ImageTk
-import numpy as np
 
 # Импорт ваших модулей (адаптировать при необходимости)
-from electoerosion import Electroerosion
 from robot import Robot
 from pico import Pico
 

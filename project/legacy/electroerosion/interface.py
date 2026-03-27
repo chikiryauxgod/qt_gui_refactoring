@@ -8,6 +8,9 @@ Created on Fri Feb 28 19:10:39 2020
 """
 import matplotlib
 import numpy as np
+import os
+import shutil
+import subprocess
 # import time
 
 # from matplotlib import pyplot as plt
@@ -20,16 +23,15 @@ from commands import CommandThread
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from robot import Robot
-from tkinter import BOTH, X, Y, Button, DoubleVar, Entry, IntVar, StringVar, Text, Listbox, Frame, HORIZONTAL, LabelFrame, Label, LEFT, RIGHT, BOTTOM, Scale, Tk, TOP
-from tkinter import X as by_X, Y as by_Y
+from tkinter import BOTH, Button, DoubleVar, Entry, IntVar, StringVar, Listbox, Frame, HORIZONTAL, LabelFrame, Label, LEFT, RIGHT, Scale, Tk, TOP
+from tkinter import Y as by_Y
 from tkinter import ttk
 from tkinter import filedialog as fd
-from tkinter.messagebox import showinfo
-from gauge import Gauge
 
 matplotlib.use("TkAgg")  # NOTE: import order matters
 
-X, Y, Z, rX, rY, rZ = 0, 1, 2, 3, 4, 5
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+X_AXIS, Y_AXIS, Z_AXIS, RX_AXIS, RY_AXIS, RZ_AXIS = 0, 1, 2, 3, 4, 5
 
 CURA_DIR_NAME = 'cura'
 DEFAULT_SPEED = 30
@@ -75,12 +77,11 @@ class RobotWindow(Tk):
         pass
 
     def start_cura(script='cura_run.sh', cura_dir=CURA_DIR_NAME, out_file='object.gcode'):
-        status = 0
         res = {}
         cura_path = '/'.join(os.path.abspath(BASE_DIR).split('/')[:-1] + [cura_dir])
         try:
             subprocess.call(['bash', f'{cura_path}/{script}'])
-            time.sleep(3)
+            sleep(3)
             app_cur_dir = ''
             if 'dev_settings' in os.getenv('DJANGO_SETTINGS_MODULE'):
                 app_cur_dir = 'core/'
@@ -103,7 +104,7 @@ class RobotWindow(Tk):
         except Exception as e:
             res['error'] = f'Aaaaa калбаска фаталити еррор!!: {e}'
 
-    #     return res
+        return res
 
     def go_home(self):
         # set robot to initial pos
@@ -420,7 +421,7 @@ class RobotWindow(Tk):
         self.q_cmd.put({'exit': 'exit'})
         sleep(2)
         try:
-            res = self.q_result.get(block=False)
+            self.q_result.get(block=False)
         except Empty:
             pass
     
@@ -472,7 +473,7 @@ class RobotWindow(Tk):
                 except KeyError:
                     print(j_values['error'])
 
-            if self.update_graph == True:
+            if self.update_graph:
                 self.plot(self.position_old, self.rotation_old)
                 self.update_graph = False
 

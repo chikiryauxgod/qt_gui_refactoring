@@ -2,24 +2,16 @@ import sys
 import os
 import cv2
 import numpy as np
-import json
 import re
 import time
-import threading
 import queue
-import platform
 import electoerosion
-from robot import Robot
-from pico import Pico
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, 
-                              QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QSpinBox,
-                              QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
-                              QScrollArea, QFrame, QSplitter, QSizePolicy, QGridLayout,
-                              QLineEdit, QStackedWidget, QListWidget, QListWidgetItem,
-                              QCheckBox, QComboBox, QSlider, QDialog, QDialogButtonBox)
-from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot, QPropertyAnimation, QEasingCurve, QEvent
-from PySide6.QtGui import QImage, QPixmap, QFont, QPalette, QColor, QTextCursor 
-import matplotlib.pyplot as plt
+                              QHBoxLayout, QLabel, QPushButton, QDoubleSpinBox, QProgressBar, QTextEdit, QGroupBox, QFileDialog, QMessageBox,
+                              QSplitter, QGridLayout,
+                              QLineEdit, QStackedWidget, QListWidget, QComboBox)
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, Slot
+from PySide6.QtGui import QImage, QPixmap, QTextCursor 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.patches import FancyArrowPatch
@@ -34,7 +26,6 @@ from log import Log
 
 try:
     from ikpy.chain import Chain
-    from ikpy.link import OriginLink, URDFLink
     IKPY_AVAILABLE = True
 except ImportError:
     IKPY_AVAILABLE = False
@@ -195,7 +186,6 @@ class ErosionWorker(QThread):
         self.start_time = time.time()
         self.is_running = True
         self.is_finished = False
-        param = [self.electrode_diameter, self.electrode_length, self.erosion_time, self.erosion_up_time, self.erosion_depth]
         # Создаем экземпляр Electroerosion
         # erode = electoerosion.Electroerosion(XS=XS, YS=YS, ZS=ZS, queue=q)
         # Используем переданный filename или fallback
@@ -1959,7 +1949,7 @@ class ServiceTab(QWidget):
                     logger(f"Ошибка визуализации траектории суставов: {e}")
 
             else:
-                logger(f"Ошибка визуализации траектории суставов: {e}")
+                logger("Ошибка визуализации траектории суставов: недостаточно точек для построения")
             
             self.joints_traj_ax.set_xlabel('X (мм)')
             self.joints_traj_ax.set_ylabel('Y (мм)')
@@ -2141,9 +2131,9 @@ class MainWindow(QMainWindow):
             # Синхронизируем вкладки
             self.sync_coordinates_to_tabs()
             
-        except Exception as e:
+        except Exception:
             # QMessageBox.critical(self, "Ошибка", f"Не удалось установить позицию: {str(e)}")
-            logger(f"Couldn't set position:", queue=q)
+            logger("Couldn't set position:", queue=q)
         finally:
             self.updating_coordinates = False
     
@@ -2333,12 +2323,12 @@ class MainWindow(QMainWindow):
     def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
 
         
-        logger(f"DEBUG: start_erosion_process called", queue=q)
+        logger("DEBUG: start_erosion_process called", queue=q)
 
         """Запуск процесса электроэрозии"""
         try:
 
-            logger(f"Start erosion process with param: ", queue=q)
+            logger("Start erosion process with param: ", queue=q)
             logger(f"- Points G-code: {len(gcode_points)} mm", queue=q)
             logger(f"- Diametr electrode: {electrode_diameter} mm", queue=q)
             logger(f"- Length electrode: {electrode_length} mm", queue=q)

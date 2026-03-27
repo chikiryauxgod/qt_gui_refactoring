@@ -1,4 +1,4 @@
-from tkinter import *
+from tkinter import LabelFrame, Tk
 from tkinter import ttk
 
 class MyApp():

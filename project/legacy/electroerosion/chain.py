@@ -4,8 +4,6 @@ import matplotlib.pyplot
 
 from ikpy.chain import Chain
 from ikpy.utils.geometry import from_transformation_matrix
-from ikpy.link import OriginLink, URDFLink
-from ikpy.urdf.URDF import get_urdf_parameters
 
 
 """my_chain = Chain(name='manipulator', 

@@ -1,7 +1,6 @@
 import sys
-from queue import Queue, Empty
+from queue import Empty
 from threading import Thread, Event
-from robot import Robot
 from time import time, sleep
 
 DT = 0.5
@@ -10,7 +9,7 @@ class CommandThread(Thread):
 
     def __init__(self, q_cmd, q_result, robot, debug=False):
         super().__init__()
-        self.__dt, t = 0,0
+        self.__dt = 0
         self.stop_event = Event()
 
         self.robot = robot
@@ -31,7 +30,8 @@ class CommandThread(Thread):
             if self.stop_event.is_set():
                 print("Gracefully stopping..", file=sys.stderr)
                 break
-            if self.__do_debug: print(f'{time()}, {self.cmd}', file=sys.stderr)
+            if self.__do_debug:
+                print(f'{time()}, {self.cmd}', file=sys.stderr)
             try:
                 self.cmd = self.q_cmd.get(block=False)
                 if 'j' in self.cmd:

@@ -4,7 +4,6 @@ import sys
 import numpy as np
 
 from time import sleep
-from queue import Queue
 from datetime import datetime
 
 from ikpy.inverse_kinematics import inverse_kinematic_optimization
@@ -14,7 +13,7 @@ import pico
 
 from chain import my_chain
 from gcode_proc import gcode_proc
-from log import Log, ERROR
+from log import Log
 
 SLEEP_TIMES = {
     'emulated': {
@@ -64,7 +63,7 @@ class Electroerosion():
     def init_robot(self, port, outfile, queue):
         try:
             r = robot.Robot(port=port, outfile=outfile, queue=queue)
-        except Exception as e:
+        except Exception:
             r = robot.Robot(port=None, outfile=outfile, queue=queue)
             self.log('Работа в режиме эмуляции манипулятора')
 
@@ -173,7 +172,6 @@ class Electroerosion():
             self.XS, self.YS, self.ZS = params['XS'], params['YS'], params['ZS']
         print(self.X_0, self.Y_0, self.Z_0, file=sys.stderr)
         print(self.XS, self.YS, self.ZS, file=sys.stderr)
-        status = 1
         z_scale = self.calc_z_scale()
         code, vectors = gcode_proc(input_file)
         try:
@@ -183,12 +181,12 @@ class Electroerosion():
                 self.erosion.pump_in(1)
                 sleep(SLEEP_TIMES[mode]['pump_in'])
                 self.erosion.pump_out(1)
-            x0, y0, z0 = self.X_0, self.Y_0, self.Z_0
+            x0, y0, _z0 = self.X_0, self.Y_0, self.Z_0
             self.path = 0
-            for x1,y1,l,e,_ in vectors:
+            for x1, y1, line_depth, e, _ in vectors:
                 x1 = x1 + self.X_0 - self.XS
                 y1 = y1 + self.Y_0 - self.YS
-                z1 = ((-l) * z_scale) + self.Z_0 - self.ZS
+                z1 = ((-line_depth) * z_scale) + self.Z_0 - self.ZS
                 if e:
                     points = self._divide_line(((x0, y0), (x1, y1)), self.d_e)
                     for p in points:
@@ -202,7 +200,7 @@ class Electroerosion():
                             self.to_erode()
                 else:
                     self.set_coord_pos(x1, y1, z1)
-                x0, y0, z0 = x1, y1, z1
+                x0, y0, _z0 = x1, y1, z1
         except KeyboardInterrupt:
             self.log('Прервано пользователем')
             self.safe_finish()
@@ -210,8 +208,8 @@ class Electroerosion():
         self.safe_finish()
         
  
-    def _divide_line(self, l, d):
-        (x0, y0), (x1, y1) = l
+    def _divide_line(self, line, d):
+        (x0, y0), (x1, y1) = line
         dx = x1 - x0
         dy = y1 - y0
         length = math.hypot(dx, dy)
@@ -230,7 +228,7 @@ class Electroerosion():
                 line = (segments[i], segments[i + 1])
                 divided_lines.append(line)
         except ZeroDivisionError:
-            divided_lines = [l]
+            divided_lines = [line]
         return divided_lines
 
     def go_to_home_positon(self):
@@ -295,6 +293,4 @@ if __name__ == '__main__':
     erode(input_file, speed, mode)
     
     
-
-
 

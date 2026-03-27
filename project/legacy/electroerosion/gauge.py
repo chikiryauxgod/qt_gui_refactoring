@@ -1,7 +1,6 @@
 import random
-from tkinter import *
-from tkinter import messagebox
 from math import sin, cos, radians
+from tkinter import BOTH, Button, Canvas, Entry, Frame, IntVar, Tk, messagebox
 
 
 class Gauge(Frame):
@@ -44,7 +43,7 @@ class Gauge(Frame):
             loc (tuple): The position of the gauge (default is (50, 80)).
             col_range (list): The range of colors for the gauge (default is [[255, 215, 0], [32, 178, 170]]).
         """
-        super().__init__()
+        super().__init__(parent)
         self.value = value
         self.max_v = max_v
         self.min_v = min_v
@@ -109,7 +108,7 @@ class Gauge(Frame):
                         "Invalid Value",
                         f"Value must be between {self.min_v} - {self.max_v}",
                     )
-            except:  # in case the input is not a number.
+            except ValueError:  # in case the input is not a number.
                 messagebox.showinfo("Invalid Value", "Please enter a number.")
 
         def handleLucky():
@@ -333,5 +332,5 @@ def generateRandomColor():
 if __name__ == "__main__":
     root = Tk()
     root.geometry("440x600+300+300")
-    gauge = Gauge()
+    gauge = Gauge(root)
     root.mainloop()

@@ -28,7 +28,8 @@ class Port(Serial):
         try:
             cmd = f'G00 J1={j1} J2={j2} J3={j3} J4={j4} J5={j5} J6={j6}\r\n'
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
             self.state = Ok(cmd)
         except Exception as e:
             self.state = Error(cmd, e)
@@ -37,7 +38,8 @@ class Port(Serial):
         try:
             cmd = f'G07 VP={vp}\r\n'
             self.log(f'>> {cmd.strip()}', file=self.__oufile, queue=self.__queue)
-            if self.__work_w_port: self.write(bytes(cmd,'ascii'))
+            if self.__work_w_port:
+                self.write(bytes(cmd,'ascii'))
             self.state = Ok(cmd)
             assert self.is_ready()
         except Exception as e:
@@ -51,7 +53,8 @@ class Port(Serial):
                     n += 1
                     assert n < timeout, f'Превышено время ожидания в {timeout / 1000} секунд при выполнении операции {self.state.operation}'
                     x = self.read_all().decode('ascii').strip()
-                    if x: self.log(f'<< {x}', file=self.__oufile, queue=self.__queue)
+                    if x:
+                        self.log(f'<< {x}', file=self.__oufile, queue=self.__queue)
                     if '%' in x:
                         break
                     sleep(0.001)
