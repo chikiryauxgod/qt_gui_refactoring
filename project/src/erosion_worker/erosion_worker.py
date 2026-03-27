@@ -22,7 +22,10 @@ class ErosionController:
 
         target = self.erosion_instance or self.erosion_target
         if hasattr(target, "start"):
-            target.start()
+            try:
+                target.start(self.filename, **self.params)
+            except TypeError:
+                target.start()
             return
         if callable(target):
             target(self.filename, **self.params)

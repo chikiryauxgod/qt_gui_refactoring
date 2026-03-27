@@ -1,16 +1,17 @@
 from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
 from src.log import logger, q
+from src.ports.ihardware_controller import IHardwareController
 
 # Process management (SRP)
 class ProcessManager:
-    def __init__(self, hardware_controller, erosion_tab, state_manager):
+    def __init__(self, hardware_controller: IHardwareController, erosion_tab, state_manager):
         self.hardware = hardware_controller
         self.erosion_tab = erosion_tab
         self.state = state_manager
         self.erosion_worker = None
 
     def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
-        erosion_target = self.hardware.erode
+        erosion_target = self.hardware.erosion_backend
         erosion_controller = ErosionController(erosion_target, filename, logger=logger, speed=10, mode=mode)
         gcode_processor = GCodeProcessor(gcode_points, erosion_time)
         self.erosion_worker = ErosionWorker(erosion_controller, gcode_processor)

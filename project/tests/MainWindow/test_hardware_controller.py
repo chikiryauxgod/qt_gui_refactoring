@@ -44,6 +44,13 @@ def test_hardware_set_coord_pos(hardware_controller):
     assert hardware_controller.robot.current_z == 3.0
 
 
+def test_hardware_exposes_erosion_backend_port(hardware_controller):
+    backend = hardware_controller.erosion_backend
+
+    assert hasattr(backend, "start")
+    assert hasattr(backend, "stop")
+
+
 def test_hardware_set_joint_pos(hardware_controller):
     joints = [10, 20, 30, 40, 50, 60]
     hardware_controller.set_joint_pos(joints)

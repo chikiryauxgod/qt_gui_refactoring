@@ -1,4 +1,5 @@
 # Hardware controller implementation
+from src.integration.legacy_erosion_backend_adapter import LegacyErosionBackendAdapter
 from src.ports.ihardware_controller import IHardwareController
 from src.electoerosion import Electroerosion
 from src.robot import Robot
@@ -11,6 +12,10 @@ class HardwareController(IHardwareController):
         self.pico = self.erode.erosion if self.erode.erosion else Pico()
         self.state_pump_one = False
         self.state_pump_two = False
+
+    @property
+    def erosion_backend(self):
+        return LegacyErosionBackendAdapter(self.erode)
 
     def set_coord_pos(self, x, y, z):
         self.erode.set_coord_pos(x, y, z)

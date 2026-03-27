@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class ErosionBackendPort(Protocol):
+    def start(self, filename: str | None = None, **params) -> None: ...
+    def stop(self) -> None: ...
