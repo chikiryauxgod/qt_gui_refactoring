@@ -3,7 +3,6 @@ import sys
 import numpy as np 
 
 from chain import my_chain
-from port import Port
 
 from ikpy.utils.geometry import from_transformation_matrix, to_transformation_matrix
 from ikpy.inverse_kinematics import inverse_kinematic_optimization
@@ -39,6 +38,8 @@ class RobotState():
 
 class Robot():
     def __init__(self, port='/dev/ttyUSB0', timeout=10000, outfile=sys.stderr, queue=None):
+        from port import Port
+
         self.port = Port(port=port, outfile=sys.stderr, queue=None)
         self.calibration = RobotCalibration()
         self.state = RobotState()

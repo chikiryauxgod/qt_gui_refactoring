@@ -2,12 +2,20 @@ import re
 import sys
 
 from json import loads, JSONDecodeError
-from serial import Serial 
-from serial.serialutil import SerialException
 from time import sleep
 
 from log import Log, ERROR
 from state import State, Ok, Error
+
+try:
+    from serial import Serial
+    from serial.serialutil import SerialException
+except ImportError:  # pragma: no cover - fallback for CI without pyserial
+    class Serial:  # type: ignore[no-redef]
+        def __init__(self, *_args, **_kwargs):
+            raise ImportError("pyserial is not installed")
+
+    SerialException = ImportError  # type: ignore[assignment]
 
 TIMEOUT_OPENING_PORT = 5
 DEFAULTS = {
