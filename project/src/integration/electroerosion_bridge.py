@@ -20,6 +20,10 @@ def _working_directory(path: Path):
         os.chdir(previous)
 
 
+def embedded_legacy_root() -> Path:
+    return Path(__file__).resolve().parents[2] / "legacy" / "electroerosion"
+
+
 def create_hardware_controller(legacy_root: str | os.PathLike[str]) -> HardwareController:
     legacy_path = Path(legacy_root).resolve()
 
@@ -41,6 +45,8 @@ def create_hardware_controller(legacy_root: str | os.PathLike[str]) -> HardwareC
         return HardwareController()
 
 
-def run_with_legacy_backend(legacy_root: str | os.PathLike[str]) -> int:
+def run_with_legacy_backend(legacy_root: str | os.PathLike[str] | None = None) -> int:
+    if legacy_root is None:
+        legacy_root = embedded_legacy_root()
     hardware_controller = create_hardware_controller(legacy_root)
     return run(hardware_controller=hardware_controller, q_ref=q)

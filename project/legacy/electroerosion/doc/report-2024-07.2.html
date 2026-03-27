@@ -1,0 +1,837 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>task.md</title><style></style></head><body id="preview">
+<h1 class="code-line" data-line-start="0" data-line-end="1"><a id="_________0"></a>Разработка и настройка платформы и программного обеспечения для робота-манипулятора</h1>
+<h2 class="code-line" data-line-start="2" data-line-end="3"><a id="_2"></a>Введение</h2>
+<p class="has-line-data" data-line-start="4" data-line-end="11">В данном отчете мы рассмотрим разработку и настройку платформы и программного<br>
+обеспечения для робота-манипулятора, который предназначен для<br>
+электроэррозионной. Мы подробно остановимся на создании платформы, оснастке,<br>
+реализации протокола управления манипулятором, создании 6-координатной<br>
+системы, решении задач обратной и прямой кинематики, разработке<br>
+программы-имитатора электроэрозионной обработки и взаимодействии интерфейса с<br>
+нижележащими классами.</p>
+<h2 class="code-line" data-line-start="12" data-line-end="13"><a id="1___________12"></a>1. Изготовление платформы и оснастки для робота манипулятора для обработки ПКМ</h2>
+<h3 class="code-line" data-line-start="14" data-line-end="15"><a id="11____14"></a>1.1 Требования к платформе</h3>
+<p class="has-line-data" data-line-start="16" data-line-end="19">Платформа робота-манипулятора, предназначенная для отладки<br>
+робота-манипулятора, должна соответствовать ряду требований, обеспечивающих<br>
+эффективность и безопасность процесса обработки.</p>
+<p class="has-line-data" data-line-start="20" data-line-end="24">Материалы, из которых изготовлена платформа, должны обладать необходимыми<br>
+прочностными и жёсткостными характеристиками, чтобы предотвратить деформацию<br>
+платформы в процессе работы с ПКМ. Это позволит сохранить точность обработки<br>
+и качество конечного продукта.</p>
+<p class="has-line-data" data-line-start="25" data-line-end="30">Платформа должна обеспечивать достаточную точность позиционирования рабочего<br>
+инструмента относительно обрабатываемой поверхности. Платформа должна иметь<br>
+возможность регулировки высоты и угла наклона, чтобы адаптироваться к<br>
+различным размерам и формам обрабатываемых деталей. Это обеспечит удобство<br>
+работы и повысит эффективность обработки.</p>
+<p class="has-line-data" data-line-start="31" data-line-end="34">Платформа должна быть совместима с различными типами рабочих инструментов,<br>
+используемых для обработки ПКМ. Это позволит расширить функциональные<br>
+возможности робота-манипулятора и повысить его универсальность.</p>
+<p class="has-line-data" data-line-start="35" data-line-end="40">Основание робота должно быть изготовлено из ламинированной древесно-стружечной<br>
+плиты (ЛДСП). Крепление робота к основанию осуществляется с помощью четырёх<br>
+болтов М10х50. Для фиксации детали используются наклонно-поворотные станочные<br>
+тиски. Фланец робота оборудован креплением восемью болтами М4 и позволяет<br>
+размещать разнообразный инструмент (см. табл. 1).</p>
+<p class="has-line-data" data-line-start="41" data-line-end="43">Платформа робота является передвижной. Питание робота осуществляется от сети с<br>
+напряжением 220 В.</p>
+<p class="has-line-data" data-line-start="44" data-line-end="45">Таблица 1 - Характеристики платформы робота</p>
+<table class="table table-striped table-bordered">
+<thead>
+<tr>
+<th>Характеристика</th>
+<th>Описание</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Материал основания</td>
+<td>ЛДСП</td>
+</tr>
+<tr>
+<td>Крепеж робота к основанию</td>
+<td>4 болта М10х50</td>
+</tr>
+<tr>
+<td>Крепеж детали</td>
+<td>Наклонно-поворотные станочные тиски</td>
+</tr>
+<tr>
+<td>Фланец робота</td>
+<td>8 болтов М4</td>
+</tr>
+<tr>
+<td>Возможность перемещения платформы</td>
+<td>Да</td>
+</tr>
+<tr>
+<td>Питание робота</td>
+<td>220В</td>
+</tr>
+</tbody>
+</table>
+<p class="has-line-data" data-line-start="55" data-line-end="56">Общий вид платформы показан на рис. 1, 2 и 3.</p>
+<p class="has-line-data" data-line-start="57" data-line-end="58"><img src="./img/1.png" alt="1" title="1"></p>
+<p class="has-line-data" data-line-start="59" data-line-end="60">Рис. 1 - Общий вид платформы, управляющая программа и ЭВМ</p>
+<p class="has-line-data" data-line-start="61" data-line-end="62"><img src="./img/2.png" alt="2" title="2"></p>
+<p class="has-line-data" data-line-start="63" data-line-end="64">Рис. 2 - Общий вид платформы, имитатор инструмента и макет обрабатываемой детали</p>
+<p class="has-line-data" data-line-start="65" data-line-end="66"><img src="./img/3.png" alt="3" title="3"></p>
+<p class="has-line-data" data-line-start="67" data-line-end="68">Рис. 3 - Общий вид платформы, управляющая программа и ЭВМ</p>
+<h3 class="code-line" data-line-start="69" data-line-end="70"><a id="12____69"></a>1.2 Оснастка для робота-манипулятора</h3>
+<p class="has-line-data" data-line-start="71" data-line-end="75">В рамках разработки системы для определения координат и ориентации фланца были<br>
+созданы имитаторы оснастки. Имитаторы представляют собой функциональные<br>
+прототипы оснастки, предназначенные для тестирования и отладки режимов работы<br>
+робота.</p>
+<p class="has-line-data" data-line-start="76" data-line-end="78">Имитаторы оснастки были изготовлены с использованием технологии 3D-печати. В<br>
+частности, были созданы следующие типы имитаторов:</p>
+<ol>
+<li class="has-line-data" data-line-start="79" data-line-end="82">
+<p class="has-line-data" data-line-start="79" data-line-end="81">Держатель светодиода, предназначенный для определения координат фланца<br>
+методом 3Д-фотометрии.</p>
+</li>
+<li class="has-line-data" data-line-start="82" data-line-end="85">
+<p class="has-line-data" data-line-start="82" data-line-end="84">Держатель пары светодиодов, предназначенный для определения координат и<br>
+ориентации фланца методом стереофотометрии.</p>
+</li>
+<li class="has-line-data" data-line-start="85" data-line-end="88">
+<p class="has-line-data" data-line-start="85" data-line-end="87">Держатель пары камер, предназначенный для создания стереосистемы и<br>
+определения координат и ориентации фланца методом стереофотометрии.</p>
+</li>
+</ol>
+<p class="has-line-data" data-line-start="88" data-line-end="91">Каждый из имитаторов оснастки позволяет провести тестирование и отладку<br>
+соответствующих режимов работы системы, обеспечивая тем самым повышение её<br>
+эффективности и точности определения координат и ориентации фланцев.</p>
+<p class="has-line-data" data-line-start="92" data-line-end="93"><img src="./img/4.png" alt="4" title="4"></p>
+<p class="has-line-data" data-line-start="94" data-line-end="95">Рис. 4 - Держатель светодиода, 3Д-печать</p>
+<p class="has-line-data" data-line-start="96" data-line-end="97"><img src="./img/5.png" alt="5" title="5"></p>
+<p class="has-line-data" data-line-start="98" data-line-end="99">Рис. 5 - Держатель пары камер, stl-файл</p>
+<p class="has-line-data" data-line-start="100" data-line-end="101"><img src="./img/6.png" alt="6" title="6"></p>
+<p class="has-line-data" data-line-start="102" data-line-end="103">Рис. 6 - Держатель пары светодиодов, stl-файл</p>
+<h2 class="code-line" data-line-start="104" data-line-end="105"><a id="2_____104"></a>2. Реализация протокола управления манипулятором</h2>
+<p class="has-line-data" data-line-start="106" data-line-end="107">Управление роботом осуществляется через последовательный порт.</p>
+<p class="has-line-data" data-line-start="108" data-line-end="109">Используемые библиотеки:</p>
+<ul>
+<li class="has-line-data" data-line-start="110" data-line-end="111">from serial import Serial — библиотека для работы с последовательными портами.</li>
+<li class="has-line-data" data-line-start="111" data-line-end="113">from serial.serialutil import SerialException — класс исключений, связанных с работой с последовательными портами.</li>
+</ul>
+<p class="has-line-data" data-line-start="113" data-line-end="119">Программа обеспечивает взаимодействие с роботом посредством последовательного<br>
+порта, позволяя отправлять ему команды и получать от него данные.<br>
+Инициализация программы включает создание объекта класса Serial для установки<br>
+соединения с последовательным портом и проверку наличия и доступности порта.<br>
+Для отправки команд роботу используется функция send(), которая может<br>
+принимать команды в виде строк или байтов.</p>
+<p class="has-line-data" data-line-start="120" data-line-end="123">Функция read() применяется для получения данных от робота, которые также могут<br>
+быть представлены в виде строк или байтов. В случае возникновения ошибок<br>
+программа выводит соответствующее сообщение.</p>
+<p class="has-line-data" data-line-start="124" data-line-end="126">Реализация протокола управления манипулятором включает в себя следующие<br>
+классы:</p>
+<ul>
+<li class="has-line-data" data-line-start="127" data-line-end="129">State — базовый класс для всех возможных состояний программы. В рамках<br>
+данного класса определены подклассы Ok и Error.</li>
+<li class="has-line-data" data-line-start="129" data-line-end="130">Ok — класс, который представляет успешное выполнение команды.</li>
+<li class="has-line-data" data-line-start="130" data-line-end="132">Error — класс, который представляет ошибку или исключение при выполнении<br>
+команды.</li>
+<li class="has-line-data" data-line-start="132" data-line-end="135">Port — класс, который представляет порт для подключения к роботу. Данный<br>
+класс содержит методы для открытия и закрытия порта, а также для отправки и<br>
+получения данных.</li>
+</ul>
+<p class="has-line-data" data-line-start="137" data-line-end="141">В методе init класса Port программа создаёт объект класса State, который,<br>
+представляет текущее состояние робота. Также программа пытается открыть<br>
+последовательный порт с указанным именем и скоростью передачи данных. Если<br>
+порт не указан, программа использует значение по умолчанию.</p>
+<p class="has-line-data" data-line-start="142" data-line-end="147">Если открытие порта не удалось, программа создаёт объект класса Error, который<br>
+содержит информацию об ошибке. Программа выводит эту информацию в stderr или<br>
+в очередь (в зависимости от значения переменной oufile). Затем программа<br>
+вызывает исключение SerialException, которое было сгенерировано при открытии<br>
+порта.</p>
+<p class="has-line-data" data-line-start="148" data-line-end="150">Робот выполняет команды G00 J1=j1 J2=j2 J3=j3 J4=j4 J5=j5 J6=j6 и G07 VP=vp<br>
+для управления его движением и регулировки скорости.</p>
+<p class="has-line-data" data-line-start="151" data-line-end="155">Команда G00 используется для перемещения робота в указанные координаты. В этой<br>
+команде параметры J1, J2, J3, J4, J5 и J6 определяют соответствующие оси<br>
+(X, Y, Z, A, B и C), по которым будет происходить перемещение. Значения этих<br>
+параметров указывают на необходимые координаты для перемещения робота.</p>
+<p class="has-line-data" data-line-start="156" data-line-end="159">Команда G07 предназначена для установки скорости робота. Параметр VP в этой<br>
+команде определяет значение скорости, с которой робот будет выполнять<br>
+последующие команды перемещения.</p>
+<p class="has-line-data" data-line-start="160" data-line-end="163">Для реализации команд G00 и G07 имеются методы G00() set_speed(). Метод G00<br>
+выполняет команды с несколькими параметрами (J1, J2, J3, J4, J5 и J6)<br>
+выполняет несколько основных шагов:</p>
+<ol>
+<li class="has-line-data" data-line-start="164" data-line-end="167">
+<p class="has-line-data" data-line-start="164" data-line-end="166">Определение параметров J1, J2, J3, J4, J5 и J6. Если параметры не указаны,<br>
+то используются значения по умолчанию (j1=0, j2=0, j3=0, j4=0, j5=0, j6=0).</p>
+</li>
+<li class="has-line-data" data-line-start="167" data-line-end="172">
+<p class="has-line-data" data-line-start="167" data-line-end="171">На основе указанных параметров формируется команда G00. Команда включает в<br>
+себя параметры J1, J2, J3, J4, J5 и J6, разделённые пробелами. В конце<br>
+команды добавляется символ новой строки (\r\n) для корректного понимания<br>
+команды роботом.</p>
+</li>
+<li class="has-line-data" data-line-start="172" data-line-end="176">
+<p class="has-line-data" data-line-start="172" data-line-end="175">Команда записывается в файл журнала (oufile) и в очередь (queue). Если<br>
+робот работает с портом (work_w_port), то команда записывается в порт с<br>
+помощью метода write.</p>
+</li>
+<li class="has-line-data" data-line-start="176" data-line-end="180">
+<p class="has-line-data" data-line-start="176" data-line-end="179">Состояние программы изменяется в зависимости от результата выполнения<br>
+команды. Если команда выполнена успешно, то состояние устанавливается в Ok.<br>
+Если возникает исключение (Exception), то состояние устанавливается в Error.</p>
+</li>
+</ol>
+<p class="has-line-data" data-line-start="180" data-line-end="184">Таким образом, метод G00() позволяет выполнять команды с параметрами J1, J2,<br>
+J3, J4, J5 и J6, представляющими собой углы поворота звеньев робота,<br>
+записывать их в файл журнала или очередь для общения с интерфейсом, а также<br>
+обрабатывать результаты выполнения команд. Реализацию метода см. на лист. 1.</p>
+<p class="has-line-data" data-line-start="185" data-line-end="186">Листинг 1 - Реализация метода G00()</p>
+<pre><code class="has-line-data" data-line-start="188" data-line-end="197" class="language-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">G00</span><span class="hljs-params">(self, j1=<span class="hljs-number">0</span>, j2=<span class="hljs-number">0</span>, j3=<span class="hljs-number">0</span>, j4=<span class="hljs-number">0</span>, j5=<span class="hljs-number">0</span>, j6=<span class="hljs-number">0</span>)</span>:</span>
+    <span class="hljs-keyword">try</span>:
+        cmd = f<span class="hljs-string">'G00 J1={j1} J2={j2} J3={j3} J4={j4} J5={j5} J6={j6}\r\n'</span>
+        self.__log(f<span class="hljs-string">'&gt;&gt; {cmd.strip()}'</span>, file=self.__oufile, queue=self.__queue)
+        <span class="hljs-keyword">if</span> self.__work_w_port: self.write(bytes(cmd,<span class="hljs-string">'ascii'</span>))
+        self.state = Ok(cmd)
+    <span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+        self.state = Error(cmd, e)
+</code></pre>
+<p class="has-line-data" data-line-start="198" data-line-end="201">Метод set_speed() предназначен для установки скорости движения робота. Метод<br>
+принимает параметр vp, который определяет желаемую скорость движения робота<br>
+(в процентах от максимальной).</p>
+<p class="has-line-data" data-line-start="202" data-line-end="206">В методе set_speed сначала формируется команда для установки скорости в виде<br>
+строки cmd. В команде используется параметр vp для указания желаемой<br>
+скорости. Затем команда cmd записывается в лог-файл и в порт робота. Если<br>
+порт открыт, то команда записывается в виде байтов с помощью метода write.</p>
+<p class="has-line-data" data-line-start="207" data-line-end="213">После записи команды состояние робота проверяется с помощью метода is_ready<br>
+для подтверждения успешной установки скорости. Если установка скорости прошла<br>
+успешно, то состояние робота устанавливается в Ok (всё в порядке). В<br>
+противном случае, если возникает исключение e, то состояние робота<br>
+устанавливается в Error с указанием команды и исключения. Реализацию метода<br>
+см. на лист. 2.</p>
+<p class="has-line-data" data-line-start="214" data-line-end="215">Листинг 2 - Реализация метода set_speed()</p>
+<pre><code class="has-line-data" data-line-start="217" data-line-end="227" class="language-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">set_speed</span><span class="hljs-params">(self, vp=<span class="hljs-number">50</span>)</span>:</span>
+    <span class="hljs-keyword">try</span>:
+        cmd = f<span class="hljs-string">'G07 VP={vp}\r\n'</span>
+        self.__log(f<span class="hljs-string">'&gt;&gt; {cmd.strip()}'</span>, file=self.__oufile, queue=self.__queue)
+        <span class="hljs-keyword">if</span> self.__work_w_port: self.write(bytes(cmd,<span class="hljs-string">'ascii'</span>))
+        self.state = Ok(cmd)
+        <span class="hljs-keyword">assert</span> self.is_ready()
+    <span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+        self.state = Error(cmd, e)
+</code></pre>
+<p class="has-line-data" data-line-start="228" data-line-end="232">Реализация протокола управления манипулятором имеет метод is_ready, который<br>
+проверяет, готов ли робот к выполнению следующих команд. Метод имеет<br>
+задаваемый таймаут (timeout=10000), равный 10 сек по умолчанию. Реализацию<br>
+метода см. на лист. 3.</p>
+<p class="has-line-data" data-line-start="233" data-line-end="234">Листинг 3 - Реализация метода is_ready()</p>
+<pre><code class="has-line-data" data-line-start="236" data-line-end="254" class="language-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">is_ready</span><span class="hljs-params">(self, timeout=<span class="hljs-number">10000</span>)</span>:</span>
+    <span class="hljs-keyword">if</span> self.__work_w_port: 
+        <span class="hljs-keyword">try</span>:
+            n = <span class="hljs-number">0</span>
+            <span class="hljs-keyword">while</span> <span class="hljs-number">1</span>:
+                n += <span class="hljs-number">1</span>
+                <span class="hljs-keyword">assert</span> n &lt; timeout, f<span class="hljs-string">'The timeout of {timeout / 1000} seconds was exceeded when performing operation {self.state.operation}'</span>
+                x = self.read_all().decode(<span class="hljs-string">'ascii'</span>).strip()
+                <span class="hljs-keyword">if</span> x: self.__log(f<span class="hljs-string">'&lt;&lt; {x}'</span>, file=self.__oufile, queue=self.__queue)
+                <span class="hljs-keyword">if</span> <span class="hljs-string">'%'</span> <span class="hljs-keyword">in</span> x:
+                    <span class="hljs-keyword">break</span>
+                sleep(<span class="hljs-number">0.001</span>)
+        <span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+            self.state = Error(self.state.operation, e)
+            <span class="hljs-keyword">raise</span> self.state
+    <span class="hljs-keyword">else</span>:
+        self.__log(<span class="hljs-string">'&lt;&lt; emulated!'</span>, file=self.__oufile, queue=self.__queue)
+</code></pre>
+<p class="has-line-data" data-line-start="255" data-line-end="260">Таким образом, реализация протокола управления манипулятором позволяет<br>
+управлять роботом через последовательный порт, отправлять ему команды и<br>
+получать данные от него. Программная реализация протокола имеет методы для<br>
+перемещения робота в указанные координаты, установки скорости движения и<br>
+проверки готовности робота к выполнению следующих команд.</p>
+<p class="has-line-data" data-line-start="261" data-line-end="262">Таблица 2 - Классы и методы реализации протокола управления манипулятором</p>
+<table class="table table-striped table-bordered">
+<thead>
+<tr>
+<th>Класс</th>
+<th>Описание</th>
+<th>Методы</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>State</td>
+<td>Базовый класс, хранящий состояние робота</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Ok</td>
+<td>Класс, хранящий состояние робота в норме</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Error</td>
+<td>Класс, хранящий состояние робота в состоянии ошибки</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Port</td>
+<td>Программная реализация протокола управления манипулятором</td>
+<td>init - подготовка к работе &lt;br&gt;log - журналирование &lt;br&gt;G00 - перемещение в координаты по углам звеньев &lt;br&gt;set_speed - установка скорости &lt;br&gt;is_ready - готовность к следующей команде</td>
+</tr>
+</tbody>
+</table>
+<h2 class="code-line" data-line-start="271" data-line-end="272"><a id="3__6__271"></a>3. Создание/настройка 6-координатной системы</h2>
+<p class="has-line-data" data-line-start="273" data-line-end="275">Робот представляет собой установку, состоящую из шести звеньев. Каждое звено<br>
+имеет свой диапазон вращения, который представлен в таблице 3:</p>
+<p class="has-line-data" data-line-start="276" data-line-end="277">Таблица 3 - Минимальное и максимальное значение, град.</p>
+<table class="table table-striped table-bordered">
+<thead>
+<tr>
+<th>Номер звена</th>
+<th>Минимальное значение, град.</th>
+<th>Максимальное значение, град.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>90</td>
+<td>90</td>
+</tr>
+<tr>
+<td>2</td>
+<td>50</td>
+<td>50</td>
+</tr>
+<tr>
+<td>3</td>
+<td>50</td>
+<td>50</td>
+</tr>
+<tr>
+<td>4</td>
+<td>90</td>
+<td>90</td>
+</tr>
+<tr>
+<td>5</td>
+<td>90</td>
+<td>90</td>
+</tr>
+<tr>
+<td>6</td>
+<td>-180</td>
+<td>180</td>
+</tr>
+</tbody>
+</table>
+<p class="has-line-data" data-line-start="287" data-line-end="288">Все звенья робота представлены на рисунке 7.</p>
+<p class="has-line-data" data-line-start="291" data-line-end="292"><img src="./img/7.png" alt="7" title="7"></p>
+<p class="has-line-data" data-line-start="293" data-line-end="294">Рис. 7 - Звенья робота, схема</p>
+<p class="has-line-data" data-line-start="295" data-line-end="297">В реализации используются библиотеки matplotlib.pyplot и ikpy для работы с<br>
+установкой. Также используются классы Chain и OriginLink.</p>
+<p class="has-line-data" data-line-start="298" data-line-end="302">В рамках разработки модели манипулятора был создан объект класса <code>Chain</code> с<br>
+именем «manipulator», основанный на библиотеке ikpy который состоит из семи<br>
+звеньев. Активными являются следующие звенья: нулевое (основание робота),<br>
+первое, второе, третье, четвёртое, пятое и шестое (инструмент — фломастер).</p>
+<p class="has-line-data" data-line-start="303" data-line-end="305">Нулевое звено представляет собой <code>OriginLink</code> и характеризуется отсутствием<br>
+вращения и ориентации.</p>
+<p class="has-line-data" data-line-start="306" data-line-end="308">Первое, второе, третье, четвёртое и пятое звенья представлены объектами класса<br>
+<code>URDFLink</code> и имеют следующие характеристики:</p>
+<ul>
+<li class="has-line-data" data-line-start="308" data-line-end="310">первое звено: <code>origin_translation</code> [0, 35, 370], <code>origin_orientation</code> [0, 0,<br>
+0], <code>rotation</code> [1, 0, 0];</li>
+<li class="has-line-data" data-line-start="310" data-line-end="312">второе звено: <code>origin_translation</code> [0, 0, 242], <code>origin_orientation</code> [0, 0,<br>
+0], <code>rotation</code> [1, 0, 0];</li>
+<li class="has-line-data" data-line-start="312" data-line-end="314">третье звено: <code>origin_translation</code> [0, 120-35, 0], <code>origin_orientation</code><br>
+[0, 0, 0], <code>rotation</code> [0, 1, 0];</li>
+<li class="has-line-data" data-line-start="314" data-line-end="316">четвёртое звено: <code>origin_translation</code> [0, 210, 0], <code>origin_orientation</code><br>
+[0, 0, 0], <code>rotation</code> [1, 0, 0];</li>
+<li class="has-line-data" data-line-start="316" data-line-end="319">пятое звено: <code>origin_translation</code> [0, 0, -145], <code>origin_orientation</code> [0, 0,<br>
+0], <code>rotation</code> [0, 0, 1].</li>
+</ul>
+<p class="has-line-data" data-line-start="319" data-line-end="322">Шестое звено представляет собой описание инструмента <code>URDFLink</code> и имеет<br>
+следующие характеристики: <code>name</code> «pen», <code>origin_translation</code> [0, 0, -150],<br>
+<code>origin_orientation</code> [0, 0, 0], <code>rotation</code> [0, 0, 1]. См. табл. 4.</p>
+<p class="has-line-data" data-line-start="323" data-line-end="324">Таблица 4 - Характеристики звеньев робота</p>
+<table class="table table-striped table-bordered">
+<thead>
+<tr>
+<th>Номер звена / инструмента</th>
+<th>Координаты</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0, 0, 0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0, 35, 370</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0, 0, 242</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0, 85, 0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0, 210, 0</td>
+</tr>
+<tr>
+<td>5</td>
+<td>0, 0, -145</td>
+</tr>
+<tr>
+<td>Инструмент</td>
+<td>0, 0, -150</td>
+</tr>
+</tbody>
+</table>
+<h2 class="code-line" data-line-start="335" data-line-end="336"><a id="4________335"></a>4. Решение/настройка решения обратной и прямой задач кинематики</h2>
+<p class="has-line-data" data-line-start="337" data-line-end="340">Решение задач обратной и прямой кинематики выполнено с использованием<br>
+библиотеки обратной кинематики ikpy, которая ориентирована на высокую<br>
+производительность и модульность.</p>
+<p class="has-line-data" data-line-start="341" data-line-end="346">IKPy — это библиотека на языке Python, предназначенная для решения задач<br>
+обратной кинематики (ИК) в робототехнике. Она позволяет вычислять обратную<br>
+кинематику для различных роботов и определять кинематические цепи с<br>
+использованием различных представлений, таких как DH и URDF. Библиотека также<br>
+позволяет автоматически импортировать кинематические цепи из файлов URDF.</p>
+<p class="has-line-data" data-line-start="347" data-line-end="348">С помощью IKPy можно:</p>
+<ul>
+<li class="has-line-data" data-line-start="349" data-line-end="350">вычислять обратную кинематику для любого существующего робота;</li>
+<li class="has-line-data" data-line-start="350" data-line-end="352">вычислять обратную кинематику в положении, ориентации или одновременно в<br>
+обоих;</li>
+<li class="has-line-data" data-line-start="352" data-line-end="354">определять кинематическую цепь с использованием произвольных представлений<br>
+(DH, URDF и других);</li>
+<li class="has-line-data" data-line-start="354" data-line-end="355">автоматически импортировать кинематическую цепь из файла URDF;</li>
+<li class="has-line-data" data-line-start="355" data-line-end="357">использовать предварительно настроенные роботы, такие как Baxter или<br>
+Poppy-torso;</li>
+<li class="has-line-data" data-line-start="357" data-line-end="358">определять собственные методы обратной кинематики;</li>
+<li class="has-line-data" data-line-start="358" data-line-end="359">анализировать файлы URDF;</li>
+<li class="has-line-data" data-line-start="359" data-line-end="362">строить кинематическую цепь без необходимости использования реального робота<br>
+или симулятора.</li>
+</ul>
+<p class="has-line-data" data-line-start="362" data-line-end="368">IKPy является точной (с точностью до 7 знаков после запятой) и быстрой<br>
+библиотекой (от 7 до 50 миллисекунд в зависимости от точности). Начиная с<br>
+версии 3.1, IKPy поддерживает только Python 3. Для более ранних версий<br>
+библиотеки возможна работа с Python 2.7 и 3.x. Рекомендуется использовать<br>
+sympy для быстрых гибридных вычислений, поэтому он устанавливается по<br>
+умолчанию. Для работы IKPy требуются библиотеки numpy и scipy.</p>
+<p class="has-line-data" data-line-start="369" data-line-end="371">Опционально может быть установлен matplotlib для построения графиков моделей в<br>
+3D (cм. рис. 8).</p>
+<p class="has-line-data" data-line-start="373" data-line-end="374"><img src="./img/8.png" alt="8" title="8"></p>
+<p class="has-line-data" data-line-start="375" data-line-end="376">Рис. 8 - Пример работы ikpy</p>
+<p class="has-line-data" data-line-start="377" data-line-end="380">Для тестирования реализации обратной и прямой кинематики была создана<br>
+программа, которая решает задачу обратной и прямой кинематики для<br>
+манипулятора с использованием библиотеки ikpy.</p>
+<p class="has-line-data" data-line-start="381" data-line-end="387">Программа начинается с импорта необходимых библиотек: numpy для работы с<br>
+массивами, matplotlib.pyplot для создания графиков и mpl_toolkits.mplot3d для<br>
+создания трёхмерных графиков, а также ikpy для работы с кинематикой<br>
+манипулятора. Затем создаётся объект my_chain класса Chain, который<br>
+представляет манипулятор. Далее создаётся трёхмерный график ax, на который<br>
+будут выводиться результаты работы программы.</p>
+<p class="has-line-data" data-line-start="388" data-line-end="391">Затем задаются три массива: z, x и y, которые представляют координаты точек в<br>
+пространстве. Также задаются массивы rx, ry и rz, которые представляют углы<br>
+вращения звеньев манипулятора.</p>
+<p class="has-line-data" data-line-start="392" data-line-end="397">Далее начинается цикл, который перебирает все возможные комбинации координат и<br>
+углов. Для каждой комбинации программа решает обратную кинематическую задачу,<br>
+то есть находит такие положения звеньев манипулятора, чтобы его конец<br>
+оказался в заданной точке пространства. Результаты решения обратной<br>
+кинематической задачи сохраняются в массиве ik.</p>
+<p class="has-line-data" data-line-start="398" data-line-end="400">Затем программа строит график, на котором отображаются найденные положения<br>
+звеньев манипулятора.</p>
+<p class="has-line-data" data-line-start="401" data-line-end="405">После этого решается прямая кинематическая задача, то есть находятся<br>
+координаты конца манипулятора для найденных положений звеньев. Результаты<br>
+сохраняются в массиве pk. Наконец, программа выводит на экран координаты<br>
+точек, углы и координаты конца манипулятора для каждой комбинации.</p>
+<p class="has-line-data" data-line-start="406" data-line-end="410">Таким образом, программа позволяет исследовать обратную и прямую кинематику<br>
+манипулятора для различных комбинаций координат и углов. Это может быть<br>
+полезно для разработки алгоритмов управления манипулятором или для анализа<br>
+его возможностей. Результат работы программы показан на рис. 9.</p>
+<p class="has-line-data" data-line-start="411" data-line-end="412"><img src="./img/9.png" alt="9" title="9"></p>
+<p class="has-line-data" data-line-start="413" data-line-end="414">Рис. 9 - Результат тестирования кинематики</p>
+<h2 class="code-line" data-line-start="415" data-line-end="416"><a id="5_____415"></a>5. Описание произвольного (тестового) инструмента</h2>
+<p class="has-line-data" data-line-start="417" data-line-end="421">В рамках исследования рассматривается произвольный (тестовый) инструмент, для<br>
+работы с которым используется инструмент Chain из библиотеки ikpy. Данная<br>
+библиотека предоставляет функционал для работы с кинематическими цепями и<br>
+позволяет моделировать движения различных механизмов.</p>
+<p class="has-line-data" data-line-start="422" data-line-end="424">В рамках исследования используется инструмент Chain, который состоит из<br>
+следующих элементов:</p>
+<ul>
+<li class="has-line-data" data-line-start="425" data-line-end="442">URDFLink — элемент, который представляет собой звено кинематической цепи. В<br>
+рамках исследования используется два типа URDFLink:
+<ul>
+<li class="has-line-data" data-line-start="427" data-line-end="430">OriginLink — элемент, который определяет начальное положение звена в<br>
+пространстве. В рамках исследования используется для определения<br>
+начального положения звена «pen»;</li>
+<li class="has-line-data" data-line-start="430" data-line-end="432">name — имя звена, которое используется для идентификации звена в рамках<br>
+исследования;</li>
+<li class="has-line-data" data-line-start="432" data-line-end="435">origin_translation — вектор, который определяет начальное положение<br>
+звена в пространстве. В рамках исследования используется для<br>
+звена «pen» и имеет координаты [0, 0, -150];</li>
+<li class="has-line-data" data-line-start="435" data-line-end="438">origin_orientation — вектор, который определяет ориентацию звена в<br>
+пространстве. В рамках исследования используется для звена «pen» и<br>
+имеет координаты [0, 0, 0];</li>
+<li class="has-line-data" data-line-start="438" data-line-end="442">rotation — вектор, который определяет вращение звена вокруг своей оси. В<br>
+рамках исследования используется для звена «pen» и имеет координаты<br>
+[0, 0, 1].</li>
+</ul>
+</li>
+</ul>
+<p class="has-line-data" data-line-start="442" data-line-end="443">Листинг 4 - Реализация тестового инструмента</p>
+<pre><code class="has-line-data" data-line-start="445" data-line-end="452" class="language-python">URDFLink(
+    name=<span class="hljs-string">"pen"</span>,
+    origin_translation=[<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, -<span class="hljs-number">150</span>],
+    origin_orientation=[<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>],
+    rotation=[<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">1</span>],
+),
+</code></pre>
+<p class="has-line-data" data-line-start="453" data-line-end="454">Робот со смонтированным тестовым инструментом показан на рис. 10.</p>
+<p class="has-line-data" data-line-start="455" data-line-end="456"><img src="./img/10.png" alt="10" title="10"></p>
+<p class="has-line-data" data-line-start="457" data-line-end="458">Рис. 10 - Тестовый инструмент на роботе</p>
+<h2 class="code-line" data-line-start="459" data-line-end="460"><a id="6_____459"></a>6. Разработка программы-имитатора электроэррозионной обработки</h2>
+<p class="has-line-data" data-line-start="462" data-line-end="468">Программа-имитатор электроэрозионной обработки представляет собой комплексное<br>
+программное решение, предназначенное для моделирования процесса<br>
+электроэрозионной обработки материалов с использованием численных методов и<br>
+алгоритмов. Программа позволяет имитировать основные этапы и параметры<br>
+процесса, обеспечивая возможность исследования и оптимизации технологических<br>
+режимов.</p>
+<p class="has-line-data" data-line-start="469" data-line-end="473">Программа основана на использовании модулей и библиотек, таких как matplotlib,<br>
+numpy, tkinter и других, которые обеспечивают функциональность для<br>
+визуализации результатов, взаимодействия с пользователем и управления<br>
+процессом обработки.</p>
+<p class="has-line-data" data-line-start="474" data-line-end="475">Основные функции программы включают:</p>
+<ol>
+<li class="has-line-data" data-line-start="476" data-line-end="480">
+<p class="has-line-data" data-line-start="476" data-line-end="479">Имитация процесса электроэрозионной обработки. Программа позволяет<br>
+моделировать процесс удаления материала с использованием электрических<br>
+разрядов между электродом и обрабатываемой поверхностью.</p>
+</li>
+<li class="has-line-data" data-line-start="480" data-line-end="484">
+<p class="has-line-data" data-line-start="480" data-line-end="483">Управление параметрами обработки. Пользователь может настраивать параметры<br>
+процесса, такие как ток, напряжение, частота импульсов и другие, для<br>
+исследования их влияния на качество и эффективность обработки.</p>
+</li>
+<li class="has-line-data" data-line-start="484" data-line-end="487">
+<p class="has-line-data" data-line-start="484" data-line-end="486">Визуализация результатов. Программа предоставляет возможность визуализации<br>
+процесса обработки, что позволяет анализировать результаты обработки.</p>
+</li>
+<li class="has-line-data" data-line-start="487" data-line-end="490">
+<p class="has-line-data" data-line-start="487" data-line-end="489">Пользователь может управлять процессом обработки с помощью интерфейса<br>
+программы, включая запуск, остановку и изменение параметров обработки.</p>
+</li>
+</ol>
+<p class="has-line-data" data-line-start="490" data-line-end="494">Основным компонентом программы-имитатора является визуальный интерфейс<br>
+оператора (см. рис. 11). Интерфейс программы управления роботом представляет<br>
+собой интуитивно понятное и функциональное окружение, предназначенное для<br>
+взаимодействия пользователя с программой и роботом.</p>
+<p class="has-line-data" data-line-start="495" data-line-end="496"><img src="./img/11.png" alt="11" title="11"></p>
+<p class="has-line-data" data-line-start="497" data-line-end="498">Рис. 11 - Визуальный интерфейс оператора</p>
+<p class="has-line-data" data-line-start="499" data-line-end="504">Элементы интерфейса выполнены в стиле, обеспечивающем удобство использования и<br>
+понятность для пользователя. Взаимодействие с программой осуществляется через<br>
+кнопки на панели инструментов и меню. Пользователь может выбрать функцию из<br>
+меню, ввести параметры в полях ввода или использовать кнопки для<br>
+непосредственного управления роботом.</p>
+<p class="has-line-data" data-line-start="505" data-line-end="511">Функция configure, которая используется для настройки параметров робота.<br>
+Функция принимает два аргумента: values и joints. Аргумент values содержит<br>
+начальные значения для координат робота в трёхмерном пространстве. Эти<br>
+значения сохраняются в переменных position. Аргумент joints содержит<br>
+начальные значения для звеньев робота. Эти значения сохраняются в переменных<br>
+joints.</p>
+<p class="has-line-data" data-line-start="512" data-line-end="515">После настройки параметров робота, функция создаёт три группы переменных:<br>
+position, rotation и joints. Каждая группа содержит по три переменные,<br>
+соответствующие трём осям координат.</p>
+<p class="has-line-data" data-line-start="517" data-line-end="522">При запуске программы создаётся главное окно приложения с помощью объекта<br>
+класса <code>Tkinter.Tk()</code>. Заголовок окна устанавливается с помощью <code>self.title</code>.<br>
+Для управления роботом создаётся фрейм с элементами управления — объект<br>
+класса <code>LabelFrame</code>. Ширина и высота фрейма задаются параметрами <code>width</code> и<br>
+<code>height</code>, а текст фрейма — параметром <code>text</code>.</p>
+<p class="has-line-data" data-line-start="523" data-line-end="528">Также создаётся фрейм, который будет содержать элементы управления графиком и<br>
+позиционированием — объект класса <code>Frame</code>. Для отображения графика создаётся<br>
+фрейм с объектом класса <code>LabelFrame</code>. Ширина фрейма задаётся параметром<br>
+<code>width</code>, а текст — параметром <code>text</code>. Затем создаётся объект класса<br>
+<code>Notebook</code> для создания вкладки с графиком, и добавляются две вкладки.</p>
+<p class="has-line-data" data-line-start="529" data-line-end="534">Для управления позиционированием создаётся фрейм с объектом класса<br>
+<code>LabelFrame</code>. Высота фрейма задаётся параметром <code>height</code>, а текст —<br>
+параметром <code>text</code>. Затем создаётся объект класса <code>Notbook</code> для создания<br>
+вкладки с позиционированием, и добавляются две вкладки с помощью метода<br>
+<code>add</code>. Внутри <code>Notbook</code> создаются дополнительные фреймы.</p>
+<p class="has-line-data" data-line-start="535" data-line-end="539">Для управления положением робота создаются объекты класса <code>Scale</code> — ползунки.<br>
+Ориентация ползунка задаётся параметром <code>orient</code>, диапазон значений —<br>
+параметрами <code>from_</code> и <code>to</code>, значение ползунка — параметром <code>showvalue</code>, а<br>
+переменная, связанная с ползунком, — параметром <code>variable</code>.</p>
+<p class="has-line-data" data-line-start="540" data-line-end="544">Для управления скоростью робота создаётся ползунок с объектом класса <code>Scale</code>.<br>
+Длина ползунка задаётся параметром <code>length</code>, диапазон значений — параметрами<br>
+<code>from_</code> и <code>to</code>, интервал между делениями — параметром <code>tickinterval</code>, а<br>
+разрешение — параметром <code>resolution</code>.</p>
+<p class="has-line-data" data-line-start="545" data-line-end="548">Элементы управления отображаются на фреймах с помощью метода <code>grid</code>. При<br>
+нажатии на кнопку выхода программа обрабатывает событие с помощью метода<br>
+<code>command</code>.</p>
+<p class="has-line-data" data-line-start="550" data-line-end="553">Интерфейс взаимодействует с роботом через модуль <code>robot</code>. Он представляет<br>
+собой набор классов, которые позволяют осуществлять контроль над его<br>
+движением и состоянием.</p>
+<p class="has-line-data" data-line-start="554" data-line-end="557">Класс RobotCalibration содержит методы для преобразования единиц измерения<br>
+углов в градусы и наоборот. Это позволяет обеспечить совместимость различных<br>
+систем измерения углов, используемых в роботе.</p>
+<p class="has-line-data" data-line-start="558" data-line-end="559">Методы класса RobotCalibration:</p>
+<ul>
+<li class="has-line-data" data-line-start="560" data-line-end="561">units_to_degrees — преобразует единицы измерения углов в градусы.</li>
+<li class="has-line-data" data-line-start="561" data-line-end="563">degrees_to_units — преобразует градусы в единицы измерения углов.</li>
+</ul>
+<p class="has-line-data" data-line-start="563" data-line-end="565">Класс RobotState представляет состояние робота. Он содержит информацию о<br>
+текущем положении и скорости робота.</p>
+<p class="has-line-data" data-line-start="566" data-line-end="569">Класс Robot представляет сам робот. Он содержит методы для управления его<br>
+движением и получения информации о его состоянии и абстрагирует класс Port,<br>
+описанный выше.</p>
+<ul>
+<li class="has-line-data" data-line-start="570" data-line-end="571">init — инициализирует объект класса Robot.</li>
+<li class="has-line-data" data-line-start="571" data-line-end="572">set_speed — устанавливает скорость робота.</li>
+<li class="has-line-data" data-line-start="572" data-line-end="573">get_speed — получает текущую скорость робота.</li>
+<li class="has-line-data" data-line-start="573" data-line-end="574">set_joint_pos — устанавливает положение суставов робота.</li>
+<li class="has-line-data" data-line-start="574" data-line-end="575">get_joint_pos — получает текущее положение суставов робота.</li>
+<li class="has-line-data" data-line-start="575" data-line-end="577">is_ready — проверяет, готов ли робот к следующей команде.</li>
+</ul>
+<p class="has-line-data" data-line-start="577" data-line-end="581">При инициализации объекта класса Robot указывается порт, к которому подключён<br>
+робот, и время ожидания ответа от робота (timeout). Для управления движением<br>
+робота используются методы set_speed и set_joint_pos. Метод set_speed<br>
+устанавливает скорость робота, а метод set_joint_pos — положение суставов.</p>
+<p class="has-line-data" data-line-start="582" data-line-end="586">Для получения информации о состоянии робота используются методы get_speed,<br>
+get_joint_pos и is_ready. Метод get_speed возвращает текущую скорость робота,<br>
+метод get_joint_pos — текущее положение суставов, а метод is_ready —<br>
+готовность робота к работе.</p>
+<p class="has-line-data" data-line-start="587" data-line-end="590">В классе RobotWindow, производном от Tk, реализуется метод timer. В рамках<br>
+этого метода происходит управление роботом. Сначала определяется значение<br>
+параметра speed с помощью элемента управления speedControl.</p>
+<p class="has-line-data" data-line-start="591" data-line-end="595">Затем происходит попытка получить текущие значения углов в суставах робота с<br>
+помощью списка <code>joints</code>. Если полученные значения отличаются от ранее<br>
+сохранённых (<code>joints_values_old</code>), то выполняется обновление графика и отправка<br>
+новых значений в очередь.</p>
+<p class="has-line-data" data-line-start="596" data-line-end="602">Полученные из очереди результаты сохраняются в словаре <code>j_values</code>. Затем<br>
+происходит печать содержимого этого словаря и установка углов в суставах<br>
+робота на основе полученных значений. Если скорость движения робота<br>
+изменяется, то происходит печать нового значения скорости и установка новой<br>
+скорости с помощью метода <code>set_speed</code>. Ранее сохранённые значения углов<br>
+звеньев сохраняются в переменной <code>joints_values_old</code>.</p>
+<p class="has-line-data" data-line-start="603" data-line-end="607">В классе <code>RobotWindow</code> для получения состояния робота используется метод <code>timer</code>.<br>
+Данный метод вызывается с интервалом в 100 миллисекунд и выполняет ряд<br>
+действий. Получение текущих значений позиций и поворотов звеньев робота с<br>
+помощью переменных <code>position</code> и <code>rotation</code>.</p>
+<p class="has-line-data" data-line-start="608" data-line-end="612">Затем выполняется сравнение текущих значений с предыдущими сохранёнными<br>
+значениями <code>position_old</code> и <code>rotation_old</code>. Если значения изменились,<br>
+установка флага <code>update_graph</code> в <code>True</code> и печать текущих и предыдущих<br>
+значений.</p>
+<p class="has-line-data" data-line-start="613" data-line-end="620">Вызов метода <code>set_joint_pos</code> робота с новыми значениями позиций и поворотов<br>
+звеньев. Текущие значения сохраняются в переменных <code>position_old</code> и<br>
+<code>rotation_old</code>. При установленном флаге <code>update_graph</code> вызов метода <code>plot</code><br>
+для отображения графика с текущими и предыдущими значениями. Повторный вызов<br>
+метода происходит с интервалом в 100 миллисекунд для продолжения выполнения.<br>
+Этот метод позволяет получать актуальное состояние робота и отслеживать<br>
+изменения в его позициях и поворотах суставов.</p>
+<p class="has-line-data" data-line-start="621" data-line-end="623">Описать взаимодействие интерфейса с нижележащими классами можно на примере<br>
+относительно простых методов <code>set_speed</code> и <code>get_speed</code>.</p>
+<p class="has-line-data" data-line-start="624" data-line-end="625">Листинг 5 - Реализация методов set_speed() и get_speed()</p>
+<pre><code class="has-line-data" data-line-start="627" data-line-end="634" class="language-python">    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">set_speed</span><span class="hljs-params">(self, speed)</span>:</span>
+        self.robot.set_speed(speed)
+
+    <span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">get_speed</span><span class="hljs-params">(self)</span>:</span>
+        speed = self.robot.get_speed()
+        self.speedControl.set(speed)
+</code></pre>
+<ol>
+<li class="has-line-data" data-line-start="635" data-line-end="637">
+<p class="has-line-data" data-line-start="635" data-line-end="636">Функция <code>set_speed</code> вызывается с параметром <code>speed</code>.</p>
+</li>
+<li class="has-line-data" data-line-start="637" data-line-end="641">
+<p class="has-line-data" data-line-start="637" data-line-end="640">Вызывается метод <code>set_speed</code> объекта robot с переданным параметром <code>speed</code>. Это<br>
+означает, что скорость робота устанавливается равной значению параметра<br>
+<code>speed</code>.</p>
+</li>
+<li class="has-line-data" data-line-start="641" data-line-end="644">
+<p class="has-line-data" data-line-start="641" data-line-end="643">Функция <code>get_speed</code> возвращает значение скорости робота с помощью метода<br>
+<code>get_speed</code> объекта <code>robot</code>.</p>
+</li>
+<li class="has-line-data" data-line-start="644" data-line-end="646">
+<p class="has-line-data" data-line-start="644" data-line-end="645">Значение скорости сохраняется в переменной <code>speed</code>.</p>
+</li>
+<li class="has-line-data" data-line-start="646" data-line-end="649">
+<p class="has-line-data" data-line-start="646" data-line-end="648">Значение переменной <code>speed</code> передаётся в метод set объекта <code>speedControl</code>,<br>
+который управляет скоростью чего-либо.</p>
+</li>
+</ol>
+<p class="has-line-data" data-line-start="649" data-line-end="652">Таким образом, код устанавливает скорость робота с помощью параметра <code>speed</code>,<br>
+переданного в функцию <code>set_speed</code>, и управляет скоростью с помощью объекта<br>
+<code>speedControl</code> на основе значения скорости, полученного из объекта <code>robot</code>.</p>
+<p class="has-line-data" data-line-start="653" data-line-end="654">Аналогично работают остальные методы взаимодействия с “железом” робота.</p>
+<h2 class="code-line" data-line-start="655" data-line-end="656"><a id="____655"></a>Выбор режимов электроэррозионной обработки.</h2>
+<p class="has-line-data" data-line-start="657" data-line-end="664">Установка параметров процесса электроэрозионной обработки включает определение<br>
+электрических параметров режима, механических и гидравлических параметров.<br>
+Основные электрические параметры режима: энергия импульса, длительность<br>
+импульса, частота следования импульсов и скважность. Механические и<br>
+гидравлические параметры могут включать напряжение холостого хода, рабочее<br>
+напряжение, ток короткого замыкания, рабочий ток, напряжение горения дуги и<br>
+другие.</p>
+<p class="has-line-data" data-line-start="665" data-line-end="666">Список параметров интерфейса управления может включать следующие элементы:</p>
+<ul>
+<li class="has-line-data" data-line-start="667" data-line-end="668">напряжение холостого хода (Uхх),</li>
+<li class="has-line-data" data-line-start="668" data-line-end="669">рабочее напряжение (Ir),</li>
+<li class="has-line-data" data-line-start="669" data-line-end="670">ток короткого замыкания (Iкз),</li>
+<li class="has-line-data" data-line-start="670" data-line-end="671">рабочий ток (Ir),</li>
+<li class="has-line-data" data-line-start="671" data-line-end="672">энергия импульса (Wi),</li>
+<li class="has-line-data" data-line-start="672" data-line-end="673">частота следования импульсов (f),</li>
+<li class="has-line-data" data-line-start="673" data-line-end="674">длительность импульса (ti),</li>
+<li class="has-line-data" data-line-start="674" data-line-end="675">скважность импульсов (nск),</li>
+<li class="has-line-data" data-line-start="675" data-line-end="677">значение ёмкости (C, мкФ) и индуктивности (L, мкГ) для генераторов импульсов.</li>
+</ul>
+<p class="has-line-data" data-line-start="677" data-line-end="681">Рассмотрим подробнее процесс установки режима ЭЭО. Как написано в<br>
+статье “Анализ структурных изменений в поверхностном слое деталей после<br>
+электроэрозионной обработки” (Абляз Т. Р.), электроэрозионная обработка<br>
+проведена на проволочно-вырезном станке фирмы Electronica.</p>
+<p class="has-line-data" data-line-start="682" data-line-end="685">В качестве рабочей жидкости использована дистиллированная вода. В качестве<br>
+электрода-инструмента использована проволока из латуни марки Л68. Обработку<br>
+проводили в соответствии с режимами, приведенными в табл. 5.</p>
+<p class="has-line-data" data-line-start="686" data-line-end="687">Таблица 5 - Режимы обработки</p>
+<p class="has-line-data" data-line-start="688" data-line-end="689"><img src="./img/12.png" alt="12" title="12"></p>
+<p class="has-line-data" data-line-start="691" data-line-end="696">Для выявления влияния сформированного измененного слоя на эксплуатационные<br>
+свойства обработанной детали авторами статьи применен метод дюрометрического<br>
+анализа. Согласно результатам эксперимента, изменения микротвердости стальных<br>
+заготовок, обработанных методом проволочно-вырезной ЭЭО поверхностей образцов<br>
+не выявлено.</p>
+<p class="has-line-data" data-line-start="697" data-line-end="698"><img src="./img/13.png" alt="13" title="13"></p>
+<p class="has-line-data" data-line-start="699" data-line-end="700">Рисунок 13 - Общий график зависимости глубины измененного слоя от силы тока</p>
+<p class="has-line-data" data-line-start="701" data-line-end="706">Также, в статье &quot;Моделирование температурного воздействия единичного импульса<br>
+при электроэрозионной обработке (Т.Р. Абляз, К.Р. Муратов, Е.Е. Красновский,<br>
+Д.А. Борисов) было проведено моделирование взаимосвязи параметров. Как<br>
+указано в статье, по результатам моделирования построен график изменения<br>
+температуры на поверхности детали при ЭЭО (рис. 14).</p>
+<p class="has-line-data" data-line-start="707" data-line-end="708"><img src="./img/14.png" alt="14" title="14"></p>
+<p class="has-line-data" data-line-start="709" data-line-end="712">Рисунок 14 - График изменения температуры на поверхности детали в результате<br>
+воздействия импульса: 1 – температура на поверхности детали в центре разряда;<br>
+2 – температура на поверхности детали на границе радиуса действия плазмы</p>
+<p class="has-line-data" data-line-start="713" data-line-end="716">Исходя из этого, в интерфейсе управления были созданы соответствующие элементы<br>
+для указания параметров ЭЭ обработки, с учётом материала, направления и<br>
+глубины воздействия. Внешний вид интерфейса на рис. 15.</p>
+<p class="has-line-data" data-line-start="717" data-line-end="718">Рисунок 15 - Внешний вид интерфейса управления параметрами ЭЭО.</p>
+<p class="has-line-data" data-line-start="719" data-line-end="720"><img src="./img/15.png" alt="15" title="15"></p>
+<p class="has-line-data" data-line-start="721" data-line-end="724">Исходя из полученных в публикациях данных, и используемого материала<br>
+(выбирается пользователем) были определены предустановленные значения в<br>
+интерфейсе управления роботом.</p>
+<p class="has-line-data" data-line-start="725" data-line-end="732">Учитывая данные о минимальной и максимальной толщине слоя (из рис. 13) -<br>
+примем за эталон минимальное, среднее и максимальное значения (6, 11, 16<br>
+мкм). Соответственно, при передаче модели в слайсер (используется Ultimaker<br>
+Cura), также передаются параметры толщины слоя и скорости перемещения, они<br>
+учитывается при преобразовании в gcode. Для того, чтобы интерфейс не зависал<br>
+во время слайсинга, используется модуль subprocess, который запускает<br>
+отдельный процесс, и передаёт ему необходимые параметры.</p>
+<p class="has-line-data" data-line-start="733" data-line-end="734">Листинг 6 - Функция запуска слайсера Ultimaker Cura</p>
+<pre><code class="has-line-data" data-line-start="736" data-line-end="765" class="language-python"><span class="hljs-function"><span class="hljs-keyword">def</span> <span class="hljs-title">start_cura</span><span class="hljs-params">(script=<span class="hljs-string">'cura_run.sh'</span>, cura_dir=CURA_DIR_NAME, out_file=<span class="hljs-string">'object.gcode'</span>)</span>:</span>
+        status = <span class="hljs-number">0</span>
+        res = {}
+        cura_path = <span class="hljs-string">'/'</span>.join(os.path.abspath(BASE_DIR).split(<span class="hljs-string">'/'</span>)[:-<span class="hljs-number">1</span>] + [cura_dir])
+        <span class="hljs-keyword">try</span>:
+            subprocess.call([<span class="hljs-string">'bash'</span>, f<span class="hljs-string">'{cura_path}/{script}'</span>])
+            time.sleep(<span class="hljs-number">3</span>)
+            interface_gcode_path = f<span class="hljs-string">'static/3d_models/{out_file}'</span>
+            print(interface_gcode_path)
+            shutil.move(f<span class="hljs-string">'{cura_path}/{out_file}'</span>, interface_gcode_path)
+            res = {<span class="hljs-string">'gcode'</span>: f<span class="hljs-string">'/static/3d_models/{out_file}'</span>} <span class="hljs-comment"># no {app_cur_dir} because static url is the same in browser for dev and prod</span>
+        <span class="hljs-keyword">except</span> FileNotFoundError <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'File not found error!: {e}'</span>
+        <span class="hljs-keyword">except</span> OSError <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'Seems that destination is not writable!: {e}'</span>
+        <span class="hljs-keyword">except</span> IOError <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'IO error!: {e}'</span>
+        <span class="hljs-keyword">except</span> subprocess.CalledProcessError <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'CalledProcessError -&gt; CuraEngine error: {e}'</span>
+        <span class="hljs-keyword">except</span> subprocess.SubprocessError <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'SubprocessError: {e}'</span>
+        <span class="hljs-keyword">except</span> subprocess.TimeoutExpired <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'TimeoutExpired: {e}'</span>
+        <span class="hljs-keyword">except</span> Exception <span class="hljs-keyword">as</span> e:
+            res[<span class="hljs-string">'error'</span>] = f<span class="hljs-string">'Unknown error!: {e}'</span>
+
+        <span class="hljs-keyword">return</span> res
+
+</code></pre>
+<p class="has-line-data" data-line-start="766" data-line-end="768">Приведенный фрагмент кода отвечает за работу с внешним слайсером Ultimaker<br>
+Cura.</p>
+<ol>
+<li class="has-line-data" data-line-start="769" data-line-end="771">
+<p class="has-line-data" data-line-start="769" data-line-end="770">Вначале задается путь к исполняемому файлу слайсера;</p>
+</li>
+<li class="has-line-data" data-line-start="771" data-line-end="775">
+<p class="has-line-data" data-line-start="771" data-line-end="774">Далее происходит запуск слайсера в дочернем процессе. Для этого можно<br>
+использовать команду запуска процесса в операционной системе или<br>
+специализированные инструменты для работы с процессами.</p>
+</li>
+<li class="has-line-data" data-line-start="775" data-line-end="778">
+<p class="has-line-data" data-line-start="775" data-line-end="777">Определение пути к получаемому результату слайсинга. После запуска слайсера<br>
+результат окажется в файле object.gcode.</p>
+</li>
+<li class="has-line-data" data-line-start="778" data-line-end="780">
+<p class="has-line-data" data-line-start="778" data-line-end="779">Обработка возможных ошибок:</p>
+</li>
+</ol>
+<ul>
+<li class="has-line-data" data-line-start="780" data-line-end="782">FileNotFoundError — ошибка, которая возникает, когда указанный файл не может<br>
+быть найден.</li>
+<li class="has-line-data" data-line-start="782" data-line-end="785">OSError — общее название для ошибок, связанных с операционной системой.<br>
+Может возникать при различных проблемах с файловой системой, доступе к<br>
+файлам и т. д.</li>
+<li class="has-line-data" data-line-start="785" data-line-end="787">IOError — ошибка, связанная с вводом-выводом (input/output). Может возникать<br>
+при проблемах с чтением или записью данных.</li>
+<li class="has-line-data" data-line-start="787" data-line-end="789">CalledProcessError — возникает, когда подпроцесс завершается с ненулевым<br>
+кодом возврата.</li>
+<li class="has-line-data" data-line-start="789" data-line-end="792">SubprocessError — общее название для ошибок, связанных с подпроцессами.<br>
+Может возникать при различных проблемах с выполнением команд в<br>
+подпроцессе.</li>
+<li class="has-line-data" data-line-start="792" data-line-end="795">TimeoutExpired — возникает, когда время выполнения команды в подпроцессе<br>
+истекло.</li>
+</ul>
+<p class="has-line-data" data-line-start="795" data-line-end="796">Запуск процесса ЭЭО</p>
+<p class="has-line-data" data-line-start="797" data-line-end="799">Для запуска процесса электроэрозионной обработки (ЭЭО) пользователю необходимо<br>
+выполнить следующие действия.</p>
+<ol>
+<li class="has-line-data" data-line-start="800" data-line-end="803">
+<p class="has-line-data" data-line-start="800" data-line-end="802">Выбор материала обработки. Необходимо выбрать материал, который будет<br>
+подвергаться обработке.</p>
+</li>
+<li class="has-line-data" data-line-start="803" data-line-end="806">
+<p class="has-line-data" data-line-start="803" data-line-end="805">Выбор варианта обработки. Необходимо выбрать один из двух вариантов<br>
+обработки: из STL-файла или по углам и глубине обработки.</p>
+</li>
+<li class="has-line-data" data-line-start="806" data-line-end="809">
+<p class="has-line-data" data-line-start="806" data-line-end="808">Преобразование STL-файла в G-код (при необходимости). Если выбран вариант<br>
+обработки из STL-файла, необходимо нажать кнопку «Преобразовать в G-код».</p>
+</li>
+<li class="has-line-data" data-line-start="809" data-line-end="813">
+<p class="has-line-data" data-line-start="809" data-line-end="812">Установка значений углов и глубины обработки. Если выбран вариант обработки<br>
+по углам и глубине, необходимо установить значения <code>Rx</code>, <code>Ry</code> и глубины обработки<br>
+<code>D</code>.</p>
+</li>
+<li class="has-line-data" data-line-start="813" data-line-end="815">
+<p class="has-line-data" data-line-start="813" data-line-end="815">Нажатие кнопки «Выполнить». После выполнения всех предыдущих шагов<br>
+необходимо нажать кнопку «Выполнить», чтобы запустить процесс обработки.</p>
+</li>
+</ol>
+<p class="has-line-data" data-line-start="817" data-line-end="824">Таким образом разработан процесс установки параметров электроэрозионной<br>
+обработки (ЭЭО), который включает определение электрических, механических и<br>
+гидравлических параметров. На основе полученных данных был создан интерфейс<br>
+управления параметрами ЭЭО, который учитывает материал, направление и глубину<br>
+воздействия. Предустановленные значения в интерфейсе управления роботом<br>
+определяются пользователем в зависимости от выбранного материала и требуемых<br>
+параметров обработки.</p>
+<p class="has-line-data" data-line-start="825" data-line-end="830">Для преобразования модели в G-код используется слайсер Ultimaker Cura. При<br>
+этом учитываются параметры толщины слоя и скорости перемещения, которые<br>
+передаются в интерфейс управления роботом. Для предотвращения зависания<br>
+интерфейса во время слайсинга используется модуль subprocess, который<br>
+запускает отдельный процесс и передаёт ему необходимые параметры.</p>
+<p class="has-line-data" data-line-start="831" data-line-end="835">Запуск процесса ЭЭО включает выбор материала обработки, выбор варианта<br>
+обработки (из STL-файла или по углам и глубине), преобразование STL-файла в<br>
+G-код (при необходимости), установку значений углов и глубины обработки и<br>
+нажатие кнопки «Выполнить».</p>
+<h2 class="code-line" data-line-start="837" data-line-end="838"><a id="_837"></a>Заключение</h2>
+<p class="has-line-data" data-line-start="839" data-line-end="845">В данном тексте были рассмотрены основные этапы разработки и настройки<br>
+платформы и программного обеспечения для робота-манипулятора. Были описаны<br>
+создание платформы, оснастки, реализация протокола управления манипулятором,<br>
+создание 6-координатной системы, решение задач обратной и прямой кинематики,<br>
+разработка программы-имитатора электроэрозионной обработки и взаимодействие<br>
+интерфейса с нижележащими классами.</p>
+</body></html>
