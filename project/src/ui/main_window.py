@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
         self.Y0 = Y0
         self.Z0 = Z0
         self.hardware = hardware_controller or HardwareController()
-        self.state = StateManager(X0, Y0, Z0, self.hardware.robot)
+        self.state = StateManager(X0, Y0, Z0, self.hardware.robot_controller)
         self.video_manager = VideoManager()
         self.process_manager = None
         self.ui_manager = None

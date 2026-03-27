@@ -51,6 +51,17 @@ def test_hardware_exposes_erosion_backend_port(hardware_controller):
     assert hasattr(backend, "stop")
 
 
+def test_hardware_exposes_robot_controller_port(hardware_controller):
+    controller = hardware_controller.robot_controller
+
+    assert hasattr(controller, "current_x")
+    assert hasattr(controller, "current_y")
+    assert hasattr(controller, "current_z")
+    assert hasattr(controller, "set_joint_pos")
+    assert hasattr(controller, "set_speed")
+    assert hasattr(controller, "emergency_stop")
+
+
 def test_hardware_set_joint_pos(hardware_controller):
     joints = [10, 20, 30, 40, 50, 60]
     hardware_controller.set_joint_pos(joints)

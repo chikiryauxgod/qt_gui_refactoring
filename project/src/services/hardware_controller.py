@@ -1,5 +1,6 @@
 # Hardware controller implementation
 from src.integration.legacy_erosion_backend_adapter import LegacyErosionBackendAdapter
+from src.integration.legacy_robot_controller_adapter import LegacyRobotControllerAdapter
 from src.ports.ihardware_controller import IHardwareController
 from src.electoerosion import Electroerosion
 from src.robot import Robot
@@ -16,6 +17,10 @@ class HardwareController(IHardwareController):
     @property
     def erosion_backend(self):
         return LegacyErosionBackendAdapter(self.erode)
+
+    @property
+    def robot_controller(self):
+        return LegacyRobotControllerAdapter(self.robot)
 
     def set_coord_pos(self, x, y, z):
         self.erode.set_coord_pos(x, y, z)

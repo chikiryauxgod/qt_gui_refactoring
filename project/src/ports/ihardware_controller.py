@@ -1,11 +1,15 @@
 from typing import Protocol
 
 from src.ports.erosion_backend_port import ErosionBackendPort
+from src.ports.robot_controller_port import RobotControllerPort
 
 
 class IHardwareController(Protocol):
     @property
     def erosion_backend(self) -> ErosionBackendPort: ...
+
+    @property
+    def robot_controller(self) -> RobotControllerPort: ...
 
     def set_coord_pos(self, x: float, y: float, z: float) -> None: ...
     def set_joint_pos(self, joints: list[float]) -> None: ...
