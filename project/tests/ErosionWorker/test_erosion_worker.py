@@ -5,6 +5,7 @@ from src.erosion_worker.erosion_worker import (
 )
 from src.electoerosion import Electroerosion
 
+
 def test_gcode_processor_progress():
     points = [(0, 0, 0), (1, 1, 1), (2, 2, 2)]
     processor = GCodeProcessor(points, total_time=60)
@@ -26,7 +27,7 @@ def test_gcode_processor_remaining_time():
 
 def test_erosion_controller_creation():
     controller = ErosionController(
-        erosion_cls=Electroerosion,
+        erosion_target=Electroerosion,
         filename="test.nc",
         speed=5
     )
@@ -37,7 +38,7 @@ def test_erosion_controller_creation():
 
 def test_erosion_controller_start_stop_no_exception():
     controller = ErosionController(
-        erosion_cls=Electroerosion,
+        erosion_target=Electroerosion,
         filename="file.nc"
     )
 
@@ -52,7 +53,7 @@ def test_erosion_controller_logger_called():
         messages.append(msg)
 
     controller = ErosionController(
-        erosion_cls=Electroerosion,
+        erosion_target=Electroerosion,
         filename="file.nc",
         logger=logger
     )
@@ -65,7 +66,7 @@ def test_erosion_controller_logger_called():
 
 def test_erosion_worker_run_no_exception():
     controller = ErosionController(
-        erosion_cls=Electroerosion,
+        erosion_target=Electroerosion,
         filename="file.nc"
     )
 
@@ -96,3 +97,28 @@ def test_erosion_worker_stop():
 
     assert worker.is_running is False
     assert worker.is_paused is False
+
+
+def test_erosion_controller_supports_callable_instance():
+    calls = []
+
+    class LegacyErosion:
+        def __call__(self, filename=None, **params):
+            calls.append((filename, params))
+
+        def safe_finish(self):
+            calls.append(("safe_finish", {}))
+
+    controller = ErosionController(
+        erosion_target=LegacyErosion(),
+        filename="legacy.nc",
+        speed=10,
+        mode="test",
+    )
+
+    controller.start_erosion()
+    controller.stop_erosion()
+
+    assert calls[0][0] == "legacy.nc"
+    assert calls[0][1]["speed"] == 10
+    assert calls[1][0] == "safe_finish"

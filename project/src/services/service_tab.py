@@ -156,7 +156,7 @@ class ServiceTab(QWidget):
             
             set_btn = QPushButton("Установить XYZ")
             manual_input.editingFinished.connect(lambda a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
-            set_btn.clicked.connect(lambda checked, a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
+            set_btn.clicked.connect(lambda checked=False, a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
             input_layout.addWidget(set_btn)
             
             group_layout.addLayout(input_layout)
@@ -170,11 +170,11 @@ class ServiceTab(QWidget):
                 step_layout.addWidget(QLabel(f"Шаг {step} мм:"))
                 
                 minus_btn = QPushButton(f"-{step}")
-                minus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, -s))
+                minus_btn.clicked.connect(lambda checked=False, a=axis, s=step: self.move_xyz(a, -s))
                 step_layout.addWidget(minus_btn)
                 
                 plus_btn = QPushButton(f"+{step}")
-                plus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, s))
+                plus_btn.clicked.connect(lambda checked=False, a=axis, s=step: self.move_xyz(a, s))
                 step_layout.addWidget(plus_btn)
                 
                 step_layout.addStretch()
@@ -311,7 +311,7 @@ class ServiceTab(QWidget):
             set_btn.setFixedSize(150, 42)
             set_btn.setStyleSheet("font-size: 10px;")
             manual_input.editingFinished.connect(lambda j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
-            set_btn.clicked.connect(lambda checked, j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
+            set_btn.clicked.connect(lambda checked=False, j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
             second_layout.addWidget(set_btn)
             
             group_layout.addLayout(second_layout)
@@ -355,7 +355,7 @@ class ServiceTab(QWidget):
                     }
                 """)
                 minus_btn.setToolTip(f"Уменьшить на {step}°")
-                minus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, -s))
+                minus_btn.clicked.connect(lambda checked=False, j=joint, s=step: self.move_joint(j, -s))
                 step_row_layout.addWidget(minus_btn)
                 
                 # Кнопка плюс
@@ -375,7 +375,7 @@ class ServiceTab(QWidget):
                     }
                 """)
                 plus_btn.setToolTip(f"Увеличить на {step}°")
-                plus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, s))
+                plus_btn.clicked.connect(lambda checked=False, j=joint, s=step: self.move_joint(j, s))
                 step_row_layout.addWidget(plus_btn)
                 
                 step_row_layout.addStretch()

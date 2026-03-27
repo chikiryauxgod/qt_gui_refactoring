@@ -2,19 +2,39 @@ from PySide6.QtCore import QThread, Signal
 import time
 
 class ErosionController:
-    def __init__(self, erosion_cls, filename=None, logger=None, **params):
+    def __init__(self, erosion_target, filename=None, logger=None, **params):
         self.filename = filename
         self.params = params
         self.logger = logger
-        self.erosion_instance = erosion_cls(filename=filename, **params)
+        self.erosion_target = erosion_target
+        self.erosion_instance = None
+
+        if isinstance(erosion_target, type):
+            self.erosion_instance = erosion_target(filename=filename, **params)
+        elif hasattr(erosion_target, "start") or hasattr(erosion_target, "stop"):
+            self.erosion_instance = erosion_target
 
     def start_erosion(self):
         if self.logger:
             self.logger(f"Starting erosion: filename={self.filename}, params={self.params}")
-        self.erosion_instance.start()
+
+        target = self.erosion_instance or self.erosion_target
+        if hasattr(target, "start"):
+            target.start()
+            return
+        if callable(target):
+            target(self.filename, **self.params)
+            return
+
+        raise TypeError("Unsupported erosion target: expected class, callable, or object with start()")
 
     def stop_erosion(self):
-        self.erosion_instance.stop()
+        target = self.erosion_instance or self.erosion_target
+        if hasattr(target, "stop"):
+            target.stop()
+            return
+        if hasattr(target, "safe_finish"):
+            target.safe_finish()
 
 
 class GCodeProcessor:

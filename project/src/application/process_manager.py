@@ -1,5 +1,4 @@
 from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
-from src.electoerosion import Electroerosion
 from src.log import logger, q
 
 # Process management (SRP)
@@ -11,7 +10,8 @@ class ProcessManager:
         self.erosion_worker = None
 
     def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
-        erosion_controller = ErosionController(Electroerosion, filename, logger=logger, speed=10, mode=mode)
+        erosion_target = self.hardware.erode
+        erosion_controller = ErosionController(erosion_target, filename, logger=logger, speed=10, mode=mode)
         gcode_processor = GCodeProcessor(gcode_points, erosion_time)
         self.erosion_worker = ErosionWorker(erosion_controller, gcode_processor)
         self.erosion_worker.progress_updated.connect(lambda p: self.erosion_tab.progress_bar.setValue(int(p)))
