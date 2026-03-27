@@ -1,5 +1,7 @@
-from PySide6.QtCore import QThread, Signal
+import threading
 import time
+
+from PySide6.QtCore import QThread, Signal
 
 class ErosionController:
     def __init__(self, erosion_target, filename=None, logger=None, **params):
@@ -70,6 +72,8 @@ class ErosionWorker(QThread):
         self.start_time = None
         self.pause_start_time = None
         self.total_paused_time = 0
+        self._stop_requested = False
+        self._stop_lock = threading.Lock()
 
     def run(self):
         self.start_time = time.time()
@@ -106,6 +110,8 @@ class ErosionWorker(QThread):
         except Exception as e:
             if self.controller.logger:
                 self.controller.logger(f"Error processing electroerosion: {e}")
+        finally:
+            self.is_running = False
             self.finished.emit()
 
     def pause(self):
@@ -115,6 +121,19 @@ class ErosionWorker(QThread):
         self.is_paused = False
 
     def stop(self):
+        with self._stop_lock:
+            if self._stop_requested:
+                return
+            self._stop_requested = True
+
         self.is_running = False
         self.is_paused = False
-        self.controller.stop_erosion()
+        self.requestInterruption()
+        threading.Thread(target=self._stop_controller, daemon=True).start()
+
+    def _stop_controller(self):
+        try:
+            self.controller.stop_erosion()
+        except Exception as exc:
+            if self.controller.logger:
+                self.controller.logger(f"Error stopping electroerosion: {exc}")

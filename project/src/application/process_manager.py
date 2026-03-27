@@ -27,7 +27,7 @@ class ProcessManager:
     def stop_erosion_process(self):
         if self.erosion_worker and self.erosion_worker.isRunning():
             self.erosion_worker.stop()
-            self.erosion_worker.wait(2000) or self.erosion_worker.terminate()
+            self.erosion_worker.wait(200)
         self.erosion_tab.set_stopped_ui_state()
         self.erosion_tab.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
 

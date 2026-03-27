@@ -13,7 +13,8 @@ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.domain.xyz_availability_service import XYZAvailabilityService
 from src.domain.joint_availability_service import JointAvailabilityService
-from src.arrow3D import Arrow3DData
+from src.arrow3D import Arrow3D, Arrow3DData
+from src.arrow3D.arrow3D import matplotlib_project
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
@@ -960,13 +961,17 @@ class ServiceTab(QWidget):
                     x1, y1, z1 = points[i]
                     x2, y2, z2 = points[i + 1]
 
-                    arrow = Arrow3DData(
-                        [x1, x2], [y1, y2], [z1, z2],
+                    arrow_data = Arrow3DData(
+                        [x1, x2], [y1, y2], [z1, z2]
+                    )
+                    arrow = Arrow3D(
+                        data=arrow_data,
+                        project_fn=matplotlib_project,
                         mutation_scale=20,
                         lw=1,
                         arrowstyle="-|>",
                         color="green",
-                        alpha=0.7
+                        alpha=0.7,
                     )
                     self.xyz_traj_ax.add_artist(arrow)
 

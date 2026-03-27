@@ -118,11 +118,16 @@ class MainWindow(QMainWindow):
             self.service_tab.stop_continuous_move()
 
     def safe_finish(self):
-        self.process_manager.stop_erosion_process()
-        self.hardware.set_erosion(False)
-        self.hardware.set_water(False)
-        self.set_coord_pos(X0, Y0, Z0)
-        self.video_manager.stop()
+        try:
+            if hasattr(self, "erosion_tab"):
+                self.erosion_tab.shutdown()
+            if self.process_manager is not None:
+                self.process_manager.stop_erosion_process()
+            self.hardware.set_erosion(False)
+            self.hardware.set_water(False)
+            self.set_coord_pos(X0, Y0, Z0)
+        finally:
+            self.video_manager.stop()
 
     def closeEvent(self, event):
         self.safe_finish()

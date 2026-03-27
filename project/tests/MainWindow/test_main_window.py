@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 
 @pytest.fixture
 def mainwindow_mocked(qtbot):
@@ -70,3 +71,28 @@ def test_mainwindow_methods(mainwindow_mocked, qtbot):
     window.emergency_stop()
     hardware.emergency_stop.assert_called_once()
     window.service_tab.stop_continuous_move.assert_called_once()
+
+
+def test_safe_finish_stops_threads_and_hardware(mainwindow_mocked):
+    window, hardware, _state = mainwindow_mocked
+    window.erosion_tab.shutdown = MagicMock()
+    window.video_manager.stop = MagicMock()
+
+    window.safe_finish()
+
+    window.erosion_tab.shutdown.assert_called_once()
+    window.process_manager.stop_erosion_process.assert_called_once()
+    hardware.set_erosion.assert_called_with(False)
+    hardware.set_water.assert_called_with(False)
+    window.video_manager.stop.assert_called_once()
+
+
+def test_safe_finish_stops_video_even_if_positioning_fails(mainwindow_mocked):
+    window, hardware, _state = mainwindow_mocked
+    window.erosion_tab.shutdown = MagicMock()
+    window.video_manager.stop = MagicMock()
+    hardware.set_coord_pos.side_effect = RuntimeError("boom")
+
+    window.safe_finish()
+
+    window.video_manager.stop.assert_called_once()

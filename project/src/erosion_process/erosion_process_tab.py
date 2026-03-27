@@ -18,7 +18,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
 from src.widgets.axis_control_widget import AxisControlWidget
-from src.arrow3D import Arrow3DData
+from src.arrow3D import Arrow3D, Arrow3DData
+from src.arrow3D.arrow3D import matplotlib_project
 
 
 Point3D = Tuple[float, float, float]
@@ -59,7 +60,7 @@ class LogReaderController:
     def stop(self) -> None:
         if self._reader and self._reader.isRunning():
             self._reader.stop()
-            self._reader.wait(1000)
+            self._reader.wait(200)
 
 
 class GCodeParser:
@@ -197,10 +198,6 @@ class ErosionProcessPresenter:
     def stop_erosion(self, worker) -> None:
         self._log_reader.stop()
 
-        if worker and worker.isRunning():
-            worker.stop()
-            worker.wait(1000)
-
         if hasattr(self._controller, "stop_erosion_process"):
             self._controller.stop_erosion_process()
 
@@ -222,6 +219,12 @@ class ErosionProcessPresenter:
 
     def return_to_zero(self) -> None:
         self._controller.set_coord_pos(self._controller.X0, self._controller.Y0, self._controller.Z0)
+
+    def shutdown(self, worker) -> None:
+        self._log_reader.stop()
+        if worker and worker.isRunning():
+            worker.stop()
+            worker.wait(200)
 
 class ErosionProcessTab(QWidget):
     def __init__(self, controller, q_ref):
@@ -285,6 +288,9 @@ class ErosionProcessTab(QWidget):
         self.pause_btn.setText("⏸ Пауза")
         self.pause_btn.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
         self.update_process_status("ПРОЦЕСС ВЫПОЛНЯЕТСЯ", "#27ae60")
+
+    def shutdown(self) -> None:
+        self._presenter.shutdown(self.erosion_worker)
 
 
     def create_widgets(self):
@@ -608,9 +614,17 @@ class ErosionProcessTab(QWidget):
                     length = np.sqrt(dx**2 + dy**2 + dz**2)
                     if length > 0:
                         dx, dy, dz = dx / length * 10, dy / length * 10, dz / length * 10
-                        arrow = Arrow3DData(
-                            [x1, x1 + dx], [y1, y1 + dy], [z1, z1 + dz],
-                            mutation_scale=15, lw=1, arrowstyle="-|>", color="red", alpha=0.7
+                        arrow_data = Arrow3DData(
+                            [x1, x1 + dx], [y1, y1 + dy], [z1, z1 + dz]
+                        )
+                        arrow = Arrow3D(
+                            data=arrow_data,
+                            project_fn=matplotlib_project,
+                            mutation_scale=15,
+                            lw=1,
+                            arrowstyle="-|>",
+                            color="red",
+                            alpha=0.7,
                         )
                         self.gcode_ax.add_artist(arrow)
         self.gcode_canvas.draw()

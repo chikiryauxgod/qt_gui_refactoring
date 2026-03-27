@@ -50,7 +50,7 @@ def test_process_manager_stop_erosion(process_manager):
     process_manager.stop_erosion_process()
 
     mock_worker_instance.stop.assert_called()
-    mock_worker_instance.wait.assert_called_with(2000)
+    mock_worker_instance.wait.assert_called_with(200)
     process_manager.erosion_tab.set_stopped_ui_state.assert_called()
     process_manager.erosion_tab.update_process_status.assert_called_with("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
 

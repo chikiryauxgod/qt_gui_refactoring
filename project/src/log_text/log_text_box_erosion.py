@@ -42,4 +42,5 @@ class LogTextBoxErrosion(QThread):
 
     def stop(self):
         self._running = False
-        self.wait()
+        if self.isRunning():
+            self.wait(200)

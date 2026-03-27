@@ -25,5 +25,11 @@ def test_video_manager_start(video_manager):
     video_manager.video_thread.start.assert_called()
 
 def test_video_manager_stop(video_manager):
+    video_manager.start()
     video_manager.stop()
     video_manager.video_thread.stop.assert_called()
+
+
+def test_video_manager_stop_is_noop_before_start(video_manager):
+    video_manager.stop()
+    video_manager.video_thread.stop.assert_not_called()
