@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import matplotlib.pyplot
 
 # from mpl_toolkits.mplot3d import Axes3D
@@ -63,8 +65,9 @@ from ikpy.utils.geometry import from_transformation_matrix
         ),
     ]
 )"""
+URDF_PATH = Path(__file__).resolve().with_name("robot_6_axis.urdf")
 
-my_chain = Chain.from_urdf_file("robot_6_axis.urdf", active_links_mask=[0,1,1,1,1,1,1,0])
+my_chain = Chain.from_urdf_file(str(URDF_PATH), active_links_mask=[0,1,1,1,1,1,1,0])
 #urdf_param = get_urdf_parameters("robot_6_axis.urdf", ["base_link, base_J1"])
 
 
