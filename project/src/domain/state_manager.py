@@ -1,5 +1,8 @@
+from src.ports.robot_controller_port import RobotControllerPort
+
+
 class StateManager:
-    def __init__(self, x0, y0, z0, robot):
+    def __init__(self, x0, y0, z0, robot: RobotControllerPort):
         self.current_x = x0
         self.current_y = y0
         self.current_z = z0

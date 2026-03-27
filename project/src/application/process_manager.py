@@ -1,17 +1,18 @@
 from src.erosion_worker.erosion_worker import ErosionWorker, ErosionController, GCodeProcessor
-from src.electoerosion import Electroerosion
 from src.log import logger, q
+from src.ports.ihardware_controller import IHardwareController
 
 # Process management (SRP)
 class ProcessManager:
-    def __init__(self, hardware_controller, erosion_tab, state_manager):
+    def __init__(self, hardware_controller: IHardwareController, erosion_tab, state_manager):
         self.hardware = hardware_controller
         self.erosion_tab = erosion_tab
         self.state = state_manager
         self.erosion_worker = None
 
     def start_erosion_process(self, gcode_points, electrode_diameter, electrode_length, erosion_time, erosion_up_time, erosion_depth, filename, mode):
-        erosion_controller = ErosionController(Electroerosion, filename, logger=logger, speed=10, mode=mode)
+        erosion_target = self.hardware.erosion_backend
+        erosion_controller = ErosionController(erosion_target, filename, logger=logger, speed=10, mode=mode)
         gcode_processor = GCodeProcessor(gcode_points, erosion_time)
         self.erosion_worker = ErosionWorker(erosion_controller, gcode_processor)
         self.erosion_worker.progress_updated.connect(lambda p: self.erosion_tab.progress_bar.setValue(int(p)))
@@ -27,7 +28,7 @@ class ProcessManager:
     def stop_erosion_process(self):
         if self.erosion_worker and self.erosion_worker.isRunning():
             self.erosion_worker.stop()
-            self.erosion_worker.wait(2000) or self.erosion_worker.terminate()
+            self.erosion_worker.wait(200)
         self.erosion_tab.set_stopped_ui_state()
         self.erosion_tab.update_process_status("ПРОЦЕСС ОСТАНОВЛЕН", "#e74c3c")
 

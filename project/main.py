@@ -1,9 +1,9 @@
 import sys
-from src.application.application_runner import run
+from src.integration.electroerosion_bridge import run_with_legacy_backend
 
 
 def main() -> None:
-    sys.exit(run())
+    sys.exit(run_with_legacy_backend())
 
 
 if __name__ == "__main__":

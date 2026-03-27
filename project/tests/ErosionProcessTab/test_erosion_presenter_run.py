@@ -125,3 +125,40 @@ def test_toggle_pause(fake_view, fake_controller, q_ref):
     worker.resume.assert_called_once()
     fake_view.set_running_ui_state.assert_called_once()
     assert paused is False
+
+
+def test_stop_erosion_delegates_stop_to_controller(fake_view, fake_controller, q_ref):
+    presenter = ErosionProcessPresenter(
+        controller=fake_controller,
+        view=fake_view,
+        q_ref=q_ref,
+    )
+
+    presenter._log_reader = DummyLogReader()
+    worker = Mock()
+    worker.isRunning.return_value = True
+
+    presenter.stop_erosion(worker)
+
+    worker.stop.assert_not_called()
+    fake_controller.stop_erosion_process.assert_called_once()
+    fake_view.set_stopped_ui_state.assert_called_once()
+
+
+def test_presenter_shutdown_stops_log_reader_and_worker(fake_view, fake_controller, q_ref):
+    presenter = ErosionProcessPresenter(
+        controller=fake_controller,
+        view=fake_view,
+        q_ref=q_ref,
+    )
+
+    log_reader = Mock()
+    presenter._log_reader = log_reader
+    worker = Mock()
+    worker.isRunning.return_value = True
+
+    presenter.shutdown(worker)
+
+    log_reader.stop.assert_called_once()
+    worker.stop.assert_called_once()
+    worker.wait.assert_called_once_with(200)

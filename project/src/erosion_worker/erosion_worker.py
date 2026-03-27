@@ -1,20 +1,45 @@
-from PySide6.QtCore import QThread, Signal
+import threading
 import time
 
+from PySide6.QtCore import QThread, Signal
+
 class ErosionController:
-    def __init__(self, erosion_cls, filename=None, logger=None, **params):
+    def __init__(self, erosion_target, filename=None, logger=None, **params):
         self.filename = filename
         self.params = params
         self.logger = logger
-        self.erosion_instance = erosion_cls(filename=filename, **params)
+        self.erosion_target = erosion_target
+        self.erosion_instance = None
+
+        if isinstance(erosion_target, type):
+            self.erosion_instance = erosion_target(filename=filename, **params)
+        elif hasattr(erosion_target, "start") or hasattr(erosion_target, "stop"):
+            self.erosion_instance = erosion_target
 
     def start_erosion(self):
         if self.logger:
             self.logger(f"Starting erosion: filename={self.filename}, params={self.params}")
-        self.erosion_instance.start()
+
+        target = self.erosion_instance or self.erosion_target
+        if hasattr(target, "start"):
+            try:
+                target.start(self.filename, **self.params)
+            except TypeError:
+                target.start()
+            return
+        if callable(target):
+            target(self.filename, **self.params)
+            return
+
+        raise TypeError("Unsupported erosion target: expected class, callable, or object with start()")
 
     def stop_erosion(self):
-        self.erosion_instance.stop()
+        target = self.erosion_instance or self.erosion_target
+        if hasattr(target, "stop"):
+            target.stop()
+            return
+        if hasattr(target, "safe_finish"):
+            target.safe_finish()
 
 
 class GCodeProcessor:
@@ -50,6 +75,8 @@ class ErosionWorker(QThread):
         self.start_time = None
         self.pause_start_time = None
         self.total_paused_time = 0
+        self._stop_requested = False
+        self._stop_lock = threading.Lock()
 
     def run(self):
         self.start_time = time.time()
@@ -86,6 +113,8 @@ class ErosionWorker(QThread):
         except Exception as e:
             if self.controller.logger:
                 self.controller.logger(f"Error processing electroerosion: {e}")
+        finally:
+            self.is_running = False
             self.finished.emit()
 
     def pause(self):
@@ -95,6 +124,19 @@ class ErosionWorker(QThread):
         self.is_paused = False
 
     def stop(self):
+        with self._stop_lock:
+            if self._stop_requested:
+                return
+            self._stop_requested = True
+
         self.is_running = False
         self.is_paused = False
-        self.controller.stop_erosion()
+        self.requestInterruption()
+        threading.Thread(target=self._stop_controller, daemon=True).start()
+
+    def _stop_controller(self):
+        try:
+            self.controller.stop_erosion()
+        except Exception as exc:
+            if self.controller.logger:
+                self.controller.logger(f"Error stopping electroerosion: {exc}")

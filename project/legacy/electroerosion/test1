@@ -1,0 +1,10 @@
+python3 robot.py 
+for x in $( seq 380 10 450 )
+do
+    for y in $( seq -80 10 80 )
+    do
+        python3 robot.py -X $x -Y $y -Z 90 
+    done 
+done
+python3 robot.py
+

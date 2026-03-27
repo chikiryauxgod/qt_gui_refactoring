@@ -13,7 +13,8 @@ from src.application.xyz_trajectory_executor import XYZTrajectoryExecutor
 from src.application.joint_trajectory_executor import JointTrajectoryExecutor
 from src.domain.xyz_availability_service import XYZAvailabilityService
 from src.domain.joint_availability_service import JointAvailabilityService
-from src.arrow3D import Arrow3DData
+from src.arrow3D import Arrow3D, Arrow3DData
+from src.arrow3D.arrow3D import matplotlib_project
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
@@ -156,7 +157,7 @@ class ServiceTab(QWidget):
             
             set_btn = QPushButton("Установить XYZ")
             manual_input.editingFinished.connect(lambda a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
-            set_btn.clicked.connect(lambda checked, a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
+            set_btn.clicked.connect(lambda checked=False, a=axis, i=manual_input: self.set_xyz_position(a, i.value()))
             input_layout.addWidget(set_btn)
             
             group_layout.addLayout(input_layout)
@@ -170,11 +171,11 @@ class ServiceTab(QWidget):
                 step_layout.addWidget(QLabel(f"Шаг {step} мм:"))
                 
                 minus_btn = QPushButton(f"-{step}")
-                minus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, -s))
+                minus_btn.clicked.connect(lambda checked=False, a=axis, s=step: self.move_xyz(a, -s))
                 step_layout.addWidget(minus_btn)
                 
                 plus_btn = QPushButton(f"+{step}")
-                plus_btn.clicked.connect(lambda checked, a=axis, s=step: self.move_xyz(a, s))
+                plus_btn.clicked.connect(lambda checked=False, a=axis, s=step: self.move_xyz(a, s))
                 step_layout.addWidget(plus_btn)
                 
                 step_layout.addStretch()
@@ -311,7 +312,7 @@ class ServiceTab(QWidget):
             set_btn.setFixedSize(150, 42)
             set_btn.setStyleSheet("font-size: 10px;")
             manual_input.editingFinished.connect(lambda j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
-            set_btn.clicked.connect(lambda checked, j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
+            set_btn.clicked.connect(lambda checked=False, j=joint, inp=manual_input: self.set_joint_position(j, inp.value()))
             second_layout.addWidget(set_btn)
             
             group_layout.addLayout(second_layout)
@@ -355,7 +356,7 @@ class ServiceTab(QWidget):
                     }
                 """)
                 minus_btn.setToolTip(f"Уменьшить на {step}°")
-                minus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, -s))
+                minus_btn.clicked.connect(lambda checked=False, j=joint, s=step: self.move_joint(j, -s))
                 step_row_layout.addWidget(minus_btn)
                 
                 # Кнопка плюс
@@ -375,7 +376,7 @@ class ServiceTab(QWidget):
                     }
                 """)
                 plus_btn.setToolTip(f"Увеличить на {step}°")
-                plus_btn.clicked.connect(lambda checked, j=joint, s=step: self.move_joint(j, s))
+                plus_btn.clicked.connect(lambda checked=False, j=joint, s=step: self.move_joint(j, s))
                 step_row_layout.addWidget(plus_btn)
                 
                 step_row_layout.addStretch()
@@ -960,13 +961,17 @@ class ServiceTab(QWidget):
                     x1, y1, z1 = points[i]
                     x2, y2, z2 = points[i + 1]
 
-                    arrow = Arrow3DData(
-                        [x1, x2], [y1, y2], [z1, z2],
+                    arrow_data = Arrow3DData(
+                        [x1, x2], [y1, y2], [z1, z2]
+                    )
+                    arrow = Arrow3D(
+                        data=arrow_data,
+                        project_fn=matplotlib_project,
                         mutation_scale=20,
                         lw=1,
                         arrowstyle="-|>",
                         color="green",
-                        alpha=0.7
+                        alpha=0.7,
                     )
                     self.xyz_traj_ax.add_artist(arrow)
 

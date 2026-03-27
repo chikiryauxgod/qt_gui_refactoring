@@ -1,0 +1,203 @@
+<?xml version="1.0"?>
+<robot name="myfirst">
+
+  <material name="blue">
+    <color rgba="0.0 0.0 0.8 1"/>
+  </material>
+
+  <material name="white">
+    <color rgba="1 1 1 1"/>
+  </material>
+
+
+  <!--BASE-->
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.16 0.16 0.2"/>
+      </geometry>
+      <material name="white"/>
+      <origin xyz="0.0 0.0 0.0"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.16 0.16 0.2"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.0"/>
+    </collision>
+  </link>
+
+  <!--J1-->
+
+  <link name="J1">
+    <visual>
+      <geometry>
+        <box size="0.145 0.145 0.1"/>
+      </geometry>
+      <material name="blue"/>
+      <origin xyz="0.0 0.0 0.05"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.145 0.145 0.1"/>
+      </geometry>
+      <material name="blue"/>
+      <origin xyz="0.0 0.0 0.05"/>
+    </collision>        
+  </link>
+
+  <joint name="base_J1" type="revolute">
+    <!--<limit lower="-1.57" upper="1.57" effort="0.0" velocity="0.01"/>-->
+    <axis rpy="0 0 0" xyz="0 0 1"/>
+    <parent link="base_link"/>
+    <child link="J1"/>
+    <origin xyz="0.016 0.0 0.171"/>
+  </joint>
+  
+  <!--J2-->
+
+  <link name="J2">
+    <visual>
+      <geometry>
+        <box size="0.102 0.1 0.187"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.093"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.102 0.1 0.187"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.093"/>
+    </collision>     
+  </link>
+
+  <joint name="base_J2" type="revolute">
+    <!--<limit lower="-0.8727" upper="1.0" effort="0.0" velocity="0.01"/>-->
+    <axis xyz="0 1 0" rpy="0 0 0"/>
+    <parent link="J1"/>
+    <child link="J2"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.039 0.0 0.197"/>
+  </joint>
+
+  <!--J3-->
+
+  <link name="J3">
+    <visual>
+      <geometry>
+        <box size="0.159 0.1 0.1"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.05"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.159 0.1 0.1"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.05"/>
+    </collision>
+  </link>
+
+  <joint name="base_J3" type="revolute">
+    <!--<limit lower="-0.8727" upper="0.69" effort="0.0" velocity="0.01"/>-->
+    <axis xyz="0 1 0"/>
+    <parent link="J2"/>
+    <child link="J3"/>
+    <origin xyz="0.0 0.0 0.242" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <!--J4-->
+  <link name="J4">
+    <visual>
+      <geometry>
+        <cylinder radius="0.047" length="0.17"/>
+      </geometry>
+      <origin xyz="0 0 0.085"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.047" length="0.17"/>
+      </geometry>
+      <origin xyz="0 0 0.085"/>
+    </collision>
+  </link>
+
+  <joint name="base_J4" type="revolute">
+    <!--<limit lower="-1.57" upper="1.57" effort="0.0" velocity="0.01"/>-->
+    <axis xyz="1 0 0" />
+    <parent link="J3"/>
+    <child link="J4"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.082 0.0 0.044"/>
+  </joint>
+
+
+  <!--J5-->
+  <link name="J5">
+    <visual>
+      <geometry>
+        <cylinder radius="0.035" length="0.1"/>
+      </geometry>
+      <origin xyz="0.0 0.0 -0.05"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.035" length="0.1"/>
+      </geometry>
+      <origin xyz="0.0 0.0 -0.05"/>
+    </collision>
+  </link>
+
+  <joint name="base_J5" type="revolute">
+    <!--<limit lower="-0.52" upper="0.197" effort="0.0" velocity="0.01"/>-->
+    <axis xyz="0 1 0"/>
+    <parent link="J4"/>
+    <child link="J5"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0.207 0.0 -0.006"/>
+  </joint>
+
+  <!--J6-->
+  <link name="J6">
+    <visual>
+      <geometry>
+        <cylinder radius="0.024" length="0.057"/>
+      </geometry>
+      <origin xyz="0.0 0.0 0.0285"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.024" length="0.057"/>
+      </geometry>
+      <origin xyz="0.0 0.0 -0.0285"/>
+    </collision>
+  </link>
+
+  <joint name="base_J6" type="revolute">
+    <!--<limit lower="-1.57" upper="1.57" effort="0.0" velocity="0.01"/>-->
+    <axis xyz="0 0 1"/>
+    <parent link="J5"/>
+    <child link="J6"/>
+    <origin xyz="-0.005 0.0 -0.129"/>
+  </joint>
+  
+  <!--TOOL-->
+  <link name="Tool">
+    <visual>
+      <geometry>
+        <box size = "0.036 0.036 0.405"/>
+      </geometry>
+      <origin xyz="0.0 0.0 -0.0572"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.14 0.036 0.405"/>
+      </geometry>
+      <origin xyz="0.0 0.0 -0.0572"/>
+    </collision>
+  </link>
+
+  <joint name="base_tool" type="fixed">
+    <parent link="J6"/>
+    <child link="Tool"/>
+    <origin xyz="0.091 0.0 -0.242"/>
+  </joint>
+  
+</robot>

@@ -105,4 +105,6 @@ class VideoStreamThread(QThread):
 
     def stop(self):
         self._running = False
-        self.wait()
+        self._source.close()
+        if self.isRunning():
+            self.wait(1000)

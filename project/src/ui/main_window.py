@@ -13,11 +13,15 @@ from src.ui.theme.style_builder import QtStyleBuilder
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, style_builder: QtStyleBuilder):
+    def __init__(self, style_builder: QtStyleBuilder, hardware_controller=None, q_ref=None):
         super().__init__()
         self._style_builder = style_builder
-        self.hardware = HardwareController()
-        self.state = StateManager(X0, Y0, Z0, self.hardware.robot)
+        self._q = q if q_ref is None else q_ref
+        self.X0 = X0
+        self.Y0 = Y0
+        self.Z0 = Z0
+        self.hardware = hardware_controller or HardwareController()
+        self.state = StateManager(X0, Y0, Z0, self.hardware.robot_controller)
         self.video_manager = VideoManager()
         self.process_manager = None
         self.ui_manager = None
@@ -33,7 +37,7 @@ class MainWindow(QMainWindow):
         central_widget = QTabWidget()
         self.setCentralWidget(central_widget)
 
-        self.erosion_tab = ErosionProcessTab(self, q)
+        self.erosion_tab = ErosionProcessTab(self, self._q)
         central_widget.addTab(self.erosion_tab, "Процесс электроэрозии")
 
         self.service_tab = ServiceTab(self)
@@ -114,11 +118,16 @@ class MainWindow(QMainWindow):
             self.service_tab.stop_continuous_move()
 
     def safe_finish(self):
-        self.process_manager.stop_erosion_process()
-        self.hardware.set_erosion(False)
-        self.hardware.set_water(False)
-        self.set_coord_pos(X0, Y0, Z0)
-        self.video_manager.stop()
+        try:
+            if hasattr(self, "erosion_tab"):
+                self.erosion_tab.shutdown()
+            if self.process_manager is not None:
+                self.process_manager.stop_erosion_process()
+            self.hardware.set_erosion(False)
+            self.hardware.set_water(False)
+            self.set_coord_pos(X0, Y0, Z0)
+        finally:
+            self.video_manager.stop()
 
     def closeEvent(self, event):
         self.safe_finish()
