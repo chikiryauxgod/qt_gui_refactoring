@@ -63,7 +63,7 @@ class ServiceTab(QWidget):
             
             try:
                 # Загрузка модели из URDF файла
-                urdf_path = "robot_6_axis.urdf"  # Убедитесь что файл в правильной директории
+                urdf_path = "src/urdf/robot_6_axis.urdf"  # Убедитесь что файл в правильной директории
                 if os.path.exists(urdf_path):
                     # Маска активных звеньев (обычно [False, True, True, True, True, True, True, False] для 6-осевого робота)
                     # Первое и последнее обычно OriginLink и ToolLink
