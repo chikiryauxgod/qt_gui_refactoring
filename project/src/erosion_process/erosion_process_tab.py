@@ -14,12 +14,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QTextCursor
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from src.log_text.log_text_box_erosion import QueueMessageSource, LogTextBoxErrosion
 from src.widgets.axis_control_widget import AxisControlWidget
 from src.arrow3D import Arrow3D, Arrow3DData
 from src.arrow3D.arrow3D import matplotlib_project
+from src.visualization.canvas_redraw import request_canvas_redraw
 
 
 Point3D = Tuple[float, float, float]
@@ -627,7 +628,7 @@ class ErosionProcessTab(QWidget):
                             alpha=0.7,
                         )
                         self.gcode_ax.add_artist(arrow)
-        self.gcode_canvas.draw()
+        request_canvas_redraw(self.gcode_canvas)
 
     @Slot()
     def show_step(self, step_index):

@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox, QListWidget, QTabWidget, QTextEdit, QGridLayout, QSplitter, QMessageBox)
 from PySide6.QtCore import Qt, QTimer, Slot
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from ikpy.chain import Chain
 from src.presenters.xyz_control_presenter import XYZControlPresenter
 from src.presenters.joint_control_presenter import JointControlPresenter
@@ -18,6 +18,7 @@ from src.arrow3D.arrow3D import matplotlib_project
 from src.visualization.xyz_kinematics_plotter import XYZKinematicsPlotter
 from src.visualization.joints_trajectory_plotter import JointsTrajectoryPlotter
 from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
+from src.visualization.canvas_redraw import request_canvas_redraw
 from src.log import logger, q
 
 import os
@@ -861,7 +862,7 @@ class ServiceTab(QWidget):
             self.joints_ax.set_ylim([-1, 1])
             self.joints_ax.set_zlim([0, 1.5])
             
-            self.joints_canvas.draw()
+            request_canvas_redraw(self.joints_canvas)
 
     # Методы траекторий XYZ
     @Slot()
@@ -980,7 +981,7 @@ class ServiceTab(QWidget):
         self.xyz_traj_ax.set_zlabel('Z (мм)')
         self.xyz_traj_ax.set_title('Траектория движения XYZ')
 
-        self.xyz_traj_canvas.draw()
+        request_canvas_redraw(self.xyz_traj_canvas)
 
     # Методы траекторий суставов
     @Slot()
@@ -1070,7 +1071,7 @@ class ServiceTab(QWidget):
             self.joints_traj_ax.set_title('Траектория движения суставов с кинематикой')
             self.joints_traj_ax.legend()
             
-            self.joints_traj_canvas.draw()
+            request_canvas_redraw(self.joints_traj_canvas)
 
     @Slot()
     def update_status(self):
