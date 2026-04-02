@@ -21,7 +21,7 @@ def _working_directory(path: Path):
 
 
 def embedded_legacy_root() -> Path:
-    return Path(__file__).resolve().parents[2] / "legacy" / "electroerosion"
+    return Path(__file__).resolve().parents[2] / "electroerosion"
 
 
 def create_hardware_controller(legacy_root: str | os.PathLike[str]) -> HardwareController:
