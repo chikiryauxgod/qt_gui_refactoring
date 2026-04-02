@@ -1,4 +1,5 @@
 import numpy as np
+from src.visualization.canvas_redraw import request_canvas_redraw
 
 
 class XYZTrajectoryPlotter:
@@ -10,7 +11,7 @@ class XYZTrajectoryPlotter:
         self._ax.clear()
 
         if not points:
-            self._canvas.draw()
+            request_canvas_redraw(self._canvas)
             return
 
         pts = np.array(points)
@@ -18,4 +19,4 @@ class XYZTrajectoryPlotter:
         self._ax.scatter(pts[:, 0], pts[:, 1], pts[:, 2])
 
         self._ax.set_title("Траектория XYZ")
-        self._canvas.draw()
+        request_canvas_redraw(self._canvas)

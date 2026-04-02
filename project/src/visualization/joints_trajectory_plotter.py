@@ -1,3 +1,6 @@
+from src.visualization.canvas_redraw import request_canvas_redraw
+
+
 class JointsTrajectoryPlotter:
     def __init__(self, ax, canvas):
         self._ax = ax
@@ -7,7 +10,7 @@ class JointsTrajectoryPlotter:
         self._ax.clear()
 
         if not trajectories:
-            self._canvas.draw()
+            request_canvas_redraw(self._canvas)
             return
 
         steps = range(len(trajectories))
@@ -25,4 +28,4 @@ class JointsTrajectoryPlotter:
         self._ax.legend()
         self._ax.grid(True)
 
-        self._canvas.draw()
+        request_canvas_redraw(self._canvas)

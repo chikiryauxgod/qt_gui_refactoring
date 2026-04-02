@@ -1,3 +1,6 @@
+from src.visualization.canvas_redraw import request_canvas_redraw
+
+
 class XYZKinematicsPlotter:
     def __init__(
         self,
@@ -20,7 +23,7 @@ class XYZKinematicsPlotter:
             self._plot_point(x, y, z)
 
         self._configure_axes(x, y, z)
-        self._canvas.draw()
+        request_canvas_redraw(self._canvas)
 
     def _plot_with_kinematics(self, x, y, z):
         try:
