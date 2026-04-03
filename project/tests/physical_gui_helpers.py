@@ -28,12 +28,24 @@ def run_xdotool(*args):
     )
 
 
+def try_activate_window(window_id: int):
+    try:
+        run_xdotool("windowactivate", "--sync", window_id)
+    except subprocess.CalledProcessError as exc:
+        if "_NET_ACTIVE_WINDOW" not in exc.stderr:
+            raise
+
+
 def physical_click(qtbot, widget: QWidget):
-    window_id = int(widget.window().winId())
+    window = widget.window()
+    window_id = int(window.winId())
     center = widget.rect().center()
     global_center: QPoint = widget.mapToGlobal(center)
 
-    run_xdotool("windowactivate", "--sync", window_id)
+    window.raise_()
+    window.activateWindow()
+    QApplication.processEvents()
+    try_activate_window(window_id)
     qtbot.wait(150)
     run_xdotool("mousemove", global_center.x(), global_center.y())
     qtbot.wait(100)
@@ -55,7 +67,11 @@ def open_tab_by_text(qtbot, tab_widget: QTabWidget, label: str):
             tab_bar = tab_widget.tabBar()
             rect = tab_bar.tabRect(index)
             global_center = tab_bar.mapToGlobal(rect.center())
-            run_xdotool("windowactivate", "--sync", int(tab_widget.window().winId()))
+            window = tab_widget.window()
+            window.raise_()
+            window.activateWindow()
+            QApplication.processEvents()
+            try_activate_window(int(window.winId()))
             qtbot.wait(150)
             run_xdotool("mousemove", global_center.x(), global_center.y())
             qtbot.wait(100)
