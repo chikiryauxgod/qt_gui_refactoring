@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QPushButton, 
     QDoubleSpinBox, QListWidget, QTabWidget, QTextEdit, QGridLayout, QSplitter, QMessageBox)
@@ -21,11 +23,12 @@ from src.visualization.xyz_trajectory_plotter import XYZTrajectoryPlotter
 from src.visualization.canvas_redraw import request_canvas_redraw
 from src.log import logger, q
 
-import os
 import numpy as np
 
 
 IKPY_AVAILABLE = True
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+URDF_PATH = PROJECT_ROOT / "src" / "urdf" / "robot_6_axis.urdf"
 
 
 
@@ -63,17 +66,15 @@ class ServiceTab(QWidget):
                 return None
             
             try:
-                # Загрузка модели из URDF файла
-                urdf_path = "src/urdf/robot_6_axis.urdf"  # Убедитесь что файл в правильной директории
-                if os.path.exists(urdf_path):
+                if URDF_PATH.exists():
                     # Маска активных звеньев (обычно [False, True, True, True, True, True, True, False] для 6-осевого робота)
                     # Первое и последнее обычно OriginLink и ToolLink
                     active_links_mask = [False, True, True, True, True, True, True, False]
-                    robot_chain = Chain.from_urdf_file(urdf_path, active_links_mask=active_links_mask)
+                    robot_chain = Chain.from_urdf_file(str(URDF_PATH), active_links_mask=active_links_mask)
                     logger("The kinematic model of the robot has been successfully uploaded from URDF", queue=q)
                     return robot_chain
                 else:
-                    logger(f"URDF file not found: {urdf_path}", file=open('log.txt', "a"))
+                    logger(f"URDF file not found: {URDF_PATH}", queue=q)
                     
             except Exception as e:
                 logger(f"Error load URDF: {e}", queue=q)
@@ -1003,7 +1004,7 @@ class ServiceTab(QWidget):
         current_row = self.joints_listbox.currentRow()
         if current_row >= 0:
             self.joints_listbox.takeItem(current_row)
-            self.joint_trajectory_service.remove_point(current_row)
+            self.trajectory_points_joints.remove_point(current_row)
             self.joints_trajectory_plotter.plot(
                 self.trajectory_points_joints.get_points())
     @Slot()
