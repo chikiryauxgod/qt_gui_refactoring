@@ -1,10 +1,9 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 @pytest.fixture
 def mainwindow_mocked(qtbot):
     from src.ui.main_window import MainWindow
-    from unittest.mock import MagicMock
 
     style_builder_mock = MagicMock()
     style_builder_mock.build.return_value = ""
@@ -20,13 +19,17 @@ def mainwindow_mocked(qtbot):
     process_manager_mock = MagicMock()
     ui_manager_mock = MagicMock()
 
-    window = MainWindow(style_builder_mock)
+    video_manager_mock = MagicMock()
+
+    with patch("src.ui.main_window.VideoManager", return_value=video_manager_mock):
+        window = MainWindow(style_builder_mock)
     qtbot.addWidget(window)
 
     window.hardware = hardware_mock
     window.state = state_mock
     window.process_manager = process_manager_mock
     window.ui_manager = ui_manager_mock
+    window.video_manager = video_manager_mock
 
     if hasattr(window, 'erosion_tab'):
         window.erosion_tab.video_label = MagicMock()
