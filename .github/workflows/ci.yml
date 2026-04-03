@@ -75,14 +75,6 @@ jobs:
         run: |
           pytest -v -m "not physical_gui"
 
-      - name: Debug Qt xcb startup
-        working-directory: project
-        env:
-          QT_QPA_PLATFORM: xcb
-          QT_DEBUG_PLUGINS: 1
-        run: |
-          xvfb-run -a --server-args="-screen 0 1920x1080x24" python -c "from PySide6.QtWidgets import QApplication; app = QApplication([]); print('QApplication OK')"
-
       - name: Run Physical GUI Tests
         working-directory: project
         env:
